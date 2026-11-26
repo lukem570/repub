@@ -1,0 +1,4 @@
+# `trunk serve` / `trunk build --release` from this directory
+[build]
+target = "www/index.html"
+dist = "dist"

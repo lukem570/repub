@@ -1,0 +1,22 @@
+[package]
+name = "repub-layout"
+description = "Repub layout engine for text and object positioning (new lower-layer rewrite)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+repub-geometry = { workspace = true }
+repub-model = { workspace = true }
+repub-fonts = { workspace = true }
+repub-text = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# The layouter tests build a mock FontProvider directly from fontdue.
+fontdue = { workspace = true }
+
+[lints]
+workspace = true

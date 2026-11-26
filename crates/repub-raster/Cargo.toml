@@ -1,0 +1,24 @@
+[package]
+name = "repub-raster"
+description = "CPU rasterizer that executes a repub-scene Scene into a pixel buffer via tiny-skia"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+repub-scene = { workspace = true }
+repub-render = { workspace = true }
+repub-fonts = { workspace = true }
+
+tiny-skia = { workspace = true }
+fontdue = { workspace = true }
+image = { workspace = true }
+thiserror = { workspace = true }
+base64 = { workspace = true }
+
+[lints]
+workspace = true

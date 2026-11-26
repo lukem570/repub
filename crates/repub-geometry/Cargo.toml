@@ -1,0 +1,11 @@
+[package]
+name = "repub-geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "2D geometry primitives and unit conversions for Repub."
+
+[lints]
+workspace = true

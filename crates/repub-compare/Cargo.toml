@@ -1,0 +1,38 @@
+[package]
+name = "repub-compare"
+description = "Comparison tools for Repub rendering and file reading"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "repub-render-compare"
+path = "src/render_compare.rs"
+
+[[bin]]
+name = "repub-import-compare"
+path = "src/import_compare.rs"
+
+[dependencies]
+repub-model = { workspace = true }
+repub-format-pub = { workspace = true }
+repub-format-native = { workspace = true }
+repub-export-raster = { workspace = true }
+repub-fonts = { workspace = true }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Image comparison
+image = { workspace = true }
+
+# Serialization for data comparison
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = "1.0"
+
+[lints]
+workspace = true

@@ -1,0 +1,18 @@
+[package]
+name = "repub-text"
+description = "Repub text run building, Unicode segmentation, and line-break opportunities"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+repub-model = { workspace = true }
+
+# Text segmentation and line breaking
+unicode-linebreak = { workspace = true }
+unicode-segmentation = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,15 @@
+[package]
+name = "repub-render"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+repub-scene = { workspace = true }
+
+[lints]
+workspace = true

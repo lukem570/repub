@@ -1,0 +1,31 @@
+[package]
+name = "repub-format-pub"
+description = "Microsoft Publisher (.pub) import and export for Repub documents"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+repub-model = { workspace = true }
+repub-escher = { workspace = true }
+
+# OLE Compound File (for .pub)
+cfb = "0.10"
+
+# Base64 encoding (embedded image data)
+base64 = "0.22"
+
+# Errors
+thiserror = "2"
+
+# Logging
+log = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

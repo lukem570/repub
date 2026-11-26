@@ -1,0 +1,31 @@
+[package]
+name = "repub-gpu"
+description = "Repub GPU renderer: a windowless wgpu executor of a repub-scene Scene"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+repub-scene = { workspace = true }
+repub-render = { workspace = true }
+repub-fonts = { workspace = true }
+
+# GPU rendering. wgpu 24 matches the proven version in the old repub-render-gpu
+# crate and differs from the workspace-wide wgpu 0.19 that other crates
+# (repub-core, the egui GUI) still depend on, so it is pinned here rather than
+# taken from [workspace.dependencies].
+wgpu = "24.0"
+lyon = { workspace = true }
+ttf-parser = { workspace = true }
+pollster = { workspace = true }
+bytemuck = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "tiff"] }
+base64 = { workspace = true }
+# thiserror 2 matches repub-render-gpu; the workspace pins 1.0 for other crates.
+thiserror = "2"
+
+[lints]
+workspace = true

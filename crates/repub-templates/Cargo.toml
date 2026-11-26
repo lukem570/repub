@@ -1,0 +1,26 @@
+[package]
+name = "repub-templates"
+description = "Template system and library for Repub, targeting the repub-model document model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+repub-model = { workspace = true }
+
+# Serialization (template-description types are a serialized asset format)
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Date/time for placeholders
+chrono = { version = "0.4", features = ["serde"] }
+
+# Regex for placeholder parsing
+regex = "1"
+
+# Error handling
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

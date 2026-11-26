@@ -1,0 +1,196 @@
+# Repub - Open Source Desktop Publishing
+# A Rust reimplementation of Microsoft Publisher
+
+[workspace]
+resolver = "2"
+members = [
+    # Layer 0 — foundations
+    "crates/repub-geometry",
+    "crates/repub-color",
+    # Layer 1 — model
+    "crates/repub-model",
+    "crates/repub-escher",
+    # Layer 2 — text & layout
+    "crates/repub-fonts",
+    "crates/repub-text",
+    "crates/repub-layout",
+    # Layer 3 — scene
+    "crates/repub-render",
+    "crates/repub-scene",
+    "crates/repub-hit",
+    # Layer 4 — renderers
+    "crates/repub-raster",
+    "crates/repub-gpu",
+    # Layer 5 — formats
+    "crates/repub-format-pub",
+    "crates/repub-format-native",
+    "crates/repub-export-vector",
+    "crates/repub-export-raster",
+    "crates/repub-format",
+    # Layer 6 — application logic
+    "crates/repub-edit",
+    "crates/repub-templates",
+    # Layer 7 — frontends
+    "crates/repub-ui",
+    "crates/repub",
+    "crates/repub-cli",
+    "crates/repub-mcp",
+    "crates/repub-web",
+    "crates/repub-compare",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/repub/repub"
+keywords = ["publishing", "desktop-publishing", "document", "pdf"]
+categories = ["graphics", "text-processing"]
+
+[workspace.dependencies]
+# Dates and times (date and time fields)
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# Math/Geometry
+glam = "0.25"
+euclid = "0.22"
+
+# Rendering - CPU
+tiny-skia = "0.11"
+fontdue = "0.8"
+ttf-parser = "0.25"
+directories = "5"
+image = { version = "0.24", default-features = false, features = ["png", "jpeg", "gif", "tiff"] }
+base64 = "0.22"
+
+# Rendering - GPU
+wgpu = "0.19"
+lyon = "1.0"
+pollster = "0.4"
+bytemuck = { version = "1.14", features = ["derive"] }
+
+# GUI
+eframe = "0.26"
+egui = "0.26"
+
+# File formats
+cfb = "0.9"
+pdf-writer = "0.9"
+quick-xml = "0.31"
+zip = "0.6"
+
+# Text
+unicode-linebreak = "0.1"
+unicode-segmentation = "1.10"
+
+# Testing
+criterion = "0.5"
+
+# Internal crates
+repub-geometry = { path = "crates/repub-geometry" }
+repub-color = { path = "crates/repub-color" }
+repub-model = { path = "crates/repub-model" }
+repub-escher = { path = "crates/repub-escher" }
+repub-fonts = { path = "crates/repub-fonts" }
+repub-text = { path = "crates/repub-text" }
+repub-layout = { path = "crates/repub-layout" }
+repub-render = { path = "crates/repub-render" }
+repub-scene = { path = "crates/repub-scene" }
+repub-hit = { path = "crates/repub-hit" }
+repub-raster = { path = "crates/repub-raster" }
+repub-gpu = { path = "crates/repub-gpu" }
+repub-format-pub = { path = "crates/repub-format-pub" }
+repub-format-native = { path = "crates/repub-format-native" }
+repub-export-vector = { path = "crates/repub-export-vector" }
+repub-export-raster = { path = "crates/repub-export-raster" }
+repub-format = { path = "crates/repub-format" }
+repub-templates = { path = "crates/repub-templates" }
+repub-edit = { path = "crates/repub-edit" }
+repub-mcp = { path = "crates/repub-mcp" }
+repub-ui = { path = "crates/repub-ui" }
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+# Allow during development phase
+missing_docs = "allow"
+unused_imports = "allow"
+unused_variables = "allow"
+dead_code = "allow"
+float_literal_f32_fallback = "allow"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# Allow during development - will fix later
+large_enum_variant = "allow"
+too_many_arguments = "allow"
+manual_range_contains = "allow"
+unnecessary_to_owned = "allow"
+field_reassign_with_default = "allow"
+collapsible_if = "allow"
+let_and_return = "allow"
+needless_borrow = "allow"
+needless_lifetimes = "allow"
+collapsible_match = "allow"
+len_zero = "allow"
+manual_clamp = "allow"
+clone_on_copy = "allow"
+excessive_precision = "allow"
+wrong_self_convention = "allow"
+question_mark = "allow"
+assign_op_pattern = "allow"
+needless_return = "allow"
+needless_borrows_for_generic_args = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_abs_to_unsigned = "allow"
+derivable_impls = "allow"
+redundant_closure = "allow"
+only_used_in_recursion = "allow"
+missing_docs_in_private_items = "allow"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[profile.release-wasm]
+inherits = "release"
+opt-level = "z"
+lto = true
+
+# Root package for integration tests and benchmarks
+[package]
+name = "repub-workspace"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dev-dependencies]
+repub-model = { path = "crates/repub-model" }
+criterion = { workspace = true }
+
+[[bench]]
+name = "document_bench"
+harness = false

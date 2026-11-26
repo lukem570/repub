@@ -1,0 +1,77 @@
+[package]
+name = "repub-ui"
+description = "egui desktop GUI for the Repub publishing system (ported from repub-gui)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# Model, geometry and colour (the old repub-core, now split).
+repub-model = { workspace = true }
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+
+# File formats (open/save/export) and templates (new-doc/start screen).
+repub-format = { workspace = true }
+repub-templates = { workspace = true }
+chrono = { workspace = true }
+
+# Text layout geometry and fonts.
+repub-layout = { workspace = true }
+repub-fonts = { workspace = true }
+
+# Office preset ("Escher") shape geometry for the Shapes gallery.
+repub-escher = { workspace = true }
+
+# Fill tessellation for path shapes (holes, concave outlines).
+lyon = "1.0"
+
+# GUI framework. The wgpu backend is used for SDF text on the canvas (WGSL shader).
+eframe = { version = "0.29", features = ["wgpu"] }
+egui = "0.29"
+egui_extras = { version = "0.29", features = ["image", "svg"] }
+
+# Distance-field text: font metrics and kerning (fontdue), glyph outlines
+# (ttf-parser) turned into a multi-channel distance-field atlas (fdsm).
+fontdue = { workspace = true }
+ttf-parser = "0.25"
+fdsm = "0.8"
+fdsm-ttf-parser = "0.2"
+nalgebra = "0.34"
+bytemuck = { version = "1", features = ["derive"] }
+
+# File dialogs.
+rfd = "0.15"
+
+# Clipboard.
+arboard = "3"
+
+# Image handling.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+# Logging.
+log = "0.4"
+env_logger = "0.11"
+
+# Serialization for settings.
+serde = { workspace = true }
+serde_json = "1.0"
+
+# Directories for config.
+directories = "5"
+
+# Error handling.
+anyhow = "1"
+
+# Native menu bar (cross-platform).
+muda = "0.21"
+base64 = "0.23.1"
+
+# macOS native APIs for context menus.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = "0.3"
+objc2-foundation = "0.3"
+
+[lints]
+workspace = true

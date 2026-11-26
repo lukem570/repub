@@ -1,0 +1,22 @@
+[package]
+name = "repub-format"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+repub-model = { workspace = true }
+repub-format-native = { workspace = true }
+repub-format-pub = { workspace = true }
+repub-export-vector = { workspace = true }
+repub-export-raster = { workspace = true }
+repub-fonts = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+
+[lints]
+workspace = true

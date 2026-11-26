@@ -1,0 +1,51 @@
+[package]
+name = "repub-mcp"
+description = "Model Context Protocol server for Repub AI integration"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+repub-model = { workspace = true }
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+repub-format-native = { workspace = true }
+repub-export-vector = { workspace = true }
+repub-export-raster = { workspace = true }
+repub-fonts = { workspace = true }
+repub-templates = { workspace = true }
+
+# Async runtime
+tokio = { version = "1", features = ["rt", "io-std", "io-util", "sync", "macros"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+log = "0.4"
+tracing = "0.1"
+
+# Async traits
+async-trait = "0.1"
+
+# Base64 for image encoding
+base64 = "0.22"
+
+# Image encoding
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+# UUID for session IDs
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3"
+
+[lints]
+workspace = true

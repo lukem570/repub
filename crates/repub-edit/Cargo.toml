@@ -1,0 +1,16 @@
+[package]
+name = "repub-edit"
+description = "Framework-free document editing engine for Repub: commands, undo/redo, selection, text editing, snapping, and tools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+repub-geometry = { workspace = true }
+repub-color = { workspace = true }
+repub-model = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

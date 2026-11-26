@@ -1,0 +1,14 @@
+[package]
+name = "repub-color"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Color types, color spaces, gradients, and patterns for Repub."
+
+[dependencies]
+repub-geometry = { workspace = true }
+
+[lints]
+workspace = true

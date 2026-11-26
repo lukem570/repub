@@ -1,0 +1,47 @@
+{
+    "name": "Repub",
+    "short_name": "Repub",
+    "description": "Desktop publishing in your browser",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a1a1a",
+    "theme_color": "#2563eb",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["productivity", "utilities"],
+    "screenshots": [],
+    "file_handlers": [
+        {
+            "action": "/",
+            "accept": {
+                "application/json": [".pcd", ".pcdz"]
+            }
+        }
+    ],
+    "share_target": {
+        "action": "/share",
+        "method": "POST",
+        "enctype": "multipart/form-data",
+        "params": {
+            "files": [
+                {
+                    "name": "file",
+                    "accept": [".pcd", ".pcdz", "application/json"]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# Pre-commit hook for Repub
+# Install with: git config core.hooksPath .githooks
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Check formatting
+echo "Checking formatting..."
+cargo fmt --all -- --check
+
+# Run clippy
+echo "Running clippy..."
+cargo clippy --workspace --all-targets -- -D warnings
+
+# Run tests
+echo "Running tests..."
+cargo test --workspace --lib --bins
+
+echo "All checks passed!"

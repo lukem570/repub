@@ -1,0 +1,21 @@
+[package]
+name = "repub-fonts"
+description = "Repub font loading, metrics, and the installed-font registry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+
+# Font metrics and rasterization
+fontdue = { workspace = true }
+
+# Installed-font registry (parsing font files and reading face names)
+ttf-parser = { workspace = true }
+directories = { workspace = true }
+
+[lints]
+workspace = true
