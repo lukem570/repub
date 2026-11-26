@@ -402,13 +402,13 @@ impl SystemFontProvider {
         None
     }
 
+    /// The bundled font, used when the system has none to offer (a bare Linux install, the
+    /// browser).
     fn create_fallback_font() -> FontResult<Arc<Font>> {
-        // This is a minimal valid TrueType font
-        // In production, we'd embed a proper fallback font
-        // For now, return an error that will be caught
-        Err(FontError::FontNotFound(
-            "No default font available".to_string(),
-        ))
+        const FALLBACK_FONT: &[u8] = include_bytes!("../../../assets/fonts/fallback.ttf");
+        Font::from_bytes(FALLBACK_FONT, FontSettings::default())
+            .map(Arc::new)
+            .map_err(|e| FontError::InvalidFont(e.to_string()))
     }
 
     /// Load a font from bytes.
@@ -677,6 +677,13 @@ impl FontProvider for WebFontProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_default_font_exists_without_any_system_fonts() {
+        // The bundled font keeps exports working on a machine (or browser) with no fonts
+        let font = SystemFontProvider::create_fallback_font().expect("bundled font loads");
+        assert!(font.horizontal_line_metrics(12.0).is_some());
+    }
 
     #[test]
     fn test_font_metrics() {
