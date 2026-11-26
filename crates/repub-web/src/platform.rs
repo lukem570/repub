@@ -8,20 +8,20 @@ use web_sys::{Blob, BlobPropertyBag, HtmlInputElement, Url};
 pub fn download_file(filename: &str, data: &[u8], mime_type: &str) -> Result<(), JsValue> {
     let window = web_sys::window().ok_or("No window")?;
     let document = window.document().ok_or("No document")?;
-    
+
     // Create blob
     let array = js_sys::Uint8Array::from(data);
     let blob_parts = js_sys::Array::new();
     blob_parts.push(&array);
-    
+
     let mut options = BlobPropertyBag::new();
     options.type_(mime_type);
-    
+
     let blob = Blob::new_with_u8_array_sequence_and_options(&blob_parts, &options)?;
-    
+
     // Create download URL
     let url = Url::create_object_url_with_blob(&blob)?;
-    
+
     // Create and click download link
     let link = document.create_element("a")?;
     link.set_attribute("href", &url)?;
@@ -29,39 +29,43 @@ pub fn download_file(filename: &str, data: &[u8], mime_type: &str) -> Result<(),
     link.dyn_ref::<web_sys::HtmlElement>()
         .ok_or("Not an HtmlElement")?
         .click();
-    
+
     // Clean up
     Url::revoke_object_url(&url)?;
-    
+
     Ok(())
 }
 
 /// Create a file input for opening files.
-pub fn create_file_input(accept: &str, callback: impl Fn(Vec<u8>, String) + 'static) -> Result<HtmlInputElement, JsValue> {
+pub fn create_file_input(
+    accept: &str,
+    callback: impl Fn(Vec<u8>, String) + 'static,
+) -> Result<HtmlInputElement, JsValue> {
     let window = web_sys::window().ok_or("No window")?;
     let document = window.document().ok_or("No document")?;
-    
+
     let input = document.create_element("input")?;
     let input = input.dyn_into::<HtmlInputElement>()?;
     input.set_type("file");
     input.set_accept(accept);
     input.set_attribute("style", "display: none")?;
-    
+
     // Set up change handler
     let callback = std::rc::Rc::new(callback);
     let closure = Closure::wrap(Box::new(move |event: web_sys::Event| {
-        let input = event.target()
+        let input = event
+            .target()
             .and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
-        
+
         if let Some(input) = input {
             if let Some(files) = input.files() {
                 if let Some(file) = files.get(0) {
                     let filename = file.name();
                     let callback = callback.clone();
-                    
+
                     let reader = web_sys::FileReader::new().unwrap();
                     let reader_clone = reader.clone();
-                    
+
                     let onload = Closure::wrap(Box::new(move |_event: web_sys::Event| {
                         if let Ok(result) = reader_clone.result() {
                             if let Some(array_buffer) = result.dyn_ref::<js_sys::ArrayBuffer>() {
@@ -71,22 +75,22 @@ pub fn create_file_input(accept: &str, callback: impl Fn(Vec<u8>, String) + 'sta
                             }
                         }
                     }) as Box<dyn FnMut(_)>);
-                    
+
                     reader.set_onload(Some(onload.as_ref().unchecked_ref()));
                     onload.forget();
-                    
+
                     let _ = reader.read_as_array_buffer(&file);
                 }
             }
         }
     }) as Box<dyn FnMut(_)>);
-    
+
     input.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())?;
     closure.forget();
-    
+
     // Add to document (hidden)
     document.body().ok_or("No body")?.append_child(&input)?;
-    
+
     Ok(input)
 }
 
@@ -100,7 +104,7 @@ pub fn get_query_param(name: &str) -> Option<String> {
     let window = web_sys::window()?;
     let location = window.location();
     let search = location.search().ok()?;
-    
+
     let params = web_sys::UrlSearchParams::new_with_str(&search).ok()?;
     params.get(name)
 }
@@ -146,10 +150,10 @@ pub fn is_mobile() -> bool {
         if let Some(navigator) = Some(window.navigator()) {
             if let Ok(user_agent) = navigator.user_agent() {
                 let ua = user_agent.to_lowercase();
-                return ua.contains("mobile") || 
-                       ua.contains("android") || 
-                       ua.contains("iphone") ||
-                       ua.contains("ipad");
+                return ua.contains("mobile")
+                    || ua.contains("android")
+                    || ua.contains("iphone")
+                    || ua.contains("ipad");
             }
         }
     }

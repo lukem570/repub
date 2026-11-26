@@ -161,8 +161,14 @@ impl Snap {
             // X snapping
             x_candidates.push((moving_left - other_left, other_left));
             x_candidates.push((moving_left - other_right, other_right));
-            x_candidates.push((moving_right - other_left, other_left - moving_bounds.width()));
-            x_candidates.push((moving_right - other_right, other_right - moving_bounds.width()));
+            x_candidates.push((
+                moving_right - other_left,
+                other_left - moving_bounds.width(),
+            ));
+            x_candidates.push((
+                moving_right - other_right,
+                other_right - moving_bounds.width(),
+            ));
             x_candidates.push((
                 moving_center_x - other_center_x,
                 other_center_x - moving_bounds.width() / 2.0,
@@ -171,8 +177,14 @@ impl Snap {
             // Y snapping
             y_candidates.push((moving_top - other_top, other_top));
             y_candidates.push((moving_top - other_bottom, other_bottom));
-            y_candidates.push((moving_bottom - other_top, other_top - moving_bounds.height()));
-            y_candidates.push((moving_bottom - other_bottom, other_bottom - moving_bounds.height()));
+            y_candidates.push((
+                moving_bottom - other_top,
+                other_top - moving_bounds.height(),
+            ));
+            y_candidates.push((
+                moving_bottom - other_bottom,
+                other_bottom - moving_bounds.height(),
+            ));
             y_candidates.push((
                 moving_center_y - other_center_y,
                 other_center_y - moving_bounds.height() / 2.0,
@@ -489,12 +501,18 @@ pub fn compute_rotated_bounds(rect: &Rect, rotation: f64) -> Rect {
         })
         .collect();
 
-    let min_x = rotated.iter().map(|(x, _)| *x).fold(f64::INFINITY, f64::min);
+    let min_x = rotated
+        .iter()
+        .map(|(x, _)| *x)
+        .fold(f64::INFINITY, f64::min);
     let max_x = rotated
         .iter()
         .map(|(x, _)| *x)
         .fold(f64::NEG_INFINITY, f64::max);
-    let min_y = rotated.iter().map(|(_, y)| *y).fold(f64::INFINITY, f64::min);
+    let min_y = rotated
+        .iter()
+        .map(|(_, y)| *y)
+        .fold(f64::INFINITY, f64::min);
     let max_y = rotated
         .iter()
         .map(|(_, y)| *y)
@@ -522,7 +540,10 @@ pub fn align_objects(objects: &mut [&mut Shape], alignment: Alignment) {
             (Some(total / bounds.len() as f64), None)
         }
         Alignment::Right => {
-            let max_x = bounds.iter().map(|b| b.right()).fold(f64::NEG_INFINITY, f64::max);
+            let max_x = bounds
+                .iter()
+                .map(|b| b.right())
+                .fold(f64::NEG_INFINITY, f64::max);
             (Some(max_x), None)
         }
         Alignment::Top => {
@@ -534,7 +555,10 @@ pub fn align_objects(objects: &mut [&mut Shape], alignment: Alignment) {
             (None, Some(total / bounds.len() as f64))
         }
         Alignment::Bottom => {
-            let max_y = bounds.iter().map(|b| b.bottom()).fold(f64::NEG_INFINITY, f64::max);
+            let max_y = bounds
+                .iter()
+                .map(|b| b.bottom())
+                .fold(f64::NEG_INFINITY, f64::max);
             (None, Some(max_y))
         }
     };

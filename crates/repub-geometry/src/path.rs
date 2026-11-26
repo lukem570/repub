@@ -258,8 +258,11 @@ mod tests {
     #[test]
     fn curved_cubic_subdivides() {
         let mut path = Path::new();
-        path.move_to(Point::new(0.0, 0.0))
-            .cubic_to(Point::new(0.0, 10.0), Point::new(10.0, 10.0), Point::new(10.0, 0.0));
+        path.move_to(Point::new(0.0, 0.0)).cubic_to(
+            Point::new(0.0, 10.0),
+            Point::new(10.0, 10.0),
+            Point::new(10.0, 0.0),
+        );
         let contours = path.flatten(0.1);
         assert!(contours[0].len() > 2);
     }
@@ -278,8 +281,14 @@ mod tests {
     fn bezier_evaluation_endpoints() {
         let p0 = Point::new(1.0, 2.0);
         let p1 = Point::new(9.0, 8.0);
-        assert_eq!(cubic_point(p0, Point::new(3.0, 3.0), Point::new(7.0, 7.0), p1, 0.0), p0);
-        assert_eq!(cubic_point(p0, Point::new(3.0, 3.0), Point::new(7.0, 7.0), p1, 1.0), p1);
+        assert_eq!(
+            cubic_point(p0, Point::new(3.0, 3.0), Point::new(7.0, 7.0), p1, 0.0),
+            p0
+        );
+        assert_eq!(
+            cubic_point(p0, Point::new(3.0, 3.0), Point::new(7.0, 7.0), p1, 1.0),
+            p1
+        );
         assert_eq!(quad_point(p0, Point::new(5.0, 5.0), p1, 0.0), p0);
     }
 }

@@ -152,8 +152,7 @@ fn emit_primitive(prim: &Primitive, defs: &mut String, body: &mut String, grad_i
             }
             if let Some(dashes) = dash {
                 if !dashes.is_empty() {
-                    let list: Vec<String> =
-                        dashes.iter().map(|d| format!("{d:.3}")).collect();
+                    let list: Vec<String> = dashes.iter().map(|d| format!("{d:.3}")).collect();
                     let _ = write!(attrs, " stroke-dasharray=\"{}\"", list.join(","));
                 }
             }
@@ -235,9 +234,7 @@ fn image_href(source: &repub_scene::ImageRef) -> Option<String> {
     match source {
         ImageRef::File(p) => Some(escape_attr(p)),
         ImageRef::Url(u) => Some(escape_attr(u)),
-        ImageRef::Embedded { data, mime_type } => {
-            Some(format!("data:{mime_type};base64,{data}"))
-        }
+        ImageRef::Embedded { data, mime_type } => Some(format!("data:{mime_type};base64,{data}")),
         ImageRef::Placeholder => None,
     }
 }
@@ -359,7 +356,9 @@ fn hex(c: Color) -> String {
 }
 
 fn escape_text(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn escape_attr(s: &str) -> String {

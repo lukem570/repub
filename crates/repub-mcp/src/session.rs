@@ -51,7 +51,7 @@ impl Session {
         self.object_ids.clear();
         self.id_to_object.clear();
         self.id_counter = 0;
-        
+
         // Index existing objects
         self.index_document();
     }
@@ -64,7 +64,7 @@ impl Session {
         self.object_ids.clear();
         self.id_to_object.clear();
         self.id_counter = 0;
-        
+
         self.index_document();
     }
 
@@ -121,7 +121,7 @@ impl Session {
     pub fn find_object(&self, str_id: &str) -> McpResult<&Shape> {
         let doc = self.document()?;
         let _obj_id = self.get_object_id(str_id)?;
-        
+
         // Search through all pages and layers
         for page in doc.pages() {
             for layer in page.layers() {
@@ -168,7 +168,7 @@ impl Default for Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{PageSize, PageOrientation};
+    use repub_model::{PageOrientation, PageSize};
 
     #[test]
     fn test_session_creation() {
@@ -182,7 +182,7 @@ mod tests {
         let mut session = Session::new();
         let doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
         session.create_document(doc);
-        
+
         assert!(session.document.is_some());
         assert!(session.dirty);
         assert!(session.path.is_none());

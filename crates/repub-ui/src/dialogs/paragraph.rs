@@ -56,7 +56,9 @@ impl ParagraphDialog {
     }
 
     pub fn open_for(&mut self, state: &AppState) {
-        let Some((style, mixed)) = text_format::paragraph_snapshot(state) else { return };
+        let Some((style, mixed)) = text_format::paragraph_snapshot(state) else {
+            return;
+        };
         self.initial = style.clone();
         self.work = style;
         self.mixed = mixed;
@@ -96,22 +98,47 @@ impl ParagraphDialog {
             "para_align",
             "Alignment",
             &mut p.alignment,
-            &[(TextAlignment::Left, "Left"), (TextAlignment::Center, "Center"), (TextAlignment::Right, "Right"), (TextAlignment::Justify, "Justify")],
+            &[
+                (TextAlignment::Left, "Left"),
+                (TextAlignment::Center, "Center"),
+                (TextAlignment::Right, "Right"),
+                (TextAlignment::Justify, "Justify"),
+            ],
         );
         ui.add_space(6.0);
         ui.label(egui::RichText::new("Indentation").strong());
         for (label, value) in [("Left", &mut p.left_indent), ("Right", &mut p.right_indent)] {
             let mut shown = units.from_points(*value);
-            if number_row(ui, label, &mut shown, 0.0..=units.from_points(1440.0), units.from_points(0.5), units.suffix()) {
+            if number_row(
+                ui,
+                label,
+                &mut shown,
+                0.0..=units.from_points(1440.0),
+                units.from_points(0.5),
+                units.suffix(),
+            ) {
                 *value = units.to_points(shown);
             }
         }
         let mut first = units.from_points(p.first_line_indent);
         let big = units.from_points(1440.0);
-        if number_row(ui, "First line", &mut first, -big..=big, units.from_points(0.5), units.suffix()) {
+        if number_row(
+            ui,
+            "First line",
+            &mut first,
+            -big..=big,
+            units.from_points(0.5),
+            units.suffix(),
+        ) {
             p.first_line_indent = units.to_points(first);
         }
-        row(ui, "", |ui| ui.label(egui::RichText::new("Negative hangs the first line out to the left.").weak().small()));
+        row(ui, "", |ui| {
+            ui.label(
+                egui::RichText::new("Negative hangs the first line out to the left.")
+                    .weak()
+                    .small(),
+            )
+        });
         ui.add_space(6.0);
         ui.label(egui::RichText::new("Spacing").strong());
         number_row(ui, "Before", &mut p.space_before, 0.0..=720.0, 0.5, " pt");
@@ -159,26 +186,49 @@ impl ParagraphDialog {
             ListStyle::Numbered { .. } => ListKind::Numbering,
         };
         let before = kind;
-        choice(ui, "para_list", "Type", &mut kind, &[(ListKind::None, "None"), (ListKind::Bullets, "Bullets"), (ListKind::Numbering, "Numbering")]);
+        choice(
+            ui,
+            "para_list",
+            "Type",
+            &mut kind,
+            &[
+                (ListKind::None, "None"),
+                (ListKind::Bullets, "Bullets"),
+                (ListKind::Numbering, "Numbering"),
+            ],
+        );
         if kind != before {
             p.list_style = match kind {
                 ListKind::None => ListStyle::None,
-                ListKind::Bullets => ListStyle::Bullet { character: '•', indent: 18.0 },
-                ListKind::Numbering => ListStyle::Numbered { format: NumberFormat::Arabic, start: 1, indent: 18.0 },
+                ListKind::Bullets => ListStyle::Bullet {
+                    character: '•',
+                    indent: 18.0,
+                },
+                ListKind::Numbering => ListStyle::Numbered {
+                    format: NumberFormat::Arabic,
+                    start: 1,
+                    indent: 18.0,
+                },
             };
         }
         match &mut p.list_style {
             ListStyle::Bullet { character, indent } => {
                 row(ui, "Bullet", |ui| {
-                    egui::ComboBox::from_id_salt("para_bullet").selected_text(character.to_string()).show_ui(ui, |ui| {
-                        for b in BULLETS {
-                            ui.selectable_value(character, b, b.to_string());
-                        }
-                    });
+                    egui::ComboBox::from_id_salt("para_bullet")
+                        .selected_text(character.to_string())
+                        .show_ui(ui, |ui| {
+                            for b in BULLETS {
+                                ui.selectable_value(character, b, b.to_string());
+                            }
+                        });
                 });
                 number_row(ui, "Indent", indent, 0.0..=360.0, 0.5, " pt");
             }
-            ListStyle::Numbered { format, start, indent } => {
+            ListStyle::Numbered {
+                format,
+                start,
+                indent,
+            } => {
                 choice(
                     ui,
                     "para_number_format",
@@ -217,7 +267,8 @@ impl ParagraphDialog {
             line_spacing: (a.line_spacing != b.line_spacing).then_some(b.line_spacing),
             space_before: (a.space_before != b.space_before).then_some(b.space_before),
             space_after: (a.space_after != b.space_after).then_some(b.space_after),
-            first_line_indent: (a.first_line_indent != b.first_line_indent).then_some(b.first_line_indent),
+            first_line_indent: (a.first_line_indent != b.first_line_indent)
+                .then_some(b.first_line_indent),
             left_indent: (a.left_indent != b.left_indent).then_some(b.left_indent),
             right_indent: (a.right_indent != b.right_indent).then_some(b.right_indent),
             list_style: (a.list_style != b.list_style).then(|| b.list_style.clone()),
@@ -239,11 +290,18 @@ mod tests {
         assert!(dialog.patch().is_empty());
         dialog.work.space_after = 6.0;
         dialog.work.line_spacing = LineSpacing::Exact(20.0);
-        dialog.work.list_style = ListStyle::Numbered { format: NumberFormat::UpperRoman, start: 4, indent: 24.0 };
+        dialog.work.list_style = ListStyle::Numbered {
+            format: NumberFormat::UpperRoman,
+            start: 4,
+            indent: 24.0,
+        };
         let patch = dialog.patch();
         assert_eq!(patch.space_after, Some(6.0));
         assert_eq!(patch.line_spacing, Some(LineSpacing::Exact(20.0)));
-        assert!(matches!(patch.list_style, Some(ListStyle::Numbered { start: 4, .. })));
+        assert!(matches!(
+            patch.list_style,
+            Some(ListStyle::Numbered { start: 4, .. })
+        ));
         assert_eq!(patch.alignment, None);
     }
 }

@@ -266,8 +266,7 @@ impl GpuRenderer {
                         let color = color_array(&shadow.color, 1.0);
                         let map = tessellation::device_mapper(shadow_t, scale);
                         let lyon = tessellation::to_lyon(path, &map);
-                        let geo =
-                            tessellation::fill(&lyon, *fill_rule, &move |_| color)?;
+                        let geo = tessellation::fill(&lyon, *fill_rule, &move |_| color)?;
                         push_shape(&mut draws, geo, *clip);
                     }
                     let color = color_fn(paint, scale, 1.0);
@@ -296,13 +295,10 @@ impl GpuRenderer {
                         let color = color_array(&shadow.color, 1.0);
                         let map = tessellation::device_mapper(shadow_t, scale);
                         let lyon = tessellation::to_lyon(path, &map);
-                        let geo = tessellation::stroke(
-                            &lyon,
-                            device_width,
-                            *cap,
-                            *join,
-                            &move |_| color,
-                        )?;
+                        let geo =
+                            tessellation::stroke(&lyon, device_width, *cap, *join, &move |_| {
+                                color
+                            })?;
                         push_shape(&mut draws, geo, *clip);
                     }
                     let color = color_fn(paint, scale, 1.0);
@@ -335,13 +331,8 @@ impl GpuRenderer {
                     effects: _,
                 } => match texture::decode(source) {
                     Some(decoded) => {
-                        let quad = img::image_quad(
-                            dest,
-                            crop.as_ref(),
-                            *opacity,
-                            *transform,
-                            scale,
-                        );
+                        let quad =
+                            img::image_quad(dest, crop.as_ref(), *opacity, *transform, scale);
                         draws.push(Draw::Image {
                             vertices: quad.vertices.to_vec(),
                             indices: quad.indices.to_vec(),
@@ -354,8 +345,7 @@ impl GpuRenderer {
                         });
                     }
                     None => {
-                        let (vertices, indices) =
-                            img::placeholder_quad(dest, *transform, scale);
+                        let (vertices, indices) = img::placeholder_quad(dest, *transform, scale);
                         draws.push(Draw::Shape {
                             vertices: vertices.to_vec(),
                             indices: indices.to_vec(),

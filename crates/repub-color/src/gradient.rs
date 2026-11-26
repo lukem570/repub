@@ -148,6 +148,9 @@ mod tests {
     #[test]
     fn empty_and_single_stop() {
         assert_eq!(sample_stops(&[], 0.5), Color::TRANSPARENT);
-        assert_eq!(sample_stops(&[GradientStop::new(0.3, Color::GREEN)], 0.9), Color::GREEN);
+        assert_eq!(
+            sample_stops(&[GradientStop::new(0.3, Color::GREEN)], 0.9),
+            Color::GREEN
+        );
     }
 }

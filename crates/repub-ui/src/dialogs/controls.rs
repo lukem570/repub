@@ -6,7 +6,12 @@ use repub_color::Color;
 use crate::theme::colors;
 
 pub fn to_color32(c: &Color) -> Color32 {
-    Color32::from_rgba_unmultiplied((c.r * 255.0).round() as u8, (c.g * 255.0).round() as u8, (c.b * 255.0).round() as u8, (c.a * 255.0).round() as u8)
+    Color32::from_rgba_unmultiplied(
+        (c.r * 255.0).round() as u8,
+        (c.g * 255.0).round() as u8,
+        (c.b * 255.0).round() as u8,
+        (c.a * 255.0).round() as u8,
+    )
 }
 
 pub fn from_color32(c: Color32) -> Color {
@@ -17,7 +22,12 @@ pub fn from_color32(c: Color32) -> Color {
 /// A color swatch that opens egui's picker (with alpha). Returns true when it changed.
 pub fn color_edit(ui: &mut Ui, color: &mut Color) -> bool {
     let mut c = to_color32(color);
-    let changed = egui::color_picker::color_edit_button_srgba(ui, &mut c, egui::color_picker::Alpha::OnlyBlend).changed();
+    let changed = egui::color_picker::color_edit_button_srgba(
+        ui,
+        &mut c,
+        egui::color_picker::Alpha::OnlyBlend,
+    )
+    .changed();
     if changed {
         *color = from_color32(c);
     }
@@ -34,28 +44,59 @@ pub fn row<R>(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
 }
 
 /// A number field with a suffix and range. Returns true when it changed.
-pub fn number(ui: &mut Ui, value: &mut f64, range: std::ops::RangeInclusive<f64>, speed: f64, suffix: &str) -> bool {
-    ui.add(DragValue::new(value).range(range).speed(speed).max_decimals(2).suffix(suffix)).changed()
+pub fn number(
+    ui: &mut Ui,
+    value: &mut f64,
+    range: std::ops::RangeInclusive<f64>,
+    speed: f64,
+    suffix: &str,
+) -> bool {
+    ui.add(
+        DragValue::new(value)
+            .range(range)
+            .speed(speed)
+            .max_decimals(2)
+            .suffix(suffix),
+    )
+    .changed()
 }
 
 /// A labeled number field.
-pub fn number_row(ui: &mut Ui, label: &str, value: &mut f64, range: std::ops::RangeInclusive<f64>, speed: f64, suffix: &str) -> bool {
+pub fn number_row(
+    ui: &mut Ui,
+    label: &str,
+    value: &mut f64,
+    range: std::ops::RangeInclusive<f64>,
+    speed: f64,
+    suffix: &str,
+) -> bool {
     row(ui, label, |ui| number(ui, value, range, speed, suffix))
 }
 
 /// A labeled combo box over `options` (value, label). Returns true when the choice changed.
-pub fn choice<T: Copy + PartialEq>(ui: &mut Ui, id: &str, label: &str, value: &mut T, options: &[(T, &str)]) -> bool {
+pub fn choice<T: Copy + PartialEq>(
+    ui: &mut Ui,
+    id: &str,
+    label: &str,
+    value: &mut T,
+    options: &[(T, &str)],
+) -> bool {
     row(ui, label, |ui| {
-        let selected = options.iter().find(|(v, _)| v == value).map_or("", |(_, n)| *n);
+        let selected = options
+            .iter()
+            .find(|(v, _)| v == value)
+            .map_or("", |(_, n)| *n);
         let mut changed = false;
-        egui::ComboBox::from_id_salt(id).selected_text(selected).show_ui(ui, |ui| {
-            for (v, name) in options {
-                if ui.selectable_label(value == v, *name).clicked() && value != v {
-                    *value = *v;
-                    changed = true;
+        egui::ComboBox::from_id_salt(id)
+            .selected_text(selected)
+            .show_ui(ui, |ui| {
+                for (v, name) in options {
+                    if ui.selectable_label(value == v, *name).clicked() && value != v {
+                        *value = *v;
+                        changed = true;
+                    }
                 }
-            }
-        });
+            });
         changed
     })
 }
@@ -85,7 +126,10 @@ pub fn ok_cancel(ui: &mut Ui) -> Option<bool> {
             result = Some(false);
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+            if ui
+                .add(egui::Button::new("OK").fill(colors::accent()))
+                .clicked()
+            {
                 result = Some(true);
             }
         });

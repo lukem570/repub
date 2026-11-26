@@ -21,7 +21,11 @@ pub const FULLSCREEN_INSET: f32 = 8.0;
 /// Left inset of the Quick Access Toolbar: clear of the traffic lights when
 /// windowed, at the far left in full screen.
 pub fn toolbar_inset(fullscreen: bool) -> f32 {
-    if fullscreen { FULLSCREEN_INSET } else { metrics::TRAFFIC_LIGHTS_WIDTH }
+    if fullscreen {
+        FULLSCREEN_INSET
+    } else {
+        metrics::TRAFFIC_LIGHTS_WIDTH
+    }
 }
 
 /// Show the title row and return the Quick Access Toolbar actions clicked this frame.
@@ -37,7 +41,8 @@ pub fn show(ui: &mut egui::Ui, state: &AppState, toolbar_inset: f32) -> Vec<AppA
     }
     if drag.double_clicked() {
         let maximized = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
-        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!maximized));
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Maximized(!maximized));
     }
 
     // Centered document title
@@ -53,18 +58,57 @@ pub fn show(ui: &mut egui::Ui, state: &AppState, toolbar_inset: f32) -> Vec<AppA
     let mut x = rect.left() + toolbar_inset;
     let has_doc = state.has_document();
     let buttons = [
-        (Icon::Save, "Save", Some(shortcut("S")), "Save this publication.", AppAction::SaveDocument, has_doc),
-        (Icon::ArrowUndo, "Undo", Some(shortcut("Z")), "Undo the last action.", AppAction::Undo, state.history.can_undo()),
-        (Icon::ArrowRedo, "Redo", Some(shortcut("Shift+Z")), "Redo the last undone action.", AppAction::Redo, state.history.can_redo()),
+        (
+            Icon::Save,
+            "Save",
+            Some(shortcut("S")),
+            "Save this publication.",
+            AppAction::SaveDocument,
+            has_doc,
+        ),
+        (
+            Icon::ArrowUndo,
+            "Undo",
+            Some(shortcut("Z")),
+            "Undo the last action.",
+            AppAction::Undo,
+            state.history.can_undo(),
+        ),
+        (
+            Icon::ArrowRedo,
+            "Redo",
+            Some(shortcut("Shift+Z")),
+            "Redo the last undone action.",
+            AppAction::Redo,
+            state.history.can_redo(),
+        ),
     ];
     for (icon, title, keys, description, action, enabled) in buttons {
-        let button_rect = Rect::from_center_size(egui::pos2(x + 12.0, rect.center().y), Vec2::splat(24.0));
-        let response = ui.interact(button_rect, ui.id().with(title), if enabled { Sense::click() } else { Sense::hover() });
+        let button_rect =
+            Rect::from_center_size(egui::pos2(x + 12.0, rect.center().y), Vec2::splat(24.0));
+        let response = ui.interact(
+            button_rect,
+            ui.id().with(title),
+            if enabled {
+                Sense::click()
+            } else {
+                Sense::hover()
+            },
+        );
         if enabled && response.hovered() {
-            ui.painter().rect_filled(button_rect, metrics::ROUNDING, colors::hover());
+            ui.painter()
+                .rect_filled(button_rect, metrics::ROUNDING, colors::hover());
         }
-        let tint = if enabled { colors::text_primary() } else { colors::text_disabled() };
-        icon.paint(ui, Rect::from_center_size(button_rect.center(), Vec2::splat(16.0)), tint);
+        let tint = if enabled {
+            colors::text_primary()
+        } else {
+            colors::text_disabled()
+        };
+        icon.paint(
+            ui,
+            Rect::from_center_size(button_rect.center(), Vec2::splat(16.0)),
+            tint,
+        );
         let response = super_tooltip(response, title, keys.as_deref(), description);
         if enabled && response.clicked() {
             actions.push(action);

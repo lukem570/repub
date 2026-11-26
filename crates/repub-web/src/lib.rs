@@ -24,8 +24,6 @@
 //!
 //! The `Deploy to GitHub Pages` workflow publishes `dist/` on every push to `main`.
 
-
-
 #[cfg(target_arch = "wasm32")]
 mod app;
 #[cfg(target_arch = "wasm32")]
@@ -45,10 +43,10 @@ pub use app::WebApp;
 pub fn main() {
     // Set up panic hook for better error messages
     console_error_panic_hook::set_once();
-    
+
     // Initialize logging
     wasm_logger::init(wasm_logger::Config::default());
-    
+
     log::info!("Repub Web starting...");
 }
 
@@ -57,7 +55,7 @@ pub fn main() {
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<(), JsValue> {
     log::info!("Starting Repub in canvas: {}", canvas_id);
-    
+
     let web_options = eframe::WebOptions::default();
 
     let canvas = web_sys::window()

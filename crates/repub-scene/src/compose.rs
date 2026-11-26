@@ -78,12 +78,7 @@ struct Ctx<'a> {
     scheme: &'a ColorScheme,
 }
 
-fn compose_shape(
-    ctx: &Ctx<'_>,
-    shape: &Shape,
-    parent: Transform2D,
-    out: &mut Vec<Primitive>,
-) {
+fn compose_shape(ctx: &Ctx<'_>, shape: &Shape, parent: Transform2D, out: &mut Vec<Primitive>) {
     if !shape.common.visible {
         return;
     }
@@ -184,7 +179,13 @@ fn compose_auto_shape(
         });
     }
     if let Some(stroke) = &shape.line {
-        out.push(stroke_primitive(&geom_path, stroke, transform, None, Vec::new()));
+        out.push(stroke_primitive(
+            &geom_path,
+            stroke,
+            transform,
+            None,
+            Vec::new(),
+        ));
     }
 }
 
@@ -352,12 +353,7 @@ fn compose_table(
         let frame = Shape::text_frame_with_text(cell_layout.content_bounds, &text);
         let text_layouter = TextLayouter::new(ctx.fonts);
         if let Some(cell_text_layout) = text_layouter.layout_shape(&frame) {
-            emit_text_layout(
-                &cell_text_layout,
-                transform,
-                Some(cell_layout.bounds),
-                out,
-            );
+            emit_text_layout(&cell_text_layout, transform, Some(cell_layout.bounds), out);
         }
     }
 }
@@ -383,15 +379,39 @@ fn emit_table_borders(
         }
     };
 
-    edge(&data.borders.top, Point::new(b.x(), b.y()), Point::new(right, b.y()), out);
-    edge(&data.borders.bottom, Point::new(b.x(), bottom), Point::new(right, bottom), out);
-    edge(&data.borders.left, Point::new(b.x(), b.y()), Point::new(b.x(), bottom), out);
-    edge(&data.borders.right, Point::new(right, b.y()), Point::new(right, bottom), out);
+    edge(
+        &data.borders.top,
+        Point::new(b.x(), b.y()),
+        Point::new(right, b.y()),
+        out,
+    );
+    edge(
+        &data.borders.bottom,
+        Point::new(b.x(), bottom),
+        Point::new(right, bottom),
+        out,
+    );
+    edge(
+        &data.borders.left,
+        Point::new(b.x(), b.y()),
+        Point::new(b.x(), bottom),
+        out,
+    );
+    edge(
+        &data.borders.right,
+        Point::new(right, b.y()),
+        Point::new(right, bottom),
+        out,
+    );
 
     // Inner vertical lines between columns.
     if data.borders.inner_vertical.is_some() {
         let mut x = b.x();
-        for w in layout.col_widths.iter().take(layout.col_widths.len().saturating_sub(1)) {
+        for w in layout
+            .col_widths
+            .iter()
+            .take(layout.col_widths.len().saturating_sub(1))
+        {
             x += w;
             edge(
                 &data.borders.inner_vertical,
@@ -404,7 +424,11 @@ fn emit_table_borders(
     // Inner horizontal lines between rows.
     if data.borders.inner_horizontal.is_some() {
         let mut y = b.y();
-        for h in layout.row_heights.iter().take(layout.row_heights.len().saturating_sub(1)) {
+        for h in layout
+            .row_heights
+            .iter()
+            .take(layout.row_heights.len().saturating_sub(1))
+        {
             y += h;
             edge(
                 &data.borders.inner_horizontal,
@@ -423,7 +447,10 @@ fn compose_line(
     effects: &[SceneEffect],
     out: &mut Vec<Primitive>,
 ) {
-    let stroke = shape.line.clone().unwrap_or_else(|| Stroke::solid(Color::BLACK, 1.0));
+    let stroke = shape
+        .line
+        .clone()
+        .unwrap_or_else(|| Stroke::solid(Color::BLACK, 1.0));
 
     // The line path: start, control points, end.
     let mut path = GeomPath::new();
@@ -432,7 +459,13 @@ fn compose_line(
         path.line_to(*cp);
     }
     path.line_to(data.end);
-    out.push(stroke_primitive(&path, &stroke, transform, None, effects.to_vec()));
+    out.push(stroke_primitive(
+        &path,
+        &stroke,
+        transform,
+        None,
+        effects.to_vec(),
+    ));
 
     // Arrowheads, resolved to small filled triangles/shapes.
     let dir_end = direction(prev_point(data, false), data.end);
@@ -440,7 +473,13 @@ fn compose_line(
     if let Some(prim) = arrowhead(data.end, dir_end, &data.end_ending, &stroke, transform) {
         out.push(prim);
     }
-    if let Some(prim) = arrowhead(data.start, dir_start, &data.start_ending, &stroke, transform) {
+    if let Some(prim) = arrowhead(
+        data.start,
+        dir_start,
+        &data.start_ending,
+        &stroke,
+        transform,
+    ) {
         out.push(prim);
     }
 }
@@ -491,10 +530,7 @@ fn arrowhead(
             path.line_to(l);
             if ending.style == LineEndingStyle::StealthArrow {
                 // Notch the back for a stealth look.
-                let notch = Point::new(
-                    back.x + dir.dx * size * 0.3,
-                    back.y + dir.dy * size * 0.3,
-                );
+                let notch = Point::new(back.x + dir.dx * size * 0.3, back.y + dir.dy * size * 0.3);
                 path.line_to(notch);
             }
             path.line_to(r);
@@ -616,10 +652,7 @@ fn map_effects(effects: &Effects, _scheme: &ColorScheme) -> Vec<SceneEffect> {
             color: g.color,
             radius: g.radius,
             choke: g.choke,
-            from_center: matches!(
-                g.source,
-                repub_model::styles::InnerGlowSource::Center
-            ),
+            from_center: matches!(g.source, repub_model::styles::InnerGlowSource::Center),
         });
     }
     if let Some(r) = &effects.reflection {

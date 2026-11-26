@@ -150,7 +150,8 @@ fn resolve_glyph_id(face: &ttf_parser::Face, g: &PositionedGlyph) -> Option<ttf_
 fn merge(into: &mut Tessellation, other: Tessellation) {
     let base = into.vertices.len() as u32;
     into.vertices.extend(other.vertices);
-    into.indices.extend(other.indices.into_iter().map(|i| i + base));
+    into.indices
+        .extend(other.indices.into_iter().map(|i| i + base));
 }
 
 /// Builds a [`Path`] from a glyph outline, scaling font units to points and

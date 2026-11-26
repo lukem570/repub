@@ -29,7 +29,12 @@ fn end_of(cmd: &PathCommand) -> Option<Point> {
 impl Path {
     /// Index of the command that holds anchor `index`.
     pub fn anchor_command(&self, index: usize) -> Option<usize> {
-        self.commands.iter().enumerate().filter(|(_, c)| !matches!(c, PathCommand::Close)).nth(index).map(|(i, _)| i)
+        self.commands
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| !matches!(c, PathCommand::Close))
+            .nth(index)
+            .map(|(i, _)| i)
     }
 
     /// The point a command starts from, and where its subpath started.
@@ -52,17 +57,47 @@ impl Path {
     /// segment leaving it, each with the anchor it hangs from.
     pub fn control_handles(&self, index: usize) -> Vec<(ControlRef, Point, Point)> {
         let mut out = Vec::new();
-        let Some(i) = self.anchor_command(index) else { return out };
+        let Some(i) = self.anchor_command(index) else {
+            return out;
+        };
         let anchor = end_of(&self.commands[i]).unwrap_or_default();
         match self.commands[i] {
-            PathCommand::QuadTo { control, .. } => out.push((ControlRef { command: i, which: 0 }, control, anchor)),
-            PathCommand::CubicTo { control2, .. } => out.push((ControlRef { command: i, which: 2 }, control2, anchor)),
+            PathCommand::QuadTo { control, .. } => out.push((
+                ControlRef {
+                    command: i,
+                    which: 0,
+                },
+                control,
+                anchor,
+            )),
+            PathCommand::CubicTo { control2, .. } => out.push((
+                ControlRef {
+                    command: i,
+                    which: 2,
+                },
+                control2,
+                anchor,
+            )),
             _ => {}
         }
         if let Some(next) = self.commands.get(i + 1) {
             match *next {
-                PathCommand::QuadTo { control, .. } => out.push((ControlRef { command: i + 1, which: 0 }, control, anchor)),
-                PathCommand::CubicTo { control1, .. } => out.push((ControlRef { command: i + 1, which: 1 }, control1, anchor)),
+                PathCommand::QuadTo { control, .. } => out.push((
+                    ControlRef {
+                        command: i + 1,
+                        which: 0,
+                    },
+                    control,
+                    anchor,
+                )),
+                PathCommand::CubicTo { control1, .. } => out.push((
+                    ControlRef {
+                        command: i + 1,
+                        which: 1,
+                    },
+                    control1,
+                    anchor,
+                )),
                 _ => {}
             }
         }
@@ -82,17 +117,32 @@ impl Path {
 
     /// Whether the segment arriving at anchor `index` is a curve.
     pub fn segment_is_curved(&self, index: usize) -> bool {
-        self.anchor_command(index).is_some_and(|i| matches!(self.commands[i], PathCommand::QuadTo { .. } | PathCommand::CubicTo { .. }))
+        self.anchor_command(index).is_some_and(|i| {
+            matches!(
+                self.commands[i],
+                PathCommand::QuadTo { .. } | PathCommand::CubicTo { .. }
+            )
+        })
     }
 
     /// Make the segment arriving at anchor `index` a curve (handles a third of the way along it) or
     /// a straight line.
     pub fn set_segment_curved(&mut self, index: usize, curved: bool) -> bool {
-        let Some(i) = self.anchor_command(index) else { return false };
-        let Some((start, _)) = self.start_of(i) else { return false };
+        let Some(i) = self.anchor_command(index) else {
+            return false;
+        };
+        let Some((start, _)) = self.start_of(i) else {
+            return false;
+        };
         let replacement = match (self.commands[i], curved) {
-            (PathCommand::LineTo(end), true) => PathCommand::CubicTo { control1: lerp(start, end, 1.0 / 3.0), control2: lerp(start, end, 2.0 / 3.0), end },
-            (PathCommand::QuadTo { end, .. } | PathCommand::CubicTo { end, .. }, false) => PathCommand::LineTo(end),
+            (PathCommand::LineTo(end), true) => PathCommand::CubicTo {
+                control1: lerp(start, end, 1.0 / 3.0),
+                control2: lerp(start, end, 2.0 / 3.0),
+                end,
+            },
+            (PathCommand::QuadTo { end, .. } | PathCommand::CubicTo { end, .. }, false) => {
+                PathCommand::LineTo(end)
+            }
             _ => return false,
         };
         self.commands[i] = replacement;
@@ -104,10 +154,14 @@ impl Path {
         if self.anchor_points().len() <= 2 {
             return false;
         }
-        let Some(i) = self.anchor_command(index) else { return false };
+        let Some(i) = self.anchor_command(index) else {
+            return false;
+        };
         if matches!(self.commands[i], PathCommand::MoveTo(_)) {
             // The next anchor becomes the start of the subpath
-            let Some(next_end) = self.commands.get(i + 1).and_then(end_of) else { return false };
+            let Some(next_end) = self.commands.get(i + 1).and_then(end_of) else {
+                return false;
+            };
             if matches!(self.commands[i + 1], PathCommand::MoveTo(_)) {
                 return false;
             }
@@ -128,14 +182,26 @@ impl Path {
             if matches!(cmd, PathCommand::MoveTo(_)) {
                 continue;
             }
-            let Some((start, subpath_start)) = self.start_of(i) else { continue };
+            let Some((start, subpath_start)) = self.start_of(i) else {
+                continue;
+            };
             let at = |t: f64| -> Point {
                 match *cmd {
                     PathCommand::LineTo(end) => lerp(start, end, t),
                     PathCommand::Close => lerp(start, subpath_start, t),
-                    PathCommand::QuadTo { control, end } => lerp(lerp(start, control, t), lerp(control, end, t), t),
-                    PathCommand::CubicTo { control1, control2, end } => {
-                        let (a, b, c) = (lerp(start, control1, t), lerp(control1, control2, t), lerp(control2, end, t));
+                    PathCommand::QuadTo { control, end } => {
+                        lerp(lerp(start, control, t), lerp(control, end, t), t)
+                    }
+                    PathCommand::CubicTo {
+                        control1,
+                        control2,
+                        end,
+                    } => {
+                        let (a, b, c) = (
+                            lerp(start, control1, t),
+                            lerp(control1, control2, t),
+                            lerp(control2, end, t),
+                        );
                         lerp(lerp(a, b, t), lerp(b, c, t), t)
                     }
                     PathCommand::MoveTo(q) => q,
@@ -146,7 +212,11 @@ impl Path {
                 let (a, b) = (at(t0), at(t1));
                 let (dx, dy) = (b.x - a.x, b.y - a.y);
                 let len_sq = dx * dx + dy * dy;
-                let k = if len_sq > 0.0 { (((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq).clamp(0.0, 1.0) } else { 0.0 };
+                let k = if len_sq > 0.0 {
+                    (((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
                 let q = Point::new(a.x + k * dx, a.y + k * dy);
                 let d = ((p.x - q.x).powi(2) + (p.y - q.y).powi(2)).sqrt();
                 if d <= tolerance && best.as_ref().map_or(true, |b| d < b.3) {
@@ -162,24 +232,56 @@ impl Path {
         let (start, subpath_start) = self.start_of(command)?;
         let t = t.clamp(0.01, 0.99);
         let (first, second) = match *self.commands.get(command)? {
-            PathCommand::LineTo(end) => (PathCommand::LineTo(lerp(start, end, t)), PathCommand::LineTo(end)),
-            PathCommand::Close => (PathCommand::LineTo(lerp(start, subpath_start, t)), PathCommand::Close),
+            PathCommand::LineTo(end) => (
+                PathCommand::LineTo(lerp(start, end, t)),
+                PathCommand::LineTo(end),
+            ),
+            PathCommand::Close => (
+                PathCommand::LineTo(lerp(start, subpath_start, t)),
+                PathCommand::Close,
+            ),
             PathCommand::QuadTo { control, end } => {
                 let (a, b) = (lerp(start, control, t), lerp(control, end, t));
                 let m = lerp(a, b, t);
-                (PathCommand::QuadTo { control: a, end: m }, PathCommand::QuadTo { control: b, end })
+                (
+                    PathCommand::QuadTo { control: a, end: m },
+                    PathCommand::QuadTo { control: b, end },
+                )
             }
-            PathCommand::CubicTo { control1, control2, end } => {
-                let (a, b, c) = (lerp(start, control1, t), lerp(control1, control2, t), lerp(control2, end, t));
+            PathCommand::CubicTo {
+                control1,
+                control2,
+                end,
+            } => {
+                let (a, b, c) = (
+                    lerp(start, control1, t),
+                    lerp(control1, control2, t),
+                    lerp(control2, end, t),
+                );
                 let (d, e) = (lerp(a, b, t), lerp(b, c, t));
                 let m = lerp(d, e, t);
-                (PathCommand::CubicTo { control1: a, control2: d, end: m }, PathCommand::CubicTo { control1: e, control2: c, end })
+                (
+                    PathCommand::CubicTo {
+                        control1: a,
+                        control2: d,
+                        end: m,
+                    },
+                    PathCommand::CubicTo {
+                        control1: e,
+                        control2: c,
+                        end,
+                    },
+                )
             }
             PathCommand::MoveTo(_) => return None,
         };
         self.commands[command] = second;
         self.commands.insert(command, first);
-        self.commands[..=command].iter().filter(|c| !matches!(c, PathCommand::Close)).count().checked_sub(1)
+        self.commands[..=command]
+            .iter()
+            .filter(|c| !matches!(c, PathCommand::Close))
+            .count()
+            .checked_sub(1)
     }
 }
 
@@ -188,13 +290,21 @@ mod tests {
     use super::*;
 
     fn square() -> Path {
-        Path::builder().move_to(0.0, 0.0).line_to(10.0, 0.0).line_to(10.0, 10.0).line_to(0.0, 10.0).close().build()
+        Path::builder()
+            .move_to(0.0, 0.0)
+            .line_to(10.0, 0.0)
+            .line_to(10.0, 10.0)
+            .line_to(0.0, 10.0)
+            .close()
+            .build()
     }
 
     #[test]
     fn a_point_can_be_added_on_a_segment_and_removed_again() {
         let mut path = square();
-        let (command, t, on) = path.nearest_segment(Point::new(5.0, 1.0), 3.0).expect("near the top edge");
+        let (command, t, on) = path
+            .nearest_segment(Point::new(5.0, 1.0), 3.0)
+            .expect("near the top edge");
         assert!((on.y).abs() < 1e-9 && (t - 0.5).abs() < 0.05);
         let index = path.split_segment(command, t).expect("anchor");
         assert_eq!(path.anchor_points().len(), 5);
@@ -206,7 +316,9 @@ mod tests {
     #[test]
     fn the_closing_segment_can_be_split() {
         let mut path = square();
-        let (command, t, _) = path.nearest_segment(Point::new(0.5, 5.0), 3.0).expect("left edge");
+        let (command, t, _) = path
+            .nearest_segment(Point::new(0.5, 5.0), 3.0)
+            .expect("left edge");
         assert!(matches!(path.commands[command], PathCommand::Close));
         path.split_segment(command, t).unwrap();
         assert_eq!(path.anchor_points().len(), 5);
@@ -220,7 +332,11 @@ mod tests {
         assert!(path.set_segment_curved(1, true));
         assert!(path.segment_is_curved(1));
         let handles = path.control_handles(1);
-        assert_eq!(handles.len(), 1, "the segment arriving at anchor 1, and a line leaves it");
+        assert_eq!(
+            handles.len(),
+            1,
+            "the segment arriving at anchor 1, and a line leaves it"
+        );
         assert!(path.move_control(handles[0].0, Point::new(9.0, -4.0)));
         assert!(path.control_handles(1)[0].1.y < 0.0);
         assert!(path.set_segment_curved(1, false));
@@ -229,7 +345,11 @@ mod tests {
 
     #[test]
     fn splitting_a_curve_keeps_its_shape_through_the_new_point() {
-        let mut path = Path::builder().move_to(0.0, 0.0).cubic_to(0.0, 10.0, 10.0, 10.0, 10.0, 0.0).close().build();
+        let mut path = Path::builder()
+            .move_to(0.0, 0.0)
+            .cubic_to(0.0, 10.0, 10.0, 10.0, 10.0, 0.0)
+            .close()
+            .build();
         let index = path.split_segment(1, 0.5).unwrap();
         let mid = path.anchor_points()[index];
         assert!((mid.x - 5.0).abs() < 1e-9 && (mid.y - 7.5).abs() < 1e-9);

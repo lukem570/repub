@@ -68,12 +68,36 @@ struct BlankPreset {
 }
 
 const BLANK_PRESETS: &[BlankPreset] = &[
-    BlankPreset { label: "Blank 8.5 x 11\"", size: PageSize::Letter, orientation: PageOrientation::Portrait },
-    BlankPreset { label: "Blank 11 x 8.5\"", size: PageSize::Letter, orientation: PageOrientation::Landscape },
-    BlankPreset { label: "A4 (210 x 297 mm)", size: PageSize::A4, orientation: PageOrientation::Portrait },
-    BlankPreset { label: "A5 (148 x 210 mm)", size: PageSize::A5, orientation: PageOrientation::Portrait },
-    BlankPreset { label: "Legal 8.5 x 14\"", size: PageSize::Legal, orientation: PageOrientation::Portrait },
-    BlankPreset { label: "Tabloid 11 x 17\"", size: PageSize::Tabloid, orientation: PageOrientation::Portrait },
+    BlankPreset {
+        label: "Blank 8.5 x 11\"",
+        size: PageSize::Letter,
+        orientation: PageOrientation::Portrait,
+    },
+    BlankPreset {
+        label: "Blank 11 x 8.5\"",
+        size: PageSize::Letter,
+        orientation: PageOrientation::Landscape,
+    },
+    BlankPreset {
+        label: "A4 (210 x 297 mm)",
+        size: PageSize::A4,
+        orientation: PageOrientation::Portrait,
+    },
+    BlankPreset {
+        label: "A5 (148 x 210 mm)",
+        size: PageSize::A5,
+        orientation: PageOrientation::Portrait,
+    },
+    BlankPreset {
+        label: "Legal 8.5 x 14\"",
+        size: PageSize::Legal,
+        orientation: PageOrientation::Portrait,
+    },
+    BlankPreset {
+        label: "Tabloid 11 x 17\"",
+        size: PageSize::Tabloid,
+        orientation: PageOrientation::Portrait,
+    },
 ];
 
 /// Start screen and Backstage view state.
@@ -126,7 +150,11 @@ impl StartScreen {
     }
 
     /// Show the start screen in `ui`, filling its available area.
-    pub fn show_start(&mut self, ui: &mut egui::Ui, recent: &[PathBuf]) -> Option<StartScreenAction> {
+    pub fn show_start(
+        &mut self,
+        ui: &mut egui::Ui,
+        recent: &[PathBuf],
+    ) -> Option<StartScreenAction> {
         if matches!(self.page, StartPage::Info) {
             self.page = StartPage::Home;
         }
@@ -173,11 +201,14 @@ impl StartScreen {
         recent: &[PathBuf],
         info: Option<&DocumentInfo>,
     ) -> Option<StartScreenAction> {
-        let rail_rect = Rect::from_min_max(rect.min, Pos2::new(rect.left() + RAIL_WIDTH, rect.bottom()));
+        let rail_rect =
+            Rect::from_min_max(rect.min, Pos2::new(rect.left() + RAIL_WIDTH, rect.bottom()));
         let body_rect = Rect::from_min_max(Pos2::new(rail_rect.right(), rect.top()), rect.max);
 
-        ui.painter().rect_filled(rail_rect, 0.0, colors::backstage_rail());
-        ui.painter().rect_filled(body_rect, 0.0, colors::backstage_body());
+        ui.painter()
+            .rect_filled(rail_rect, 0.0, colors::backstage_rail());
+        ui.painter()
+            .rect_filled(body_rect, 0.0, colors::backstage_body());
 
         let mut action = None;
 
@@ -216,7 +247,12 @@ impl StartScreen {
         action
     }
 
-    fn rail(&mut self, ui: &mut egui::Ui, recent: &[PathBuf], backstage: bool) -> Option<StartScreenAction> {
+    fn rail(
+        &mut self,
+        ui: &mut egui::Ui,
+        recent: &[PathBuf],
+        backstage: bool,
+    ) -> Option<StartScreenAction> {
         let mut action = None;
 
         if backstage {
@@ -252,7 +288,8 @@ impl StartScreen {
             }
         } else {
             ui.add_space(22.0);
-            let (title_rect, _) = ui.allocate_exact_size(Vec2::new(RAIL_WIDTH, 40.0), Sense::hover());
+            let (title_rect, _) =
+                ui.allocate_exact_size(Vec2::new(RAIL_WIDTH, 40.0), Sense::hover());
             ui.painter().text(
                 Pos2::new(title_rect.left() + RAIL_TEXT_INSET, title_rect.center().y),
                 Align2::LEFT_CENTER,
@@ -304,11 +341,14 @@ fn file_name(path: &Path) -> String {
 }
 
 fn parent_dir(path: &Path) -> String {
-    path.parent().map(|p| p.display().to_string()).unwrap_or_default()
+    path.parent()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default()
 }
 
 fn rail_item(ui: &mut egui::Ui, label: &str, selected: bool) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(RAIL_WIDTH, RAIL_ITEM_HEIGHT), Sense::click());
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(RAIL_WIDTH, RAIL_ITEM_HEIGHT), Sense::click());
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     let fill = if selected {
         Some(colors::backstage_rail_selected())
@@ -336,12 +376,19 @@ fn rail_recent_item(ui: &mut egui::Ui, path: &Path) -> egui::Response {
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(path.display().to_string());
     if response.hovered() {
-        ui.painter().rect_filled(rect, 0.0, colors::backstage_rail_hover());
+        ui.painter()
+            .rect_filled(rect, 0.0, colors::backstage_rail_hover());
     }
-    let icon = Rect::from_min_size(Pos2::new(rect.left() + 14.0, rect.center().y - 9.0), Vec2::new(14.0, 18.0));
+    let icon = Rect::from_min_size(
+        Pos2::new(rect.left() + 14.0, rect.center().y - 9.0),
+        Vec2::new(14.0, 18.0),
+    );
     draw_doc_glyph(ui.painter(), icon, Color32::WHITE, colors::backstage_rail());
     let text_x = icon.right() + 8.0;
-    let clip = Rect::from_min_max(Pos2::new(text_x, rect.top()), Pos2::new(rect.right() - 6.0, rect.bottom()));
+    let clip = Rect::from_min_max(
+        Pos2::new(text_x, rect.top()),
+        Pos2::new(rect.right() - 6.0, rect.bottom()),
+    );
     let painter = ui.painter().with_clip_rect(clip);
     painter.text(
         Pos2::new(text_x, rect.top() + 12.0),
@@ -371,7 +418,9 @@ fn rail_divider(ui: &mut egui::Ui) {
 
 fn back_button(ui: &mut egui::Ui) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(RAIL_WIDTH, 44.0), Sense::click());
-    let response = response.on_hover_cursor(CursorIcon::PointingHand).on_hover_text("Back");
+    let response = response
+        .on_hover_cursor(CursorIcon::PointingHand)
+        .on_hover_text("Back");
     let center = Pos2::new(rect.left() + 18.0 + 18.0, rect.center().y);
     let painter = ui.painter();
     if response.hovered() {
@@ -379,29 +428,57 @@ fn back_button(ui: &mut egui::Ui) -> egui::Response {
     }
     let stroke = Stroke::new(1.5, Color32::WHITE);
     painter.circle_stroke(center, 17.0, stroke);
-    painter.line_segment([center + Vec2::new(-8.0, 0.0), center + Vec2::new(8.0, 0.0)], stroke);
-    painter.line_segment([center + Vec2::new(-8.0, 0.0), center + Vec2::new(-2.0, -6.0)], stroke);
-    painter.line_segment([center + Vec2::new(-8.0, 0.0), center + Vec2::new(-2.0, 6.0)], stroke);
+    painter.line_segment(
+        [center + Vec2::new(-8.0, 0.0), center + Vec2::new(8.0, 0.0)],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            center + Vec2::new(-8.0, 0.0),
+            center + Vec2::new(-2.0, -6.0),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [center + Vec2::new(-8.0, 0.0), center + Vec2::new(-2.0, 6.0)],
+        stroke,
+    );
     response
 }
 
 fn page_heading(ui: &mut egui::Ui, text: &str) {
-    ui.label(egui::RichText::new(text).font(FontId::proportional(34.0)).color(colors::text_primary()));
+    ui.label(
+        egui::RichText::new(text)
+            .font(FontId::proportional(34.0))
+            .color(colors::text_primary()),
+    );
     ui.add_space(18.0);
 }
 
 fn section_heading(ui: &mut egui::Ui, text: &str) {
-    ui.label(egui::RichText::new(text).font(FontId::proportional(17.0)).color(colors::text_primary()));
+    ui.label(
+        egui::RichText::new(text)
+            .font(FontId::proportional(17.0))
+            .color(colors::text_primary()),
+    );
     ui.add_space(10.0);
 }
 
 fn link(ui: &mut egui::Ui, text: &str) -> egui::Response {
-    let galley = ui.painter().layout_no_wrap(text.to_owned(), FontId::proportional(13.0), colors::accent());
+    let galley = ui.painter().layout_no_wrap(
+        text.to_owned(),
+        FontId::proportional(13.0),
+        colors::accent(),
+    );
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::click());
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     ui.painter().galley(rect.min, galley, colors::accent());
     if response.hovered() {
-        ui.painter().hline(rect.x_range(), rect.bottom(), Stroke::new(1.0, colors::accent()));
+        ui.painter().hline(
+            rect.x_range(),
+            rect.bottom(),
+            Stroke::new(1.0, colors::accent()),
+        );
     }
     response
 }
@@ -436,7 +513,10 @@ fn blank_tiles(ui: &mut egui::Ui) -> Option<StartScreenAction> {
 
 /// A page-shaped tile: white square with a dog-eared page drawn inside, label beneath.
 fn blank_tile(ui: &mut egui::Ui, label: &str, aspect: f32) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(TILE_SIZE, TILE_SIZE + TILE_LABEL_HEIGHT), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(TILE_SIZE, TILE_SIZE + TILE_LABEL_HEIGHT),
+        Sense::click(),
+    );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     let painter = ui.painter();
     let hovered = response.hovered();
@@ -450,7 +530,11 @@ fn blank_tile(ui: &mut egui::Ui, label: &str, aspect: f32) -> egui::Response {
     painter.rect(tile, Rounding::ZERO, fill, Stroke::new(1.0, border));
 
     let max = TILE_SIZE - 30.0;
-    let (pw, ph) = if aspect >= 1.0 { (max, max / aspect) } else { (max * aspect, max) };
+    let (pw, ph) = if aspect >= 1.0 {
+        (max, max / aspect)
+    } else {
+        (max * aspect, max)
+    };
     let page = Rect::from_center_size(tile.center(), Vec2::new(pw, ph));
     let fold = 14.0_f32.min(pw * 0.25);
     let outline = Color32::from_rgb(0x7A, 0x7A, 0x7A);
@@ -476,7 +560,12 @@ fn blank_tile(ui: &mut egui::Ui, label: &str, aspect: f32) -> egui::Response {
         stroke,
     ));
 
-    let galley = painter.layout(label.to_owned(), FontId::proportional(12.0), colors::text_primary(), TILE_SIZE);
+    let galley = painter.layout(
+        label.to_owned(),
+        FontId::proportional(12.0),
+        colors::text_primary(),
+        TILE_SIZE,
+    );
     let pos = Pos2::new(tile.center().x - galley.size().x / 2.0, tile.bottom() + 8.0);
     painter.galley(pos, galley, colors::text_primary());
 
@@ -525,14 +614,22 @@ fn recent_list(ui: &mut egui::Ui, recent: &[PathBuf]) -> Option<StartScreenActio
         FontId::proportional(12.0),
         colors::text_secondary(),
     );
-    ui.painter().hline(hdr.x_range(), hdr.bottom(), Stroke::new(1.0, colors::border()));
+    ui.painter().hline(
+        hdr.x_range(),
+        hdr.bottom(),
+        Stroke::new(1.0, colors::border()),
+    );
     for path in recent {
-        let (rect, response) = ui.allocate_exact_size(Vec2::new(width, RECENT_ROW_HEIGHT), Sense::click());
+        let (rect, response) =
+            ui.allocate_exact_size(Vec2::new(width, RECENT_ROW_HEIGHT), Sense::click());
         let response = response.on_hover_cursor(CursorIcon::PointingHand);
         if response.hovered() {
             ui.painter().rect_filled(rect, 0.0, colors::tile_hover());
         }
-        let icon = Rect::from_min_size(Pos2::new(rect.left() + 14.0, rect.center().y - 11.0), Vec2::new(18.0, 22.0));
+        let icon = Rect::from_min_size(
+            Pos2::new(rect.left() + 14.0, rect.center().y - 11.0),
+            Vec2::new(18.0, 22.0),
+        );
         draw_doc_glyph(ui.painter(), icon, colors::accent(), Color32::WHITE);
         let painter = ui.painter().with_clip_rect(rect);
         painter.text(
@@ -582,7 +679,13 @@ fn body_open(ui: &mut egui::Ui, recent: &[PathBuf]) -> Option<StartScreenAction>
     if response.hovered() {
         ui.painter().rect_filled(rect, 0.0, colors::tile_hover());
     }
-    draw_folder_glyph(ui.painter(), Rect::from_min_size(Pos2::new(rect.left() + 12.0, rect.center().y - 10.0), Vec2::new(26.0, 20.0)));
+    draw_folder_glyph(
+        ui.painter(),
+        Rect::from_min_size(
+            Pos2::new(rect.left() + 12.0, rect.center().y - 10.0),
+            Vec2::new(26.0, 20.0),
+        ),
+    );
     ui.painter().text(
         Pos2::new(rect.left() + 52.0, rect.center().y),
         Align2::LEFT_CENTER,
@@ -607,40 +710,72 @@ fn draw_folder_glyph(painter: &egui::Painter, rect: Rect) {
     painter.rect_filled(tab, 1.0, color);
     let body = Rect::from_min_max(Pos2::new(rect.left(), rect.top() + 3.0), rect.max);
     painter.rect_filled(body, 1.0, color);
-    painter.rect_stroke(body, 1.0, Stroke::new(1.0, Color32::from_rgb(0xC4, 0x92, 0x28)));
+    painter.rect_stroke(
+        body,
+        1.0,
+        Stroke::new(1.0, Color32::from_rgb(0xC4, 0x92, 0x28)),
+    );
 }
 
 fn body_info(ui: &mut egui::Ui, info: &DocumentInfo) -> Option<StartScreenAction> {
     page_heading(ui, "Info");
-    ui.label(egui::RichText::new(&info.name).font(FontId::proportional(20.0)).color(colors::text_primary()));
+    ui.label(
+        egui::RichText::new(&info.name)
+            .font(FontId::proportional(20.0))
+            .color(colors::text_primary()),
+    );
     let location = info
         .path
         .as_ref()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|| "Not saved yet".to_owned());
-    ui.label(egui::RichText::new(location).font(FontId::proportional(12.0)).color(colors::text_secondary()));
+    ui.label(
+        egui::RichText::new(location)
+            .font(FontId::proportional(12.0))
+            .color(colors::text_secondary()),
+    );
     ui.add_space(24.0);
 
     section_heading(ui, "Publication Properties");
     let (w, h) = info.page_size;
     let rows = [
         ("Pages", info.pages.to_string()),
-        ("Page size", format!("{:.2} x {:.2} in.", w / 72.0, h / 72.0)),
-        ("Status", if info.dirty { "Unsaved changes".to_owned() } else { "Saved".to_owned() }),
+        (
+            "Page size",
+            format!("{:.2} x {:.2} in.", w / 72.0, h / 72.0),
+        ),
+        (
+            "Status",
+            if info.dirty {
+                "Unsaved changes".to_owned()
+            } else {
+                "Saved".to_owned()
+            },
+        ),
     ];
     egui::Grid::new("backstage_info_props")
         .num_columns(2)
         .spacing(Vec2::new(48.0, 8.0))
         .show(ui, |ui| {
             for (k, v) in rows {
-                ui.label(egui::RichText::new(k).font(FontId::proportional(13.0)).color(colors::text_primary()));
-                ui.label(egui::RichText::new(v).font(FontId::proportional(13.0)).color(colors::text_secondary()));
+                ui.label(
+                    egui::RichText::new(k)
+                        .font(FontId::proportional(13.0))
+                        .color(colors::text_primary()),
+                );
+                ui.label(
+                    egui::RichText::new(v)
+                        .font(FontId::proportional(13.0))
+                        .color(colors::text_secondary()),
+                );
                 ui.end_row();
             }
         });
     ui.add_space(16.0);
     if ui.button("Document Properties…").clicked() {
-        return Some(StartScreenAction::Command(AppAction::ShowDocumentProperties));
+        return Some(StartScreenAction::Command(
+            AppAction::ShowDocumentProperties,
+        ));
     }
     None
 }

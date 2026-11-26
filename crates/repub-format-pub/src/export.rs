@@ -428,7 +428,11 @@ fn encode_custom_path(
                 segments.push(0x0000); // msopathLineTo
                 current = *p;
             }
-            PathCommand::CubicTo { control1, control2, end } => {
+            PathCommand::CubicTo {
+                control1,
+                control2,
+                end,
+            } => {
                 vertices.push(to_shape(*control1));
                 vertices.push(to_shape(*control2));
                 vertices.push(to_shape(*end));
@@ -469,9 +473,7 @@ fn encode_custom_path(
 /// Contents chunk and sequence number).
 fn count_shape_chunks(obj: &Object) -> usize {
     match obj {
-        Object::Group(group) => {
-            1 + group.children.iter().map(count_shape_chunks).sum::<usize>()
-        }
+        Object::Group(group) => 1 + group.children.iter().map(count_shape_chunks).sum::<usize>(),
         // A table is its own chunk plus a following CELLS chunk.
         Object::Table(_) => 2,
         _ => 1,
@@ -746,7 +748,8 @@ impl<'a> PubExporter<'a> {
         let escher_delay_data = self.build_escher_delay()?;
 
         // Write Contents
-        let mut stream = cfb.create_stream("/Contents")
+        let mut stream = cfb
+            .create_stream("/Contents")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
         stream.write_all(&contents_data)?;
         stream.flush()?;
@@ -757,7 +760,8 @@ impl<'a> PubExporter<'a> {
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
         cfb.create_storage("/Quill/QuillSub")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
-        let mut stream = cfb.create_stream("/Quill/QuillSub/CONTENTS")
+        let mut stream = cfb
+            .create_stream("/Quill/QuillSub/CONTENTS")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
         stream.write_all(&quill_data)?;
         drop(stream);
@@ -765,25 +769,29 @@ impl<'a> PubExporter<'a> {
         // Write Escher
         cfb.create_storage("/Escher")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
-        let mut stream = cfb.create_stream("/Escher/EscherStm")
+        let mut stream = cfb
+            .create_stream("/Escher/EscherStm")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
         stream.write_all(&escher_stm_data)?;
         drop(stream);
 
         if !escher_delay_data.is_empty() {
-            let mut stream = cfb.create_stream("/Escher/EscherDelayStm")
+            let mut stream = cfb
+                .create_stream("/Escher/EscherDelayStm")
                 .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
             stream.write_all(&escher_delay_data)?;
             drop(stream);
         }
 
         // Write other required streams
-        let mut stream = cfb.create_stream("/Internal")
+        let mut stream = cfb
+            .create_stream("/Internal")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
         stream.write_all(&[0u8; 12])?;
         drop(stream);
 
-        let stream = cfb.create_stream("/Envelope")
+        let stream = cfb
+            .create_stream("/Envelope")
             .map_err(|e| FormatError::Io(std::io::Error::other(e.to_string())))?;
         drop(stream);
 
@@ -795,50 +803,53 @@ impl<'a> PubExporter<'a> {
 
     fn build_contents(&mut self) -> FormatResult<Vec<u8>> {
         let mut data = Vec::new();
-        
+
         // Header - 0x1E bytes before the trailer offset field
         // Based on analysis of real Publisher files:
         // Bytes 0x00-0x03: Some kind of magic/version
         // Bytes 0x04-0x07: Version info
         // etc.
         // Trailer offset at 0x1A
-        
+
         // Write a header similar to real Publisher files
         let first_page = self.document.pages().first();
         let (width, height) = if let Some(page) = first_page {
-            (points_to_emus(page.size.width) as u32, points_to_emus(page.size.height) as u32)
+            (
+                points_to_emus(page.size.width) as u32,
+                points_to_emus(page.size.height) as u32,
+            )
         } else {
             (points_to_emus(612.0) as u32, points_to_emus(792.0) as u32)
         };
-        
+
         // Header bytes (based on observed patterns)
-        data.extend_from_slice(&width.to_le_bytes());           // 0x00: width
-        data.extend_from_slice(&0x03E8u16.to_le_bytes());       // 0x04: version marker?
-        data.extend_from_slice(&0x000Au16.to_le_bytes());       // 0x06: some flag
-        data.extend_from_slice(&height.to_le_bytes());          // 0x08: height?
-        data.extend_from_slice(&0x001Au16.to_le_bytes());       // 0x0C: header size?
-        data.extend_from_slice(&0x0001u16.to_le_bytes());       // 0x0E: flag
-        data.extend_from_slice(&[0u8; 8]);                      // 0x10: padding
-        data.extend_from_slice(&0x0000u16.to_le_bytes());       // 0x18: padding
-        
+        data.extend_from_slice(&width.to_le_bytes()); // 0x00: width
+        data.extend_from_slice(&0x03E8u16.to_le_bytes()); // 0x04: version marker?
+        data.extend_from_slice(&0x000Au16.to_le_bytes()); // 0x06: some flag
+        data.extend_from_slice(&height.to_le_bytes()); // 0x08: height?
+        data.extend_from_slice(&0x001Au16.to_le_bytes()); // 0x0C: header size?
+        data.extend_from_slice(&0x0001u16.to_le_bytes()); // 0x0E: flag
+        data.extend_from_slice(&[0u8; 8]); // 0x10: padding
+        data.extend_from_slice(&0x0000u16.to_le_bytes()); // 0x18: padding
+
         // Trailer offset placeholder at 0x1A
         let trailer_offset_pos = data.len();
-        data.extend_from_slice(&0u32.to_le_bytes());            // Will be patched
-        
+        data.extend_from_slice(&0u32.to_le_bytes()); // Will be patched
+
         // Build chunk directory entries
         // Note: chunk offsets are ABSOLUTE offsets from the start of the Contents stream
         let mut chunk_entries: Vec<ChunkEntry> = Vec::new();
-        
+
         // First, calculate what seq nums pages will get
         // Doc gets seq 0, then each page followed by its shapes
         let doc_seq = 0u32;
         let mut page_seq_nums: Vec<u32> = Vec::new();
         let mut next_seq = 1u32; // Start after doc
-        
+
         for page in self.document.pages() {
             page_seq_nums.push(next_seq);
             next_seq += 1;
-            
+
             // Add seq nums for shapes on this page, counting every group
             // descendant (each gets its own chunk and seq num).
             let shape_count: usize = page
@@ -849,10 +860,10 @@ impl<'a> PubExporter<'a> {
                 .sum();
             next_seq += shape_count as u32;
         }
-        
+
         // Reset our seq counter
         self.next_seq_num = 0;
-        
+
         // Now write document chunk with correct page seq nums
         let doc_offset = data.len();
         self.write_document_chunk(&mut data, &page_seq_nums)?;
@@ -863,11 +874,11 @@ impl<'a> PubExporter<'a> {
             parent_seq: 0,
             seq: doc_seq,
         });
-        
+
         // Page chunks
         for (page_idx, page) in self.document.pages().iter().enumerate() {
             let page_seq = self.alloc_seq_num();
-            
+
             // Collect shape seqnums for this page, including every group
             // descendant so the importer can nest children back into groups.
             let mut page_shape_seqs: Vec<u32> = Vec::new();
@@ -883,7 +894,7 @@ impl<'a> PubExporter<'a> {
             for i in 0..shape_count {
                 page_shape_seqs.push(shape_start_seq + i as u32);
             }
-            
+
             // Write page chunk
             let page_offset = data.len();
             self.write_page_chunk(&mut data, page, &page_shape_seqs)?;
@@ -893,7 +904,7 @@ impl<'a> PubExporter<'a> {
                 parent_seq: doc_seq,
                 seq: page_seq,
             });
-            
+
             // Write shapes
             for layer in page.layers() {
                 for obj in layer.objects() {
@@ -901,39 +912,46 @@ impl<'a> PubExporter<'a> {
                 }
             }
         }
-        
+
         // Write trailer
         let trailer_offset = data.len();
         self.write_trailer(&mut data, &chunk_entries)?;
-        
+
         // Patch trailer offset at 0x1A
         let trailer_bytes = (trailer_offset as u32).to_le_bytes();
         data[trailer_offset_pos..trailer_offset_pos + 4].copy_from_slice(&trailer_bytes);
-        
+
         Ok(data)
     }
 
-    fn write_document_chunk(&mut self, data: &mut Vec<u8>, page_seq_nums: &[u32]) -> FormatResult<()> {
+    fn write_document_chunk(
+        &mut self,
+        data: &mut Vec<u8>,
+        page_seq_nums: &[u32],
+    ) -> FormatResult<()> {
         // Document chunk format:
         // - 4 bytes: total chunk length (includes these 4 bytes)
         // - Then blocks with id+type format
-        
+
         let chunk_start = data.len();
         data.extend_from_slice(&0u32.to_le_bytes()); // Placeholder for length
-        
+
         let first_page = self.document.pages().first();
         let (width, height) = if let Some(page) = first_page {
-            (points_to_emus(page.size.width) as u32, points_to_emus(page.size.height) as u32)
+            (
+                points_to_emus(page.size.width) as u32,
+                points_to_emus(page.size.height) as u32,
+            )
         } else {
             (points_to_emus(612.0) as u32, points_to_emus(792.0) as u32)
         };
-        
+
         // Document size container (block_id::DOCUMENT_SIZE = 0x12)
         let size_start = write_container_start(data, 0x12);
         write_u32_block(data, block_id::DOCUMENT_WIDTH, width);
         write_u32_block(data, block_id::DOCUMENT_HEIGHT, height);
         patch_container_length(data, size_start);
-        
+
         // Page list container (block_id::DOCUMENT_PAGE_LIST = 0x02)
         // Contains sequence numbers of pages (actual seq nums, not indices)
         if !page_seq_nums.is_empty() {
@@ -943,26 +961,31 @@ impl<'a> PubExporter<'a> {
             }
             patch_container_length(data, list_start);
         }
-        
+
         // Patch chunk length (includes the 4-byte length field itself)
         let chunk_len = (data.len() - chunk_start) as u32;
         data[chunk_start..chunk_start + 4].copy_from_slice(&chunk_len.to_le_bytes());
-        
+
         Ok(())
     }
 
-    fn write_page_chunk(&self, data: &mut Vec<u8>, page: &repub_model::document::Page, shape_seqs: &[u32]) -> FormatResult<()> {
+    fn write_page_chunk(
+        &self,
+        data: &mut Vec<u8>,
+        page: &repub_model::document::Page,
+        shape_seqs: &[u32],
+    ) -> FormatResult<()> {
         // Page chunk format:
         // - 4 bytes: total chunk length
         // - Blocks with id+type format
-        
+
         let chunk_start = data.len();
         data.extend_from_slice(&0u32.to_le_bytes()); // Placeholder for length
-        
+
         // Page dimensions (optional, using same IDs as document)
         let _width = points_to_emus(page.size.width) as u32;
         let _height = points_to_emus(page.size.height) as u32;
-        
+
         // Shape list container (PAGE_SHAPES = 0x02)
         // Contains sequence numbers of shapes on this page
         if !shape_seqs.is_empty() {
@@ -970,16 +993,16 @@ impl<'a> PubExporter<'a> {
             for &seq in shape_seqs {
                 // Shape seqnum: id=anything (usually increments), type=0x70 (SHAPE_SEQNUM)
                 data.push(0x00);
-                data.push(block_type::FOUR_BYTE_2); // 0x70 = SHAPE_SEQNUM  
+                data.push(block_type::FOUR_BYTE_2); // 0x70 = SHAPE_SEQNUM
                 data.extend_from_slice(&seq.to_le_bytes());
             }
             patch_container_length(data, list_start);
         }
-        
+
         // Patch chunk length
         let chunk_len = (data.len() - chunk_start) as u32;
         data[chunk_start..chunk_start + 4].copy_from_slice(&chunk_len.to_le_bytes());
-        
+
         Ok(())
     }
 
@@ -992,18 +1015,18 @@ impl<'a> PubExporter<'a> {
     ) -> FormatResult<()> {
         let seq = self.alloc_seq_num();
         let offset = data.len(); // Absolute offset
-        
+
         // Shape chunk format:
         // - 4 bytes: total chunk length
         // - Blocks with id+type format
-        
+
         let chunk_start = data.len();
         data.extend_from_slice(&0u32.to_le_bytes()); // Placeholder for length
-        
+
         let bounds = obj.bounds();
         let width_emu = points_to_emus(bounds.width()) as u32;
         let height_emu = points_to_emus(bounds.height()) as u32;
-        
+
         // Shape dimensions (required)
         write_u32_block(data, block_id::SHAPE_WIDTH, width_emu);
         write_u32_block(data, block_id::SHAPE_HEIGHT, height_emu);
@@ -1051,11 +1074,14 @@ impl<'a> PubExporter<'a> {
                 // The picture's bytes go into the Escher BLIP store; the Contents
                 // chunk only carries its position/size. Record the blip so the
                 // shape's FOPT can reference it by one-based index.
-                if let ImageSource::Embedded { data: img_data, mime_type } = &img.source {
-                    if let Ok(bytes) = base64::Engine::decode(
-                        &base64::engine::general_purpose::STANDARD,
-                        img_data,
-                    ) {
+                if let ImageSource::Embedded {
+                    data: img_data,
+                    mime_type,
+                } = &img.source
+                {
+                    if let Ok(bytes) =
+                        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, img_data)
+                    {
                         if let Some(blip) = ImageBlip::from_bytes(mime_type, bytes) {
                             self.images.push(blip);
                             blip_index = Some(self.images.len() as u32);
@@ -1174,10 +1200,18 @@ impl<'a> PubExporter<'a> {
         let container_start = write_container_start(&mut inner, 0x00);
         inner.extend_from_slice(&0u32.to_le_bytes()); // 4-byte inner header the importer skips
         for &w in &table.col_widths {
-            write_u32_block(&mut inner, block_id::TABLE_ROWCOL_SIZE, points_to_emus(w) as u32);
+            write_u32_block(
+                &mut inner,
+                block_id::TABLE_ROWCOL_SIZE,
+                points_to_emus(w) as u32,
+            );
         }
         for &h in &table.row_heights {
-            write_u32_block(&mut inner, block_id::TABLE_ROWCOL_SIZE, points_to_emus(h) as u32);
+            write_u32_block(
+                &mut inner,
+                block_id::TABLE_ROWCOL_SIZE,
+                points_to_emus(h) as u32,
+            );
         }
         patch_container_length(&mut inner, container_start);
 
@@ -1241,8 +1275,16 @@ impl<'a> PubExporter<'a> {
             match fill {
                 Fill::None => None,
                 Fill::LinearGradient(g) => {
-                    let start = rgb(&g.stops.first().map(|s| s.color).unwrap_or(repub_color::Color::WHITE));
-                    let end = rgb(&g.stops.last().map(|s| s.color).unwrap_or(repub_color::Color::WHITE));
+                    let start = rgb(&g
+                        .stops
+                        .first()
+                        .map(|s| s.color)
+                        .unwrap_or(repub_color::Color::WHITE));
+                    let end = rgb(&g
+                        .stops
+                        .last()
+                        .map(|s| s.color)
+                        .unwrap_or(repub_color::Color::WHITE));
                     // Angle from the gradient's start→end direction.
                     let dx = g.end.x - g.start.x;
                     let dy = g.end.y - g.start.y;
@@ -1250,8 +1292,16 @@ impl<'a> PubExporter<'a> {
                     Some(FillSpec::Linear(start, end, angle))
                 }
                 Fill::RadialGradient(g) => {
-                    let start = rgb(&g.stops.first().map(|s| s.color).unwrap_or(repub_color::Color::WHITE));
-                    let end = rgb(&g.stops.last().map(|s| s.color).unwrap_or(repub_color::Color::WHITE));
+                    let start = rgb(&g
+                        .stops
+                        .first()
+                        .map(|s| s.color)
+                        .unwrap_or(repub_color::Color::WHITE));
+                    let end = rgb(&g
+                        .stops
+                        .last()
+                        .map(|s| s.color)
+                        .unwrap_or(repub_color::Color::WHITE));
                     Some(FillSpec::Radial(start, end))
                 }
                 _ => Some(FillSpec::Solid(rgb(&fill.primary_color()))),
@@ -1263,122 +1313,121 @@ impl<'a> PubExporter<'a> {
         };
         let mut adjust1: Option<u32> = None;
         let mut custom_path: Option<CustomPath> = None;
-        let (spt, fill, line, line_w): (u16, Option<FillSpec>, Option<Rgb>, u32) =
-            match obj {
-                Object::Shape(s) => {
-                    let bounds = s.common.bounds;
-                    let spt = match &s.shape_type {
-                        ShapeType::Rectangle { corner_radius } if *corner_radius > 0.0 => {
-                            // The corner radius as a fraction of the smaller side,
-                            // in Publisher's 21600-unit shape space.
-                            let min_side = bounds.width().min(bounds.height());
-                            if min_side > 0.0 {
-                                let frac = (*corner_radius / min_side).clamp(0.0, 0.5);
-                                adjust1 = Some((frac * 21600.0).round() as u32);
-                            }
-                            escher::SHAPE_TYPE_ROUND_RECT as u16
+        let (spt, fill, line, line_w): (u16, Option<FillSpec>, Option<Rgb>, u32) = match obj {
+            Object::Shape(s) => {
+                let bounds = s.common.bounds;
+                let spt = match &s.shape_type {
+                    ShapeType::Rectangle { corner_radius } if *corner_radius > 0.0 => {
+                        // The corner radius as a fraction of the smaller side,
+                        // in Publisher's 21600-unit shape space.
+                        let min_side = bounds.width().min(bounds.height());
+                        if min_side > 0.0 {
+                            let frac = (*corner_radius / min_side).clamp(0.0, 0.5);
+                            adjust1 = Some((frac * 21600.0).round() as u32);
                         }
-                        ShapeType::Rectangle { .. } => escher::SHAPE_TYPE_RECTANGLE as u16,
-                        ShapeType::Ellipse => escher::SHAPE_TYPE_ELLIPSE as u16,
-                        ShapeType::Polygon { sides } => match sides {
-                            3 => escher::SHAPE_TYPE_ISOSCELES_TRIANGLE as u16,
-                            5 => escher::SHAPE_TYPE_PENTAGON as u16,
-                            6 => escher::SHAPE_TYPE_HEXAGON as u16,
-                            _ => escher::SHAPE_TYPE_RECTANGLE as u16,
-                        },
-                        ShapeType::Star { .. } => escher::SHAPE_TYPE_RECTANGLE as u16,
-                        ShapeType::Path(path) => {
-                            // A freeform shape: encode its outline as pVertices /
-                            // pSegments in 21600-unit shape space (spt 0).
-                            custom_path = encode_custom_path(path, bounds);
-                            0
-                        }
-                    };
-                    let line = s.style.stroke.as_ref().map(|st| rgb(&st.color));
-                    let lw = s
-                        .style
-                        .stroke
+                        escher::SHAPE_TYPE_ROUND_RECT as u16
+                    }
+                    ShapeType::Rectangle { .. } => escher::SHAPE_TYPE_RECTANGLE as u16,
+                    ShapeType::Ellipse => escher::SHAPE_TYPE_ELLIPSE as u16,
+                    ShapeType::Polygon { sides } => match sides {
+                        3 => escher::SHAPE_TYPE_ISOSCELES_TRIANGLE as u16,
+                        5 => escher::SHAPE_TYPE_PENTAGON as u16,
+                        6 => escher::SHAPE_TYPE_HEXAGON as u16,
+                        _ => escher::SHAPE_TYPE_RECTANGLE as u16,
+                    },
+                    ShapeType::Star { .. } => escher::SHAPE_TYPE_RECTANGLE as u16,
+                    ShapeType::Path(path) => {
+                        // A freeform shape: encode its outline as pVertices /
+                        // pSegments in 21600-unit shape space (spt 0).
+                        custom_path = encode_custom_path(path, bounds);
+                        0
+                    }
+                };
+                let line = s.style.stroke.as_ref().map(|st| rgb(&st.color));
+                let lw = s
+                    .style
+                    .stroke
+                    .as_ref()
+                    .map(|st| points_to_emus(st.width) as u32)
+                    .unwrap_or(0);
+                (spt, fill_of(&s.style.fill), line, lw)
+            }
+            Object::TextFrame(tf) => {
+                let line = tf.style.stroke.as_ref().map(|st| rgb(&st.color));
+                let lw = tf
+                    .style
+                    .stroke
+                    .as_ref()
+                    .map(|st| points_to_emus(st.width) as u32)
+                    .unwrap_or(0);
+                (
+                    escher::SHAPE_TYPE_TEXT_BOX as u16,
+                    fill_of(&tf.style.fill),
+                    line,
+                    lw,
+                )
+            }
+            Object::ImageFrame(_) => (escher::SHAPE_TYPE_PICTURE_FRAME as u16, None, None, 0),
+            Object::Line(l) => {
+                let line = Some(rgb(&l.stroke.color));
+                let lw = points_to_emus(l.stroke.width) as u32;
+                let arrows = (
+                    arrow_code(l.start_ending.style),
+                    arrow_code(l.end_ending.style),
+                );
+                self.escher_shapes.push(EscherShapeInfo {
+                    spid: seq,
+                    spt: escher::SHAPE_TYPE_LINE as u16,
+                    fill: None,
+                    line,
+                    line_width_emu: lw,
+                    rotation_deg: obj.common().rotation,
+                    flip_h: obj.common().flip_h,
+                    flip_v: obj.common().flip_v,
+                    arrows: Some(arrows),
+                    text_id,
+                    blip_index: None,
+                    wordart_text: None,
+                    adjust1: None,
+                    shadow: None,
+                    columns: None,
+                    insets: None,
+                    custom_path: None,
+                });
+                return;
+            }
+            Object::WordArt(wa) => {
+                // A text effect: a WordArt shape type carrying its string as
+                // the GTEXT_UNICODE complex property.
+                self.escher_shapes.push(EscherShapeInfo {
+                    spid: seq,
+                    spt: escher::SHAPE_TYPE_TEXT_PLAIN_TEXT as u16,
+                    fill: fill_of(&wa.fill),
+                    line: wa.outline.as_ref().map(|st| rgb(&st.color)),
+                    line_width_emu: wa
+                        .outline
                         .as_ref()
                         .map(|st| points_to_emus(st.width) as u32)
-                        .unwrap_or(0);
-                    (spt, fill_of(&s.style.fill), line, lw)
-                }
-                Object::TextFrame(tf) => {
-                    let line = tf.style.stroke.as_ref().map(|st| rgb(&st.color));
-                    let lw = tf
-                        .style
-                        .stroke
-                        .as_ref()
-                        .map(|st| points_to_emus(st.width) as u32)
-                        .unwrap_or(0);
-                    (
-                        escher::SHAPE_TYPE_TEXT_BOX as u16,
-                        fill_of(&tf.style.fill),
-                        line,
-                        lw,
-                    )
-                }
-                Object::ImageFrame(_) => (escher::SHAPE_TYPE_PICTURE_FRAME as u16, None, None, 0),
-                Object::Line(l) => {
-                    let line = Some(rgb(&l.stroke.color));
-                    let lw = points_to_emus(l.stroke.width) as u32;
-                    let arrows = (
-                        arrow_code(l.start_ending.style),
-                        arrow_code(l.end_ending.style),
-                    );
-                    self.escher_shapes.push(EscherShapeInfo {
-                        spid: seq,
-                        spt: escher::SHAPE_TYPE_LINE as u16,
-                        fill: None,
-                        line,
-                        line_width_emu: lw,
-                        rotation_deg: obj.common().rotation,
-                        flip_h: obj.common().flip_h,
-                        flip_v: obj.common().flip_v,
-                        arrows: Some(arrows),
-                        text_id,
-                        blip_index: None,
-                        wordart_text: None,
-                        adjust1: None,
-                        shadow: None,
-                        columns: None,
-                        insets: None,
-                        custom_path: None,
-                    });
-                    return;
-                }
-                Object::WordArt(wa) => {
-                    // A text effect: a WordArt shape type carrying its string as
-                    // the GTEXT_UNICODE complex property.
-                    self.escher_shapes.push(EscherShapeInfo {
-                        spid: seq,
-                        spt: escher::SHAPE_TYPE_TEXT_PLAIN_TEXT as u16,
-                        fill: fill_of(&wa.fill),
-                        line: wa.outline.as_ref().map(|st| rgb(&st.color)),
-                        line_width_emu: wa
-                            .outline
-                            .as_ref()
-                            .map(|st| points_to_emus(st.width) as u32)
-                            .unwrap_or(0),
-                        rotation_deg: obj.common().rotation,
-                        flip_h: obj.common().flip_h,
-                        flip_v: obj.common().flip_v,
-                        arrows: None,
-                        text_id,
-                        blip_index: None,
-                        wordart_text: Some(wa.text.clone()),
-                        adjust1: None,
-                        shadow: None,
-                        columns: None,
-                        insets: None,
-                        custom_path: None,
-                    });
-                    return;
-                }
-                // Tables and groups are not given Escher geometry here; they
-                // round-trip via Contents only.
-                _ => return,
-            };
+                        .unwrap_or(0),
+                    rotation_deg: obj.common().rotation,
+                    flip_h: obj.common().flip_h,
+                    flip_v: obj.common().flip_v,
+                    arrows: None,
+                    text_id,
+                    blip_index: None,
+                    wordart_text: Some(wa.text.clone()),
+                    adjust1: None,
+                    shadow: None,
+                    columns: None,
+                    insets: None,
+                    custom_path: None,
+                });
+                return;
+            }
+            // Tables and groups are not given Escher geometry here; they
+            // round-trip via Contents only.
+            _ => return,
+        };
 
         // Drop shadow, if the shape carries one.
         let shadow = match obj {
@@ -1397,8 +1446,7 @@ impl<'a> PubExporter<'a> {
                     None
                 };
                 let m = &tf.margins;
-                let insets = if m.left != 0.0 || m.top != 0.0 || m.right != 0.0 || m.bottom != 0.0
-                {
+                let insets = if m.left != 0.0 || m.top != 0.0 || m.right != 0.0 || m.bottom != 0.0 {
                     Some((m.left, m.top, m.right, m.bottom))
                 } else {
                     None
@@ -1435,22 +1483,22 @@ impl<'a> PubExporter<'a> {
         // - Block id=0x01, type=0x20: entry count?
         // - Block id=0x02, type=0x20: entry count?
         // - Block id=0x03, type=0x90 (TRAILER_DIRECTORY): directory entries
-        
+
         let trailer_start = data.len();
         data.extend_from_slice(&0u32.to_le_bytes()); // Placeholder for total length
-        
+
         // Version/sequence info blocks
         write_u32_block(data, 0x01, entries.len() as u32);
         write_u32_block(data, 0x02, entries.len() as u32);
-        
+
         // Trailer directory block (id=0x03, type=0x90)
         // The 0x90 type is a variable-length block like containers
         data.push(0x03); // id
         data.push(block_type::TRAILER); // 0x90
-        
+
         let dir_len_pos = data.len();
         data.extend_from_slice(&0u32.to_le_bytes()); // Placeholder for directory length
-        
+
         // Write directory entries (each is a container with chunk info)
         for entry in entries {
             let entry_container = write_container_start(data, 0x00);
@@ -1459,45 +1507,45 @@ impl<'a> PubExporter<'a> {
             write_u32_block(data, block_id::CHUNK_PARENT_SEQNUM, entry.parent_seq);
             patch_container_length(data, entry_container);
         }
-        
+
         // Patch directory length (includes the 4-byte length field)
         let dir_len = (data.len() - dir_len_pos) as u32;
         data[dir_len_pos..dir_len_pos + 4].copy_from_slice(&dir_len.to_le_bytes());
-        
+
         // Add padding (some zero-blocks)
         for _ in 0..20 {
             write_zero_block(data, 0x00);
         }
-        
+
         // Patch total trailer length
         let trailer_len = (data.len() - trailer_start) as u32;
         data[trailer_start..trailer_start + 4].copy_from_slice(&trailer_len.to_le_bytes());
-        
+
         Ok(())
     }
 
     fn build_quill(&self) -> FormatResult<Vec<u8>> {
         let mut data = Vec::new();
-        
+
         // Quill signature: "CHNKINK " (8 bytes)
         data.extend_from_slice(b"CHNKINK ");
-        
+
         // Header bytes (based on observed real Publisher files)
         // 0x08: 04 00 - version?
         data.extend_from_slice(&0x0004u16.to_le_bytes()); // 0x08
-        // 0x0A: 07 00 
+                                                          // 0x0A: 07 00
         data.extend_from_slice(&0x0007u16.to_le_bytes()); // 0x0A
-        // 0x0C: 14 00
+                                                          // 0x0C: 14 00
         data.extend_from_slice(&0x0014u16.to_le_bytes()); // 0x0C
-        // 0x0E: 00 03 (0x0300)
+                                                          // 0x0E: 00 03 (0x0300)
         data.extend_from_slice(&0x0300u16.to_le_bytes()); // 0x0E
-        // 0x10: 00 04 (0x0400)
+                                                          // 0x10: 00 04 (0x0400)
         data.extend_from_slice(&0x0400u16.to_le_bytes()); // 0x10
-        // 0x12: 00 00 
+                                                          // 0x12: 00 00
         data.extend_from_slice(&0x0000u16.to_le_bytes()); // 0x12
-        // 0x14-0x17: some offset value
+                                                          // 0x14-0x17: some offset value
         data.extend_from_slice(&0x00000022u32.to_le_bytes()); // 0x14
-        
+
         // 0x18-0x19: Initial value (looks like an offset or count - 0x01f8 in original)
         // For simple files, use a smaller value
         // Paragraph boundaries (one entry per CR) across all text blocks, as
@@ -1517,26 +1565,25 @@ impl<'a> PubExporter<'a> {
         let num_chunks = if self.text_blocks.is_empty() {
             0u16
         } else {
-            4u16
-                + if para_end_chars.is_empty() { 0 } else { 1 }
+            4u16 + if para_end_chars.is_empty() { 0 } else { 1 }
                 + if char_spans.is_empty() { 0 } else { 1 }
                 + if palette.is_empty() { 0 } else { 1 }
         };
         let chunk_refs_size = num_chunks as usize * 0x18;
         let data_start = chunk_refs_start + chunk_refs_size;
-        
+
         // Initial value at 0x18 - seems to be related to data start
         data.extend_from_slice(&(data_start as u16).to_le_bytes()); // 0x18
-        
+
         // 0x1A: Number of chunks
         data.extend_from_slice(&num_chunks.to_le_bytes()); // 0x1A
-        
+
         // 0x1C-0x1F: Next chunk list offset (0xFFFFFFFF = none, or actual offset if more)
         // For simple files with one list, use 0xFFFFFFFF
         data.extend_from_slice(&0xFFFFFFFFu32.to_le_bytes()); // 0x1C
-        
+
         // Now at 0x20 - chunk refs start here
-        
+
         // Build text content first (we need to know sizes)
         let mut text_data: Vec<u8> = Vec::new();
         for block in &self.text_blocks {
@@ -1544,15 +1591,15 @@ impl<'a> PubExporter<'a> {
                 text_data.extend_from_slice(&ch.to_le_bytes());
             }
         }
-        
+
         // Build chunk directory and data
         let mut chunks: Vec<QuillChunkInfo> = Vec::new();
         let mut chunk_data: Vec<u8> = Vec::new();
-        
+
         if !self.text_blocks.is_empty() {
             // Data starts right after chunk refs
             let mut current_offset = data_start as u32;
-            
+
             // TEXT chunk - actual text content in UTF-16
             chunks.push(QuillChunkInfo {
                 name: *b"TEXT",
@@ -1563,7 +1610,7 @@ impl<'a> PubExporter<'a> {
             });
             chunk_data.extend_from_slice(&text_data);
             current_offset += text_data.len() as u32;
-            
+
             // STRS chunk - string table with character counts per text block
             // Format: num_entries (4) + header_size (4) + padding[header_size] + counts[num_entries] (4 each)
             // Import reads entries at offset: 4 + header_size
@@ -1584,7 +1631,7 @@ impl<'a> PubExporter<'a> {
             });
             chunk_data.extend_from_slice(&strs_data);
             current_offset += strs_data.len() as u32;
-            
+
             // SYID chunk - text IDs mapping
             let mut syid_data = Vec::new();
             syid_data.extend_from_slice(&0u32.to_le_bytes()); // Unknown
@@ -1601,7 +1648,7 @@ impl<'a> PubExporter<'a> {
             });
             chunk_data.extend_from_slice(&syid_data);
             current_offset += syid_data.len() as u32;
-            
+
             // FONT chunk - font table. Layout the importer reads: a DWORD, the
             // font count, a 12-byte area, a per-font u32 offset table, then each
             // font as [u16 name_len, UTF-16 name, u32 trailing].
@@ -1746,22 +1793,22 @@ impl<'a> PubExporter<'a> {
                 chunk_data.extend_from_slice(&pl);
             }
         }
-        
+
         // Write chunk references (each is 0x18 = 24 bytes)
         // Format: marker (2) + name (4) + id (2) + unknown (4) + name2 (4) + offset (4) + length (4) = 24
         for chunk in &chunks {
             data.extend_from_slice(&0x0018u16.to_le_bytes()); // Marker = 0x18
-            data.extend_from_slice(&chunk.name);               // 4-char name
-            data.extend_from_slice(&chunk.id.to_le_bytes());   // ID
+            data.extend_from_slice(&chunk.name); // 4-char name
+            data.extend_from_slice(&chunk.id.to_le_bytes()); // ID
             data.extend_from_slice(&0x00000001u32.to_le_bytes()); // Unknown = 1
-            data.extend_from_slice(&chunk.name2);              // 4-char name2
+            data.extend_from_slice(&chunk.name2); // 4-char name2
             data.extend_from_slice(&chunk.offset.to_le_bytes()); // Data offset
             data.extend_from_slice(&chunk.length.to_le_bytes()); // Data length
         }
-        
+
         // Append actual chunk data
         data.extend_from_slice(&chunk_data);
-        
+
         Ok(data)
     }
 
@@ -2112,7 +2159,7 @@ mod tests {
     fn test_export_empty_document() {
         let doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
         let mut buffer = Cursor::new(Vec::new());
-        
+
         let result = export_to_writer(&doc, &mut buffer, &PubExportOptions::default());
         assert!(result.is_ok());
         assert!(!buffer.into_inner().is_empty());
@@ -2147,7 +2194,8 @@ mod tests {
             page.add_shape(rect);
 
             // A text frame placed between two shapes: it must keep its own fill.
-            let mut text = Shape::text_frame_with_text(Rect::new(72.0, 300.0, 400.0, 80.0), "Hello");
+            let mut text =
+                Shape::text_frame_with_text(Rect::new(72.0, 300.0, 400.0, 80.0), "Hello");
             text.fill = Fill::Solid(Color::from_rgb8(250, 250, 180));
             page.add_shape(text);
 
@@ -2193,7 +2241,10 @@ mod tests {
         assert!(!rect.common.flip_v);
 
         let text = shapes[1];
-        assert!(matches!(text.kind, ShapeKind::TextFrame(_)), "second shape is text");
+        assert!(
+            matches!(text.kind, ShapeKind::TextFrame(_)),
+            "second shape is text"
+        );
         assert_eq!(
             text.fill.primary_color().to_rgba8(),
             (250, 250, 180, 255),
@@ -2274,7 +2325,11 @@ mod tests {
 
         let stroke = line.line.as_ref().expect("line keeps its stroke");
         assert_eq!(stroke.color.to_rgba8(), (0, 0, 200, 255));
-        assert!((stroke.width - 2.5).abs() < 0.1, "stroke width, got {}", stroke.width);
+        assert!(
+            (stroke.width - 2.5).abs() < 0.1,
+            "stroke width, got {}",
+            stroke.width
+        );
         if let ShapeKind::Line(l) = &line.kind {
             assert_eq!(l.end_ending.style, LineEndingStyle::Arrow);
         }
@@ -2329,7 +2384,11 @@ mod tests {
                 _ => None,
             })
             .expect("the outer group round-trips");
-        assert_eq!(group.children.len(), 2, "outer group keeps its two children");
+        assert_eq!(
+            group.children.len(),
+            2,
+            "outer group keeps its two children"
+        );
 
         let nested = group
             .children
@@ -2604,8 +2663,16 @@ mod tests {
         assert_eq!(shadow.color.to_rgba8().0, 50);
         assert_eq!(shadow.color.to_rgba8().1, 50);
         assert_eq!(shadow.color.to_rgba8().2, 50);
-        assert!((shadow.offset_x - 4.0).abs() < 0.5, "x offset, got {}", shadow.offset_x);
-        assert!((shadow.offset_y - 6.0).abs() < 0.5, "y offset, got {}", shadow.offset_y);
+        assert!(
+            (shadow.offset_x - 4.0).abs() < 0.5,
+            "x offset, got {}",
+            shadow.offset_x
+        );
+        assert!(
+            (shadow.offset_y - 6.0).abs() < 0.5,
+            "y offset, got {}",
+            shadow.offset_y
+        );
     }
 
     /// Linear and radial gradient fills round-trip their end-stop colours.
@@ -2661,8 +2728,14 @@ mod tests {
                 _ => None,
             })
             .expect("linear gradient round-trips");
-        assert_eq!(linear.stops.first().unwrap().color.to_rgba8(), (255, 0, 0, 255));
-        assert_eq!(linear.stops.last().unwrap().color.to_rgba8(), (0, 0, 255, 255));
+        assert_eq!(
+            linear.stops.first().unwrap().color.to_rgba8(),
+            (255, 0, 0, 255)
+        );
+        assert_eq!(
+            linear.stops.last().unwrap().color.to_rgba8(),
+            (0, 0, 255, 255)
+        );
 
         let radial = fills
             .iter()
@@ -2671,8 +2744,14 @@ mod tests {
                 _ => None,
             })
             .expect("radial gradient round-trips");
-        assert_eq!(radial.stops.first().unwrap().color.to_rgba8(), (0, 255, 0, 255));
-        assert_eq!(radial.stops.last().unwrap().color.to_rgba8(), (0, 0, 0, 255));
+        assert_eq!(
+            radial.stops.first().unwrap().color.to_rgba8(),
+            (0, 255, 0, 255)
+        );
+        assert_eq!(
+            radial.stops.last().unwrap().color.to_rgba8(),
+            (0, 0, 0, 255)
+        );
     }
 
     /// A text frame's column layout and internal margins round-trip.
@@ -2713,7 +2792,11 @@ mod tests {
             .expect("the text frame round-trips");
 
         assert_eq!(frame.columns.count, 3, "column count");
-        assert!((frame.columns.gap - 18.0).abs() < 0.5, "gap, got {}", frame.columns.gap);
+        assert!(
+            (frame.columns.gap - 18.0).abs() < 0.5,
+            "gap, got {}",
+            frame.columns.gap
+        );
         assert!((frame.margins.left - 5.0).abs() < 0.5, "left margin");
         assert!((frame.margins.top - 3.0).abs() < 0.5, "top margin");
     }
@@ -2846,7 +2929,10 @@ mod tests {
         assert!(bold.1, "bold");
         assert!((bold.4 - 18.0).abs() < 0.5, "size 18, got {}", bold.4);
 
-        let ital = runs.iter().find(|r| r.0 == "ItalUnder").expect("italic run");
+        let ital = runs
+            .iter()
+            .find(|r| r.0 == "ItalUnder")
+            .expect("italic run");
         assert!(ital.2, "italic");
         assert!(ital.3, "underline");
     }
@@ -2897,8 +2983,14 @@ mod tests {
             .iter()
             .map(|p| (p.plain_text(), p.style.alignment))
             .collect();
-        assert!(aligns.iter().any(|(t, a)| t == "Centered" && *a == TextAlignment::Center));
-        assert!(aligns.iter().any(|(t, a)| t == "Right" && *a == TextAlignment::Right));
-        assert!(aligns.iter().any(|(t, a)| t == "Left default" && *a == TextAlignment::Left));
+        assert!(aligns
+            .iter()
+            .any(|(t, a)| t == "Centered" && *a == TextAlignment::Center));
+        assert!(aligns
+            .iter()
+            .any(|(t, a)| t == "Right" && *a == TextAlignment::Right));
+        assert!(aligns
+            .iter()
+            .any(|(t, a)| t == "Left default" && *a == TextAlignment::Left));
     }
 }

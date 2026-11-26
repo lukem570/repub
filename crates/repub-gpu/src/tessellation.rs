@@ -203,7 +203,8 @@ mod tests {
     #[test]
     fn strokes_a_line() {
         let mut path = Path::new();
-        path.move_to(Point::new(0.0, 5.0)).line_to(Point::new(10.0, 5.0));
+        path.move_to(Point::new(0.0, 5.0))
+            .line_to(Point::new(10.0, 5.0));
         let map = device_mapper(Transform2D::IDENTITY, 1.0);
         let lyon = to_lyon(&path, &map);
         let geo = stroke(&lyon, 2.0, LineCap::Butt, LineJoin::Miter, &white).unwrap();

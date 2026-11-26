@@ -134,7 +134,10 @@ impl McpServer {
             "resources/list" => self.handle_list_resources(),
             "resources/read" => self.handle_read_resource(request.params.clone()),
             "ping" => Ok(json!({})),
-            _ => Err(McpError::Protocol(format!("Unknown method: {}", request.method))),
+            _ => Err(McpError::Protocol(format!(
+                "Unknown method: {}",
+                request.method
+            ))),
         }
     }
 
@@ -158,9 +161,7 @@ impl McpServer {
 
     /// Handle tools/list request.
     fn handle_list_tools(&self) -> McpResult<Value> {
-        let tools: Vec<ToolDefinition> = self.tools.values()
-            .map(|t| t.definition())
-            .collect();
+        let tools: Vec<ToolDefinition> = self.tools.values().map(|t| t.definition()).collect();
 
         Ok(json!({
             "tools": tools
@@ -169,18 +170,22 @@ impl McpServer {
 
     /// Handle tools/call request.
     fn handle_call_tool(&mut self, params: Option<Value>) -> McpResult<Value> {
-        let params = params.ok_or_else(|| McpError::InvalidArgument("Missing params".to_string()))?;
-        
-        let name = params["name"].as_str()
+        let params =
+            params.ok_or_else(|| McpError::InvalidArgument("Missing params".to_string()))?;
+
+        let name = params["name"]
+            .as_str()
             .ok_or_else(|| McpError::InvalidArgument("Missing tool name".to_string()))?
             .to_string();
-        
+
         let args = params.get("arguments").cloned().unwrap_or(json!({}));
 
         // Get the tool and execute it
-        let tool = self.tools.get(&name)
+        let tool = self
+            .tools
+            .get(&name)
             .ok_or_else(|| McpError::UnknownTool(name.clone()))?;
-        
+
         let result = tool.execute(&mut self.session, args)?;
 
         Ok(serde_json::to_value(result)?)
@@ -196,13 +201,15 @@ impl McpServer {
 
     /// Handle resources/read request.
     fn handle_read_resource(&self, params: Option<Value>) -> McpResult<Value> {
-        let params = params.ok_or_else(|| McpError::InvalidArgument("Missing params".to_string()))?;
-        
-        let uri = params["uri"].as_str()
+        let params =
+            params.ok_or_else(|| McpError::InvalidArgument("Missing params".to_string()))?;
+
+        let uri = params["uri"]
+            .as_str()
             .ok_or_else(|| McpError::InvalidArgument("Missing resource URI".to_string()))?;
 
         let content = resources::read_resource(&self.session, uri)?;
-        
+
         Ok(json!({
             "contents": [content]
         }))
@@ -237,7 +244,7 @@ mod tests {
         let server = McpServer::new();
         let result = server.handle_list_tools();
         assert!(result.is_ok());
-        
+
         let value = result.unwrap();
         assert!(value["tools"].is_array());
         assert!(!value["tools"].as_array().unwrap().is_empty());
@@ -246,7 +253,7 @@ mod tests {
     #[test]
     fn test_call_tool_create_document() {
         let mut server = McpServer::new();
-        
+
         let result = server.handle_call_tool(Some(json!({
             "name": "repub_create_document",
             "arguments": {
@@ -254,17 +261,17 @@ mod tests {
                 "pages": 2
             }
         })));
-        
+
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_message_handling() {
         let mut server = McpServer::new();
-        
+
         let request = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#;
         let response = server.handle_message(request);
-        
+
         assert!(response.is_ok());
         assert!(response.unwrap().is_some());
     }

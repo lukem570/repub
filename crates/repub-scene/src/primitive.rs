@@ -104,12 +104,16 @@ impl Paint {
     pub fn primary_color(&self) -> Color {
         match self {
             Paint::Solid(c) => *c,
-            Paint::LinearGradient { gradient, .. } => {
-                gradient.stops.first().map(|s| s.color).unwrap_or(Color::BLACK)
-            }
-            Paint::RadialGradient { gradient, .. } => {
-                gradient.stops.first().map(|s| s.color).unwrap_or(Color::BLACK)
-            }
+            Paint::LinearGradient { gradient, .. } => gradient
+                .stops
+                .first()
+                .map(|s| s.color)
+                .unwrap_or(Color::BLACK),
+            Paint::RadialGradient { gradient, .. } => gradient
+                .stops
+                .first()
+                .map(|s| s.color)
+                .unwrap_or(Color::BLACK),
             Paint::Pattern { pattern, .. } => pattern.foreground,
         }
     }

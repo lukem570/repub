@@ -186,7 +186,10 @@ impl SnapEngine {
             }
         }
 
-        (Point::new(bounds.origin.x + dx, bounds.origin.y + dy), snaps)
+        (
+            Point::new(bounds.origin.x + dx, bounds.origin.y + dy),
+            snaps,
+        )
     }
 
     fn snap_x(&self, x: f64) -> (f64, Option<SnapResult>) {
@@ -268,7 +271,12 @@ impl SnapEngine {
         match best_snap {
             Some((pos, target, guide_pos)) => (
                 pos,
-                Some(SnapResult { position: pos, target, guide_pos, axis: SnapAxis::Horizontal }),
+                Some(SnapResult {
+                    position: pos,
+                    target,
+                    guide_pos,
+                    axis: SnapAxis::Horizontal,
+                }),
             ),
             None => (x, None),
         }
@@ -353,7 +361,12 @@ impl SnapEngine {
         match best_snap {
             Some((pos, target, guide_pos)) => (
                 pos,
-                Some(SnapResult { position: pos, target, guide_pos, axis: SnapAxis::Vertical }),
+                Some(SnapResult {
+                    position: pos,
+                    target,
+                    guide_pos,
+                    axis: SnapAxis::Vertical,
+                }),
             ),
             None => (y, None),
         }
@@ -409,8 +422,8 @@ mod tests {
         let page = Rect::new(0.0, 0.0, 612.0, 792.0);
         let config = SnapConfig {
             grid: true,
-            grid_spacing: 9.0,  // 1/8 inch
-            page_edges: false,  // Disable page edges to test grid alone
+            grid_spacing: 9.0, // 1/8 inch
+            page_edges: false, // Disable page edges to test grid alone
             margins: false,
             objects: false,
             ..SnapConfig::default()

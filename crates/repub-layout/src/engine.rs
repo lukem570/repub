@@ -127,11 +127,7 @@ impl<F: FontProvider> LayoutEngine<F> {
     }
 
     /// Layout a text frame given its shape (for bounds and id) and its data.
-    pub fn layout_text_frame(
-        &mut self,
-        shape: &Shape,
-        data: &TextFrameData,
-    ) -> TextFrameLayout {
+    pub fn layout_text_frame(&mut self, shape: &Shape, data: &TextFrameData) -> TextFrameLayout {
         let object_id = shape.common.id;
         let version = self.cache.version();
 

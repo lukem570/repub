@@ -132,15 +132,15 @@ impl ColorScheme {
     /// The default Office-style scheme.
     pub const OFFICE: ColorScheme = ColorScheme {
         colors: [
-            Color::WHITE,                   // Background
-            Color::BLACK,                   // Text
-            Color::rgb(0.27, 0.45, 0.77),   // Accent1 (blue)
-            Color::rgb(0.91, 0.43, 0.32),   // Accent2 (orange-red)
-            Color::rgb(0.64, 0.64, 0.64),   // Accent3 (gray)
-            Color::rgb(1.0, 0.75, 0.0),     // Accent4 (gold)
-            Color::rgb(0.44, 0.68, 0.28),   // Accent5 (green)
-            Color::rgb(0.0, 0.0, 1.0),      // Hyperlink
-            Color::rgb(0.5, 0.0, 0.5),      // FollowedHyperlink
+            Color::WHITE,                 // Background
+            Color::BLACK,                 // Text
+            Color::rgb(0.27, 0.45, 0.77), // Accent1 (blue)
+            Color::rgb(0.91, 0.43, 0.32), // Accent2 (orange-red)
+            Color::rgb(0.64, 0.64, 0.64), // Accent3 (gray)
+            Color::rgb(1.0, 0.75, 0.0),   // Accent4 (gold)
+            Color::rgb(0.44, 0.68, 0.28), // Accent5 (green)
+            Color::rgb(0.0, 0.0, 1.0),    // Hyperlink
+            Color::rgb(0.5, 0.0, 0.5),    // FollowedHyperlink
         ],
     };
 }

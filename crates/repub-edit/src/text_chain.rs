@@ -100,7 +100,9 @@ pub fn head(page: &Page, id: ObjectId) -> ObjectId {
     let frames = text_frames(page);
     let mut current = id;
     for _ in 0..MAX_CHAIN {
-        let prev = frames.values().find(|s| frame_data(s).and_then(|d| d.linked_frame) == Some(current));
+        let prev = frames
+            .values()
+            .find(|s| frame_data(s).and_then(|d| d.linked_frame) == Some(current));
         match prev {
             Some(prev) if prev.id() != id => current = prev.id(),
             _ => break,
@@ -114,7 +116,10 @@ pub fn chain(page: &Page, id: ObjectId) -> Vec<ObjectId> {
     let frames = text_frames(page);
     let mut out = vec![head(page, id)];
     while out.len() < MAX_CHAIN {
-        let next = frames.get(out.last().unwrap()).and_then(|s| frame_data(s)).and_then(|d| d.linked_frame);
+        let next = frames
+            .get(out.last().unwrap())
+            .and_then(|s| frame_data(s))
+            .and_then(|d| d.linked_frame);
         match next {
             Some(n) if frames.contains_key(&n) && !out.contains(&n) => out.push(n),
             _ => break,
@@ -126,14 +131,19 @@ pub fn chain(page: &Page, id: ObjectId) -> Vec<ObjectId> {
 /// Every linked box on `page` as drawn: the first box shows the story up to
 /// where it stops fitting, each next box the rest from there. `overflow`
 /// reports where a frame's text stops fitting (`None` when it all fits).
-pub fn layout_chains(page: &Page, overflow: impl Fn(&Shape) -> Option<TextPos>) -> HashMap<ObjectId, ChainFrame> {
+pub fn layout_chains(
+    page: &Page,
+    overflow: impl Fn(&Shape) -> Option<TextPos>,
+) -> HashMap<ObjectId, ChainFrame> {
     let frames = text_frames(page);
     let mut out = HashMap::new();
     for shape in frames.values() {
         let id = shape.id();
         let data = frame_data(shape).unwrap();
         let starts_chain = data.linked_frame.is_some()
-            && !frames.values().any(|o| frame_data(o).and_then(|d| d.linked_frame) == Some(id));
+            && !frames
+                .values()
+                .any(|o| frame_data(o).and_then(|d| d.linked_frame) == Some(id));
         if !starts_chain {
             continue;
         }
@@ -152,7 +162,15 @@ pub fn layout_chains(page: &Page, overflow: impl Fn(&Shape) -> Option<TextPos>) 
                     d.content = text_before(&story, pos);
                 }
             }
-            out.insert(*box_id, ChainFrame { frame, start, head: id, last });
+            out.insert(
+                *box_id,
+                ChainFrame {
+                    frame,
+                    start,
+                    head: id,
+                    last,
+                },
+            );
             match split {
                 Some(pos) => {
                     story = text_from(&story, pos);
@@ -206,7 +224,10 @@ pub fn break_link(page: &mut Page, from: ObjectId) {
         }
         _ => None,
     };
-    if let Some(ShapeKind::TextFrame(d)) = next.and_then(|n| page.get_shape_mut(n)).map(|s| &mut s.kind) {
+    if let Some(ShapeKind::TextFrame(d)) = next
+        .and_then(|n| page.get_shape_mut(n))
+        .map(|s| &mut s.kind)
+    {
         d.is_continuation = false;
     }
 }
@@ -215,11 +236,14 @@ pub fn break_link(page: &mut Page, from: ObjectId) {
 /// deleted boxes, and a deleted first box hands the story to the next one.
 pub fn before_delete(page: &mut Page, ids: &[ObjectId]) {
     for &id in ids {
-        let Some(data) = page.get_shape(id).and_then(|s| frame_data(s)) else { continue };
+        let Some(data) = page.get_shape(id).and_then(|s| frame_data(s)) else {
+            continue;
+        };
         let (next, content) = (data.linked_frame, data.content.clone());
         match previous(page, id) {
             Some(prev) => {
-                if let Some(ShapeKind::TextFrame(d)) = page.get_shape_mut(prev).map(|s| &mut s.kind) {
+                if let Some(ShapeKind::TextFrame(d)) = page.get_shape_mut(prev).map(|s| &mut s.kind)
+                {
                     d.linked_frame = next;
                     if next.is_none() {
                         d.overflow = TextOverflow::default();
@@ -227,7 +251,10 @@ pub fn before_delete(page: &mut Page, ids: &[ObjectId]) {
                 }
             }
             None => {
-                if let Some(ShapeKind::TextFrame(d)) = next.and_then(|n| page.get_shape_mut(n)).map(|s| &mut s.kind) {
+                if let Some(ShapeKind::TextFrame(d)) = next
+                    .and_then(|n| page.get_shape_mut(n))
+                    .map(|s| &mut s.kind)
+                {
                     d.content = content;
                     d.is_continuation = false;
                 }
@@ -248,7 +275,10 @@ mod tests {
     fn page_with_two_frames() -> (Page, ObjectId, ObjectId) {
         let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
         let page = &mut doc.pages_mut()[0];
-        let a = page.add_shape(Shape::text_frame_with_text(Rect::new(0.0, 0.0, 100.0, 50.0), "Hello"));
+        let a = page.add_shape(Shape::text_frame_with_text(
+            Rect::new(0.0, 0.0, 100.0, 50.0),
+            "Hello",
+        ));
         let b = page.add_shape(Shape::text_frame(Rect::new(0.0, 60.0, 100.0, 50.0)));
         (page.clone(), a, b)
     }

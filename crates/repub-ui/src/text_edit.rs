@@ -74,7 +74,11 @@ impl TextEditState {
 
     /// Selection as an ordered (start, end) pair.
     pub fn range(&self) -> (TextPos, TextPos) {
-        if self.caret <= self.anchor { (self.caret, self.anchor) } else { (self.anchor, self.caret) }
+        if self.caret <= self.anchor {
+            (self.caret, self.anchor)
+        } else {
+            (self.anchor, self.caret)
+        }
     }
 }
 
@@ -153,7 +157,8 @@ fn insert_in_para(p: &mut Paragraph, offset: usize, text: &str) {
         pos += element_len(&p.elements[index]);
         index += 1;
     }
-    p.elements.insert(index, InlineElement::Text(TextRun::styled(text, style)));
+    p.elements
+        .insert(index, InlineElement::Text(TextRun::styled(text, style)));
 }
 
 /// Delete character offsets `start..end` from a paragraph.
@@ -169,11 +174,17 @@ fn delete_in_para(p: &mut Paragraph, start: usize, end: usize) {
         if s < t {
             match &mut e {
                 InlineElement::Text(run) => {
-                    let (a, b) = (byte_index(&run.text, s - pos), byte_index(&run.text, t - pos));
+                    let (a, b) = (
+                        byte_index(&run.text, s - pos),
+                        byte_index(&run.text, t - pos),
+                    );
                     run.text.replace_range(a..b, "");
                 }
                 InlineElement::Link(link) => {
-                    let (a, b) = (byte_index(&link.text, s - pos), byte_index(&link.text, t - pos));
+                    let (a, b) = (
+                        byte_index(&link.text, s - pos),
+                        byte_index(&link.text, t - pos),
+                    );
                     link.text.replace_range(a..b, "");
                 }
                 // Non-text elements inside the range are removed entirely
@@ -234,7 +245,11 @@ pub fn insert_text(text: &mut StyledText, pos: TextPos, s: &str) -> TextPos {
         }
         for (j, part) in line.split('\t').enumerate() {
             if j > 0 {
-                insert_inline(&mut text.paragraphs[pos.para], pos.offset, InlineElement::Tab);
+                insert_inline(
+                    &mut text.paragraphs[pos.para],
+                    pos.offset,
+                    InlineElement::Tab,
+                );
                 pos.offset += 1;
             }
             let part = part.replace('\r', "");
@@ -260,7 +275,8 @@ pub(crate) fn split_run_at(p: &mut Paragraph, offset: usize) {
                     if let InlineElement::Text(run) = &mut p.elements[i] {
                         run.text.truncate(at);
                     }
-                    p.elements.insert(i + 1, InlineElement::Text(TextRun::styled(&right, style)));
+                    p.elements
+                        .insert(i + 1, InlineElement::Text(TextRun::styled(&right, style)));
                 }
                 InlineElement::Link(link) => {
                     let at = byte_index(&link.text, local);
@@ -284,14 +300,21 @@ pub(crate) fn split_run_at(p: &mut Paragraph, offset: usize) {
 }
 
 /// The link around offset `pos`, as (start, end, link).
-pub fn link_around(text: &StyledText, pos: TextPos) -> Option<(TextPos, TextPos, repub_model::text::Hyperlink)> {
+pub fn link_around(
+    text: &StyledText,
+    pos: TextPos,
+) -> Option<(TextPos, TextPos, repub_model::text::Hyperlink)> {
     let p = text.paragraphs.get(pos.para)?;
     let mut at = 0;
     for e in &p.elements {
         let len = element_len(e);
         if let InlineElement::Link(link) = e {
             if pos.offset >= at && pos.offset <= at + len && len > 0 {
-                return Some((TextPos::new(pos.para, at), TextPos::new(pos.para, at + len), link.clone()));
+                return Some((
+                    TextPos::new(pos.para, at),
+                    TextPos::new(pos.para, at + len),
+                    link.clone(),
+                ));
             }
         }
         at += len;
@@ -300,7 +323,11 @@ pub fn link_around(text: &StyledText, pos: TextPos) -> Option<(TextPos, TextPos,
 }
 
 /// Insert a hyperlink element at `pos`. Returns the caret after the link text.
-pub fn insert_link(text: &mut StyledText, pos: TextPos, link: repub_model::text::Hyperlink) -> TextPos {
+pub fn insert_link(
+    text: &mut StyledText,
+    pos: TextPos,
+    link: repub_model::text::Hyperlink,
+) -> TextPos {
     ensure_paragraph(text);
     let pos = clamp(text, pos);
     let p = &mut text.paragraphs[pos.para];
@@ -377,9 +404,17 @@ pub fn text_between(text: &StyledText, a: TextPos, b: TextPos) -> String {
     for para in start.para..=end.para.min(text.paragraphs.len() - 1) {
         let chars = para_chars(&text.paragraphs[para]);
         let from = if para == start.para { start.offset } else { 0 };
-        let to = if para == end.para { end.offset.min(chars.len()) } else { chars.len() };
+        let to = if para == end.para {
+            end.offset.min(chars.len())
+        } else {
+            chars.len()
+        };
         if from < to {
-            out.extend(chars[from..to].iter().map(|&c| if c == '\u{FFFC}' { ' ' } else { c }));
+            out.extend(
+                chars[from..to]
+                    .iter()
+                    .map(|&c| if c == '\u{FFFC}' { ' ' } else { c }),
+            );
         }
         if para != end.para {
             out.push('\n');
@@ -443,7 +478,11 @@ pub fn prev_word(text: &StyledText, pos: TextPos) -> TextPos {
 
 /// End of the next word (Option/Alt+Right).
 pub fn next_word(text: &StyledText, pos: TextPos) -> TextPos {
-    let chars = text.paragraphs.get(pos.para).map(para_chars).unwrap_or_default();
+    let chars = text
+        .paragraphs
+        .get(pos.para)
+        .map(para_chars)
+        .unwrap_or_default();
     if pos.offset >= chars.len() {
         return next_pos(text, pos);
     }
@@ -459,11 +498,19 @@ pub fn next_word(text: &StyledText, pos: TextPos) -> TextPos {
 
 /// Word around a position (double-click).
 pub fn word_at(text: &StyledText, pos: TextPos) -> (TextPos, TextPos) {
-    let Some(p) = text.paragraphs.get(pos.para) else { return (pos, pos) };
+    let Some(p) = text.paragraphs.get(pos.para) else {
+        return (pos, pos);
+    };
     let chars = para_chars(p);
     let (mut a, mut b) = (pos.offset.min(chars.len()), pos.offset.min(chars.len()));
     let class = |c: char| is_word(c);
-    let target = if b < chars.len() { class(chars[b]) } else if a > 0 { class(chars[a - 1]) } else { true };
+    let target = if b < chars.len() {
+        class(chars[b])
+    } else if a > 0 {
+        class(chars[a - 1])
+    } else {
+        true
+    };
     while a > 0 && class(chars[a - 1]) == target && chars[a - 1] != '\n' {
         a -= 1;
     }
@@ -492,7 +539,11 @@ fn line_of(layout: &FrameLayout, pos: TextPos) -> Option<usize> {
 /// Caret x and vertical extent for a position, document points.
 pub fn caret_geometry(layout: &FrameLayout, pos: TextPos) -> Option<(f32, f32, f32)> {
     let line = &layout.lines[line_of(layout, pos)?];
-    let x = line.xs.get(pos.offset - line.start).copied().or(line.xs.last().copied())?;
+    let x = line
+        .xs
+        .get(pos.offset - line.start)
+        .copied()
+        .or(line.xs.last().copied())?;
     Some((x, line.top, line.bottom))
 }
 
@@ -543,9 +594,20 @@ pub fn selection_rects(layout: &FrameLayout, a: TextPos, b: TextPos) -> Vec<[f32
         if line_end < start || line_start > end || (line_end == start && line.end > line.start) {
             continue;
         }
-        let from = if start > line_start { start.offset - line.start } else { 0 };
-        let to = if end < line_end { end.offset - line.start } else { line.end - line.start };
-        let (x0, mut x1) = (line.xs[from.min(line.xs.len() - 1)], line.xs[to.min(line.xs.len() - 1)]);
+        let from = if start > line_start {
+            start.offset - line.start
+        } else {
+            0
+        };
+        let to = if end < line_end {
+            end.offset - line.start
+        } else {
+            line.end - line.start
+        };
+        let (x0, mut x1) = (
+            line.xs[from.min(line.xs.len() - 1)],
+            line.xs[to.min(line.xs.len() - 1)],
+        );
         // When the selection continues past this line, show a small block for the
         // line/paragraph break, as text editors do
         if end > line_end {
@@ -576,7 +638,11 @@ fn frame(state: &AppState, id: ObjectId) -> Option<Cow<'_, Shape>> {
 
 /// The cell of table `id` being edited, if any.
 fn edited_cell(state: &AppState, id: ObjectId) -> Option<(usize, usize)> {
-    state.text_edit.as_ref().filter(|e| e.frame == id).and_then(|e| e.cell)
+    state
+        .text_edit
+        .as_ref()
+        .filter(|e| e.frame == id)
+        .and_then(|e| e.cell)
 }
 
 /// `id`'s text: a text box's, or the edited cell's when `id` is the table being edited.
@@ -599,7 +665,9 @@ pub(crate) fn text_mut(state: &mut AppState, id: ObjectId) -> Option<&mut Styled
         ShapeKind::TextFrame(tf) => Some(&mut tf.content),
         ShapeKind::Table(table) => {
             let (row, col) = cell?;
-            table.cell_mut(row as u32, col as u32).map(|c| &mut c.content)
+            table
+                .cell_mut(row as u32, col as u32)
+                .map(|c| &mut c.content)
         }
         _ => None,
     }
@@ -607,11 +675,23 @@ pub(crate) fn text_mut(state: &mut AppState, id: ObjectId) -> Option<&mut Styled
 
 /// The texts of object `id`: a text box's, or a table's cell `cell` (every
 /// cell when `cell` is `None`).
-pub(crate) fn texts_in(state: &AppState, id: ObjectId, cell: Option<(usize, usize)>) -> Vec<&StyledText> {
-    match state.current_page().and_then(|p| p.get_shape(id)).map(|s| &s.kind) {
+pub(crate) fn texts_in(
+    state: &AppState,
+    id: ObjectId,
+    cell: Option<(usize, usize)>,
+) -> Vec<&StyledText> {
+    match state
+        .current_page()
+        .and_then(|p| p.get_shape(id))
+        .map(|s| &s.kind)
+    {
         Some(ShapeKind::TextFrame(tf)) => vec![&tf.content],
         Some(ShapeKind::Table(table)) => match cell {
-            Some((row, col)) => table.cell(row as u32, col as u32).map(|c| &c.content).into_iter().collect(),
+            Some((row, col)) => table
+                .cell(row as u32, col as u32)
+                .map(|c| &c.content)
+                .into_iter()
+                .collect(),
             None => table.cells.iter().map(|c| &c.content).collect(),
         },
         _ => Vec::new(),
@@ -619,8 +699,17 @@ pub(crate) fn texts_in(state: &AppState, id: ObjectId, cell: Option<(usize, usiz
 }
 
 /// Run `f` on each of [`texts_in`], mutably.
-pub(crate) fn for_each_text_mut(state: &mut AppState, id: ObjectId, cell: Option<(usize, usize)>, mut f: impl FnMut(&mut StyledText)) {
-    match state.current_page_mut().and_then(|p| p.get_shape_mut(id)).map(|s| &mut s.kind) {
+pub(crate) fn for_each_text_mut(
+    state: &mut AppState,
+    id: ObjectId,
+    cell: Option<(usize, usize)>,
+    mut f: impl FnMut(&mut StyledText),
+) {
+    match state
+        .current_page_mut()
+        .and_then(|p| p.get_shape_mut(id))
+        .map(|s| &mut s.kind)
+    {
         Some(ShapeKind::TextFrame(tf)) => f(&mut tf.content),
         Some(ShapeKind::Table(table)) => match cell {
             Some((row, col)) => {
@@ -637,14 +726,19 @@ pub(crate) fn for_each_text_mut(state: &mut AppState, id: ObjectId, cell: Option
 /// Whether document point (`x`, `y`) is inside the text being edited (the
 /// text box, or the edited cell).
 pub fn edit_contains(state: &AppState, x: f32, y: f32) -> bool {
-    let Some(edit) = &state.text_edit else { return false };
+    let Some(edit) = &state.text_edit else {
+        return false;
+    };
     frame(state, edit.frame).is_some_and(|tf| frame_contains(&tf, x, y))
 }
 
 /// Rotate a document point into the frame's unrotated coordinates.
 pub fn to_frame_space(tf: &Shape, x: f32, y: f32) -> (f32, f32) {
     let b = tf.common.bounds;
-    let (cx, cy) = ((b.origin.x + b.size.width / 2.0) as f32, (b.origin.y + b.size.height / 2.0) as f32);
+    let (cx, cy) = (
+        (b.origin.x + b.size.width / 2.0) as f32,
+        (b.origin.y + b.size.height / 2.0) as f32,
+    );
     let (sin, cos) = (-(tf.common.rotation as f32)).to_radians().sin_cos();
     let (dx, dy) = (x - cx, y - cy);
     (cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
@@ -653,7 +747,10 @@ pub fn to_frame_space(tf: &Shape, x: f32, y: f32) -> (f32, f32) {
 /// Rotate an unrotated frame-space point into document coordinates.
 pub fn from_frame_space(tf: &Shape, x: f32, y: f32) -> (f32, f32) {
     let b = tf.common.bounds;
-    let (cx, cy) = ((b.origin.x + b.size.width / 2.0) as f32, (b.origin.y + b.size.height / 2.0) as f32);
+    let (cx, cy) = (
+        (b.origin.x + b.size.width / 2.0) as f32,
+        (b.origin.y + b.size.height / 2.0) as f32,
+    );
     let (sin, cos) = (tf.common.rotation as f32).to_radians().sin_cos();
     let (dx, dy) = (x - cx, y - cy);
     (cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
@@ -663,7 +760,10 @@ pub fn from_frame_space(tf: &Shape, x: f32, y: f32) -> (f32, f32) {
 pub fn frame_contains(tf: &Shape, x: f32, y: f32) -> bool {
     let (fx, fy) = to_frame_space(tf, x, y);
     let b = tf.common.bounds;
-    fx >= b.origin.x as f32 && fx <= (b.origin.x + b.size.width) as f32 && fy >= b.origin.y as f32 && fy <= (b.origin.y + b.size.height) as f32
+    fx >= b.origin.x as f32
+        && fx <= (b.origin.x + b.size.width) as f32
+        && fy >= b.origin.y as f32
+        && fy <= (b.origin.y + b.size.height) as f32
 }
 
 // ----------------------------------------------------------------------- session
@@ -680,7 +780,9 @@ pub fn begin(state: &mut AppState, id: ObjectId, caret: Option<TextPos>, now: f6
     if let Some(page) = state.current_page() {
         let head = crate::text_chain::head(page, id);
         if head != id {
-            let start = crate::text_chain::layout_chains(page).get(&id).map_or(TextPos::new(0, 0), |c| c.start);
+            let start = crate::text_chain::layout_chains(page)
+                .get(&id)
+                .map_or(TextPos::new(0, 0), |c| c.start);
             let caret = Some(caret.map_or(start, |c| crate::text_chain::to_story(start, c)));
             return begin(state, head, caret, now);
         }
@@ -690,26 +792,59 @@ pub fn begin(state: &mut AppState, id: ObjectId, caret: Option<TextPos>, now: f6
     }
     end(state);
     let Some(tf) = frame(state, id) else { return };
-    let caret = clamp(frame_content(&tf), caret.unwrap_or_else(|| end_pos(frame_content(&tf))));
+    let caret = clamp(
+        frame_content(&tf),
+        caret.unwrap_or_else(|| end_pos(frame_content(&tf))),
+    );
     state.select(id, false);
     state.begin_edit();
-    state.text_edit = Some(TextEditState { frame: id, cell: None, caret, anchor: caret, preferred_x: None, blink_epoch: now });
+    state.text_edit = Some(TextEditState {
+        frame: id,
+        cell: None,
+        caret,
+        anchor: caret,
+        preferred_x: None,
+        blink_epoch: now,
+    });
 }
 
 /// Start editing cell (`row`, `col`) of table `id` with the caret at `caret`
 /// (or the end of its text). Within one table, moving between cells continues
 /// the same editing session (one undo step).
-pub fn begin_cell(state: &mut AppState, id: ObjectId, row: usize, col: usize, caret: Option<TextPos>, now: f64) {
-    let same_table = state.text_edit.as_ref().is_some_and(|e| e.frame == id && e.cell.is_some());
+pub fn begin_cell(
+    state: &mut AppState,
+    id: ObjectId,
+    row: usize,
+    col: usize,
+    caret: Option<TextPos>,
+    now: f64,
+) {
+    let same_table = state
+        .text_edit
+        .as_ref()
+        .is_some_and(|e| e.frame == id && e.cell.is_some());
     if !same_table {
         end(state);
-        if !matches!(state.current_page().and_then(|p| p.get_shape(id)).map(|s| &s.kind), Some(ShapeKind::Table(_))) {
+        if !matches!(
+            state
+                .current_page()
+                .and_then(|p| p.get_shape(id))
+                .map(|s| &s.kind),
+            Some(ShapeKind::Table(_))
+        ) {
             return;
         }
         state.select(id, false);
         state.begin_edit();
     }
-    let session = TextEditState { frame: id, cell: Some((row, col)), caret: TextPos::default(), anchor: TextPos::default(), preferred_x: None, blink_epoch: now };
+    let session = TextEditState {
+        frame: id,
+        cell: Some((row, col)),
+        caret: TextPos::default(),
+        anchor: TextPos::default(),
+        preferred_x: None,
+        blink_epoch: now,
+    };
     state.text_edit = Some(session);
     let Some(text) = text_ref(state, id) else {
         // No such cell
@@ -729,10 +864,18 @@ pub fn begin_cell(state: &mut AppState, id: ObjectId, row: usize, col: usize, ca
 /// Start editing the cell of table `id` under document point (`x`, `y`), with
 /// the caret at the point.
 pub fn begin_cell_at_point(state: &mut AppState, id: ObjectId, x: f32, y: f32, now: f64) -> bool {
-    let Some(shape) = state.current_page().and_then(|p| p.get_shape(id)) else { return false };
-    if !matches!(shape.kind, ShapeKind::Table(_)) { return false }
+    let Some(shape) = state.current_page().and_then(|p| p.get_shape(id)) else {
+        return false;
+    };
+    if !matches!(shape.kind, ShapeKind::Table(_)) {
+        return false;
+    }
     // TODO(port): assumes table_view::cell_at / cell_frame take the table `Shape`.
-    let Some((row, col)) = crate::table_view::cell_at(shape, repub_geometry::Point::new(x as f64, y as f64)) else { return false };
+    let Some((row, col)) =
+        crate::table_view::cell_at(shape, repub_geometry::Point::new(x as f64, y as f64))
+    else {
+        return false;
+    };
     let caret = crate::table_view::cell_frame(shape, row, col).map(|tf| {
         let (fx, fy) = to_frame_space(&tf, x, y);
         hit_test(&sdf_text::layout_frame(&tf), fx, fy)
@@ -744,10 +887,21 @@ pub fn begin_cell_at_point(state: &mut AppState, id: ObjectId, x: f32, y: f32, n
 /// Tab / Shift+Tab in a table: edit the next (or previous) cell, its text
 /// selected. Tab in the last cell adds a row, as in Publisher.
 pub fn next_cell(state: &mut AppState, forward: bool, now: f64) {
-    let Some(TextEditState { frame: id, cell: Some((row, col)), .. }) = state.text_edit.clone() else { return };
+    let Some(TextEditState {
+        frame: id,
+        cell: Some((row, col)),
+        ..
+    }) = state.text_edit.clone()
+    else {
+        return;
+    };
     let neighbour = {
-        let Some(shape) = state.current_page().and_then(|p| p.get_shape(id)) else { return };
-        if !matches!(shape.kind, ShapeKind::Table(_)) { return }
+        let Some(shape) = state.current_page().and_then(|p| p.get_shape(id)) else {
+            return;
+        };
+        if !matches!(shape.kind, ShapeKind::Table(_)) {
+            return;
+        }
         crate::table_view::neighbour_cell(shape, row, col, forward)
     };
     let target = match neighbour {
@@ -776,11 +930,17 @@ pub fn next_cell(state: &mut AppState, forward: bool, now: f64) {
 /// Start editing with the caret at a document point inside the frame.
 pub fn begin_at_point(state: &mut AppState, id: ObjectId, x: f32, y: f32, now: f64) {
     // Linked boxes: the part of the story this box shows
-    let shown = state.current_page().and_then(|p| crate::text_chain::layout_chains(p).remove(&id)).map(|c| c.frame);
-    let caret = shown.map(Cow::Owned).or_else(|| frame(state, id)).map(|tf| {
-        let (fx, fy) = to_frame_space(&tf, x, y);
-        hit_test(&sdf_text::layout_frame(&tf), fx, fy)
-    });
+    let shown = state
+        .current_page()
+        .and_then(|p| crate::text_chain::layout_chains(p).remove(&id))
+        .map(|c| c.frame);
+    let caret = shown
+        .map(Cow::Owned)
+        .or_else(|| frame(state, id))
+        .map(|tf| {
+            let (fx, fy) = to_frame_space(&tf, x, y);
+            hit_test(&sdf_text::layout_frame(&tf), fx, fy)
+        });
     begin(state, id, caret, now);
 }
 
@@ -792,7 +952,10 @@ pub fn end(state: &mut AppState) {
 }
 
 /// Run `f` on the edited frame's text and session.
-fn with_text<R>(state: &mut AppState, f: impl FnOnce(&mut StyledText, &mut TextEditState) -> R) -> Option<R> {
+fn with_text<R>(
+    state: &mut AppState,
+    f: impl FnOnce(&mut StyledText, &mut TextEditState) -> R,
+) -> Option<R> {
     let mut edit = state.text_edit.clone()?;
     let text = text_mut(state, edit.frame)?;
     let result = f(text, &mut edit);
@@ -816,9 +979,15 @@ pub fn type_text(state: &mut AppState, s: &str, now: f64) {
 /// Undo (or redo) while editing: the typing so far becomes one undo step, it is
 /// undone, and editing resumes in the same frame if it still exists.
 pub fn undo(state: &mut AppState, redo: bool, now: f64) {
-    let Some(edit) = state.text_edit.clone() else { return };
+    let Some(edit) = state.text_edit.clone() else {
+        return;
+    };
     end(state);
-    if redo { state.redo() } else { state.undo() };
+    if redo {
+        state.redo()
+    } else {
+        state.undo()
+    };
     match edit.cell {
         Some((row, col)) => begin_cell(state, edit.frame, row, col, Some(edit.caret), now),
         None if is_text_frame(state, edit.frame) => begin(state, edit.frame, Some(edit.caret), now),
@@ -862,7 +1031,14 @@ pub fn backspace(state: &mut AppState, word: bool, now: f64) {
             (edit.caret, edit.anchor)
         } else {
             let to = clamp(text, edit.caret);
-            (if word { prev_word(text, to) } else { prev_pos(text, to) }, to)
+            (
+                if word {
+                    prev_word(text, to)
+                } else {
+                    prev_pos(text, to)
+                },
+                to,
+            )
         };
         let caret = delete_range(text, from, to);
         set_caret(edit, caret, false, now);
@@ -876,7 +1052,14 @@ pub fn delete_forward(state: &mut AppState, word: bool, now: f64) {
             (edit.caret, edit.anchor)
         } else {
             let from = clamp(text, edit.caret);
-            (from, if word { next_word(text, from) } else { next_pos(text, from) })
+            (
+                from,
+                if word {
+                    next_word(text, from)
+                } else {
+                    next_pos(text, from)
+                },
+            )
         };
         let caret = delete_range(text, from, to);
         set_caret(edit, caret, false, now);
@@ -885,13 +1068,24 @@ pub fn delete_forward(state: &mut AppState, word: bool, now: f64) {
 
 /// Selected text (empty if nothing is selected).
 pub fn selected_text(state: &AppState) -> String {
-    let Some(edit) = &state.text_edit else { return String::new() };
-    frame(state, edit.frame).map_or_else(String::new, |tf| text_between(frame_content(&tf), edit.caret, edit.anchor))
+    let Some(edit) = &state.text_edit else {
+        return String::new();
+    };
+    frame(state, edit.frame).map_or_else(String::new, |tf| {
+        text_between(frame_content(&tf), edit.caret, edit.anchor)
+    })
 }
 
 /// Select all text in the frame.
 pub fn select_all(state: &mut AppState, now: f64) {
-    let Some(end) = state.text_edit.as_ref().and_then(|e| frame(state, e.frame)).map(|tf| end_pos(frame_content(&tf))) else { return };
+    let Some(end) = state
+        .text_edit
+        .as_ref()
+        .and_then(|e| frame(state, e.frame))
+        .map(|tf| end_pos(frame_content(&tf)))
+    else {
+        return;
+    };
     if let Some(edit) = state.text_edit.as_mut() {
         edit.anchor = TextPos::default();
         edit.caret = end;
@@ -924,8 +1118,12 @@ pub enum Motion {
 
 /// Move the caret; `extend` (Shift) grows the selection instead of collapsing it.
 pub fn move_caret(state: &mut AppState, motion: Motion, extend: bool, now: f64) {
-    let Some(edit) = state.text_edit.clone() else { return };
-    let Some(tf) = frame(state, edit.frame) else { return };
+    let Some(edit) = state.text_edit.clone() else {
+        return;
+    };
+    let Some(tf) = frame(state, edit.frame) else {
+        return;
+    };
     let text = frame_content(&tf);
     let layout = sdf_text::layout_frame(&tf);
     let caret = clamp(text, edit.caret);
@@ -941,18 +1139,34 @@ pub fn move_caret(state: &mut AppState, motion: Motion, extend: bool, now: f64) 
         Motion::WordLeft => prev_word(text, caret),
         Motion::WordRight => next_word(text, caret),
         Motion::Up | Motion::Down => {
-            let x = edit.preferred_x.or_else(|| caret_geometry(&layout, caret).map(|g| g.0)).unwrap_or(0.0);
+            let x = edit
+                .preferred_x
+                .or_else(|| caret_geometry(&layout, caret).map(|g| g.0))
+                .unwrap_or(0.0);
             preferred_x = Some(x);
             let down = motion == Motion::Down;
-            vertical(&layout, caret, x, down).unwrap_or(if down { end_pos(text) } else { TextPos::default() })
+            vertical(&layout, caret, x, down).unwrap_or(if down {
+                end_pos(text)
+            } else {
+                TextPos::default()
+            })
         }
-        Motion::LineStart => line_of(&layout, caret).map_or(caret, |i| TextPos::new(caret.para, layout.lines[i].start)),
+        Motion::LineStart => line_of(&layout, caret)
+            .map_or(caret, |i| TextPos::new(caret.para, layout.lines[i].start)),
         Motion::LineEnd => line_of(&layout, caret).map_or(caret, |i| {
             let line = &layout.lines[i];
             // Stop before a trailing space at a soft wrap so the caret stays on this line
             let chars = para_chars(&text.paragraphs[caret.para]);
-            let wrapped_space = line.end > line.start && line.end < chars.len() && chars[line.end - 1] == ' ';
-            TextPos::new(caret.para, if wrapped_space { line.end - 1 } else { line.end })
+            let wrapped_space =
+                line.end > line.start && line.end < chars.len() && chars[line.end - 1] == ' ';
+            TextPos::new(
+                caret.para,
+                if wrapped_space {
+                    line.end - 1
+                } else {
+                    line.end
+                },
+            )
         }),
         Motion::DocStart => TextPos::default(),
         Motion::DocEnd => end_pos(text),
@@ -966,8 +1180,12 @@ pub fn move_caret(state: &mut AppState, motion: Motion, extend: bool, now: f64) 
 
 /// Mouse press inside the edited frame: place the caret (`extend`: Shift-click extends).
 pub fn click_at(state: &mut AppState, x: f32, y: f32, extend: bool, now: f64) {
-    let Some(edit) = state.text_edit.clone() else { return };
-    let Some(tf) = frame(state, edit.frame) else { return };
+    let Some(edit) = state.text_edit.clone() else {
+        return;
+    };
+    let Some(tf) = frame(state, edit.frame) else {
+        return;
+    };
     let (fx, fy) = to_frame_space(&tf, x, y);
     let pos = hit_test(&sdf_text::layout_frame(&tf), fx, fy);
     if let Some(edit) = state.text_edit.as_mut() {
@@ -983,8 +1201,12 @@ pub fn drag_to(state: &mut AppState, x: f32, y: f32, now: f64) {
 
 /// Double-click: select the word under the pointer.
 pub fn select_word_at(state: &mut AppState, x: f32, y: f32, now: f64) {
-    let Some(edit) = state.text_edit.clone() else { return };
-    let Some(tf) = frame(state, edit.frame) else { return };
+    let Some(edit) = state.text_edit.clone() else {
+        return;
+    };
+    let Some(tf) = frame(state, edit.frame) else {
+        return;
+    };
     let (fx, fy) = to_frame_space(&tf, x, y);
     let pos = hit_test(&sdf_text::layout_frame(&tf), fx, fy);
     let (a, b) = word_at(frame_content(&tf), pos);
@@ -1012,7 +1234,9 @@ mod tests {
     }
 
     fn text(paras: &[&str]) -> StyledText {
-        StyledText { paragraphs: paras.iter().map(|s| para(s)).collect() }
+        StyledText {
+            paragraphs: paras.iter().map(|s| para(s)).collect(),
+        }
     }
 
     /// A text-frame [`Shape`] at `rect` with the given content.
@@ -1025,7 +1249,10 @@ mod tests {
     }
 
     fn plain(t: &StyledText) -> Vec<String> {
-        t.paragraphs.iter().map(|p| para_chars(p).into_iter().collect()).collect()
+        t.paragraphs
+            .iter()
+            .map(|p| para_chars(p).into_iter().collect())
+            .collect()
     }
 
     #[test]
@@ -1033,11 +1260,17 @@ mod tests {
         use repub_model::text::Hyperlink;
         let mut p = Paragraph::new();
         p.elements.push(InlineElement::Text(TextRun::new("ab")));
-        p.elements.push(InlineElement::Link(Hyperlink::external("https://example.com", "cd")));
+        p.elements.push(InlineElement::Link(Hyperlink::external(
+            "https://example.com",
+            "cd",
+        )));
         p.elements.push(InlineElement::Text(TextRun::new("ef")));
-        let text = StyledText { paragraphs: vec![p] };
+        let text = StyledText {
+            paragraphs: vec![p],
+        };
         for offset in [2, 3, 4] {
-            let (start, end, link) = link_around(&text, TextPos::new(0, offset)).expect("inside or at the edges");
+            let (start, end, link) =
+                link_around(&text, TextPos::new(0, offset)).expect("inside or at the edges");
             assert_eq!((start.offset, end.offset), (2, 4));
             assert_eq!(link.target, "https://example.com");
         }
@@ -1049,7 +1282,11 @@ mod tests {
     fn line_breaks_and_fields_split_a_run_and_count_as_one_character() {
         let mut p = para("abcd");
         insert_inline(&mut p, 2, InlineElement::LineBreak);
-        insert_inline(&mut p, 3, InlineElement::Field(repub_model::text::Field::page_count()));
+        insert_inline(
+            &mut p,
+            3,
+            InlineElement::Field(repub_model::text::Field::page_count()),
+        );
         assert_eq!(para_len(&p), 6);
         let kinds: Vec<&str> = p
             .elements
@@ -1108,8 +1345,11 @@ mod tests {
         let mut p = Paragraph::new();
         let mut bold = p.style.default_char_style.clone();
         bold.font.weight = repub_model::styles::FontWeight::Bold;
-        p.elements.push(InlineElement::Text(TextRun::styled("Bold", bold.clone())));
-        let mut t = StyledText { paragraphs: vec![p] };
+        p.elements
+            .push(InlineElement::Text(TextRun::styled("Bold", bold.clone())));
+        let mut t = StyledText {
+            paragraphs: vec![p],
+        };
         insert_text(&mut t, TextPos::new(0, 4), "er");
         match &t.paragraphs[0].elements[0] {
             InlineElement::Text(run) => {
@@ -1136,35 +1376,54 @@ mod tests {
         assert_eq!(next_word(&t, TextPos::new(0, 0)), TextPos::new(0, 5));
         assert_eq!(next_word(&t, TextPos::new(0, 5)), TextPos::new(0, 11));
         assert_eq!(prev_word(&t, TextPos::new(0, 18)), TextPos::new(0, 13));
-        assert_eq!(word_at(&t, TextPos::new(0, 7)), (TextPos::new(0, 6), TextPos::new(0, 11)));
+        assert_eq!(
+            word_at(&t, TextPos::new(0, 7)),
+            (TextPos::new(0, 6), TextPos::new(0, 11))
+        );
     }
 
     #[test]
     fn text_between_spans_paragraphs() {
         let t = text(&["one", "two"]);
-        assert_eq!(text_between(&t, TextPos::new(0, 1), TextPos::new(1, 2)), "ne\ntw");
+        assert_eq!(
+            text_between(&t, TextPos::new(0, 1), TextPos::new(1, 2)),
+            "ne\ntw"
+        );
     }
 
     #[test]
     fn layout_offsets_round_trip_through_hit_testing() {
-        let tf = text_frame(repub_geometry::Rect::new(0.0, 0.0, 300.0, 200.0), text(&["The quick brown fox", "jumps"]));
+        let tf = text_frame(
+            repub_geometry::Rect::new(0.0, 0.0, 300.0, 200.0),
+            text(&["The quick brown fox", "jumps"]),
+        );
         let layout = sdf_text::layout_frame(&tf);
         for (para, len) in [(0usize, 19usize), (1, 5)] {
             for offset in 0..=len {
                 let pos = TextPos::new(para, offset);
                 let (x, top, bottom) = caret_geometry(&layout, pos).expect("caret exists");
-                assert_eq!(hit_test(&layout, x, (top + bottom) / 2.0), pos, "offset {offset} of paragraph {para}");
+                assert_eq!(
+                    hit_test(&layout, x, (top + bottom) / 2.0),
+                    pos,
+                    "offset {offset} of paragraph {para}"
+                );
             }
         }
     }
 
     #[test]
     fn wrapped_lines_cover_every_offset() {
-        let tf = text_frame(repub_geometry::Rect::new(0.0, 0.0, 60.0, 400.0), text(&["alpha beta gamma delta epsilon"]));
+        let tf = text_frame(
+            repub_geometry::Rect::new(0.0, 0.0, 60.0, 400.0),
+            text(&["alpha beta gamma delta epsilon"]),
+        );
         let layout = sdf_text::layout_frame(&tf);
         assert!(layout.lines.len() > 2, "narrow frame wraps");
         for offset in 0..=30 {
-            assert!(caret_geometry(&layout, TextPos::new(0, offset)).is_some(), "offset {offset}");
+            assert!(
+                caret_geometry(&layout, TextPos::new(0, offset)).is_some(),
+                "offset {offset}"
+            );
         }
     }
 

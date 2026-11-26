@@ -4,9 +4,7 @@
 //! provides mirror structs with `serde` derives and `From` conversions in both
 //! directions.
 
-use repub_color::{
-    Color, GradientStop, LinearGradient, Pattern, PatternType, RadialGradient,
-};
+use repub_color::{Color, GradientStop, LinearGradient, Pattern, PatternType, RadialGradient};
 use repub_geometry::{Point, Rect, Size, Transform2D};
 use serde::{Deserialize, Serialize};
 

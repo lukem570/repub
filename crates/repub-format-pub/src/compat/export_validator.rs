@@ -1,8 +1,8 @@
 //! Export validation - measures how well exported files match the expected format.
 
-use std::path::Path;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
+use std::path::Path;
 
 use crate::error::FormatResult;
 use crate::model::LayerObjectExt;
@@ -16,18 +16,18 @@ pub struct ExportValidationResult {
     pub success: bool,
     /// Error message if export failed
     pub error: Option<String>,
-    
+
     /// File size in bytes
     pub file_size: usize,
-    
+
     /// Streams created
     pub streams: Vec<String>,
     /// Stream sizes
     pub stream_sizes: HashMap<String, usize>,
-    
+
     /// Whether the file is a valid OLE compound document
     pub valid_ole: bool,
-    
+
     /// Whether Contents stream exists and has valid header
     pub valid_contents_header: bool,
     /// Contents stream size
@@ -36,19 +36,19 @@ pub struct ExportValidationResult {
     pub trailer_offset: Option<u32>,
     /// Number of chunk entries in trailer
     pub chunk_count: Option<usize>,
-    
+
     /// Whether Quill stream exists
     pub has_quill: bool,
     /// Quill stream size
     pub quill_size: usize,
-    
+
     /// Whether Escher streams exist
     pub has_escher: bool,
     /// EscherStm size
     pub escher_stm_size: usize,
     /// EscherDelayStm size
     pub escher_delay_size: usize,
-    
+
     /// Whether the exported file can be re-imported
     pub reimportable: bool,
     /// Re-import error if any
@@ -57,7 +57,7 @@ pub struct ExportValidationResult {
     pub reimport_pages: usize,
     /// Number of objects after re-import
     pub reimport_objects: usize,
-    
+
     /// Validation score (0-100%)
     pub score: f64,
     /// Score breakdown
@@ -95,7 +95,10 @@ impl ExportValidationResult {
     pub fn summary(&self) -> String {
         let mut s = String::new();
         s.push_str(&"Export Validation\n".to_string());
-        s.push_str(&format!("Status: {}\n", if self.success { "SUCCESS" } else { "FAILED" }));
+        s.push_str(&format!(
+            "Status: {}\n",
+            if self.success { "SUCCESS" } else { "FAILED" }
+        ));
         if let Some(err) = &self.error {
             s.push_str(&format!("Error: {}\n", err));
         }
@@ -103,9 +106,12 @@ impl ExportValidationResult {
         s.push_str(&format!("\nFile size: {} bytes\n", self.file_size));
         s.push_str(&format!("Valid OLE: {}\n", self.valid_ole));
         s.push_str(&format!("Streams: {}\n", self.streams.len()));
-        
+
         if self.valid_contents_header {
-            s.push_str(&format!("\nContents stream: {} bytes\n", self.contents_size));
+            s.push_str(&format!(
+                "\nContents stream: {} bytes\n",
+                self.contents_size
+            ));
             if let Some(offset) = self.trailer_offset {
                 s.push_str(&format!("  Trailer offset: 0x{:x}\n", offset));
             }
@@ -113,13 +119,19 @@ impl ExportValidationResult {
                 s.push_str(&format!("  Chunk count: {}\n", count));
             }
         }
-        
-        s.push_str(&format!("\nQuill: {} ({} bytes)\n", 
-            if self.has_quill { "yes" } else { "no" }, self.quill_size));
-        s.push_str(&format!("Escher: {} (stm: {} bytes, delay: {} bytes)\n",
-            if self.has_escher { "yes" } else { "no" }, 
-            self.escher_stm_size, self.escher_delay_size));
-        
+
+        s.push_str(&format!(
+            "\nQuill: {} ({} bytes)\n",
+            if self.has_quill { "yes" } else { "no" },
+            self.quill_size
+        ));
+        s.push_str(&format!(
+            "Escher: {} (stm: {} bytes, delay: {} bytes)\n",
+            if self.has_escher { "yes" } else { "no" },
+            self.escher_stm_size,
+            self.escher_delay_size
+        ));
+
         s.push_str(&format!("\nRe-importable: {}\n", self.reimportable));
         if let Some(err) = &self.reimport_error {
             s.push_str(&format!("  Re-import error: {}\n", err));
@@ -128,14 +140,14 @@ impl ExportValidationResult {
             s.push_str(&format!("  Pages: {}\n", self.reimport_pages));
             s.push_str(&format!("  Objects: {}\n", self.reimport_objects));
         }
-        
+
         if !self.score_breakdown.is_empty() {
             s.push_str("\nScore Breakdown:\n");
             for (category, score) in &self.score_breakdown {
                 s.push_str(&format!("  {}: {:.1}%\n", category, score));
             }
         }
-        
+
         s
     }
 }
@@ -199,7 +211,11 @@ impl ExportValidator {
     }
 
     /// Validate export to a file path
-    pub fn validate_to_file<P: AsRef<Path>>(&self, document: &Document, path: P) -> ExportValidationResult {
+    pub fn validate_to_file<P: AsRef<Path>>(
+        &self,
+        document: &Document,
+        path: P,
+    ) -> ExportValidationResult {
         let mut result = ExportValidationResult::new();
 
         // Export to file
@@ -253,20 +269,23 @@ impl ExportValidator {
 
     fn validate_ole_structure(&self, data: &[u8], result: &mut ExportValidationResult) {
         let cursor = std::io::Cursor::new(data);
-        
+
         match cfb::CompoundFile::open(cursor) {
             Ok(mut cfb) => {
                 result.valid_ole = true;
 
                 // Collect streams
-                let paths: Vec<String> = cfb.walk()
+                let paths: Vec<String> = cfb
+                    .walk()
                     .filter(|e| e.is_stream())
                     .map(|e| e.path().to_string_lossy().to_string())
                     .collect();
 
                 for path in &paths {
                     if let Ok(stream) = cfb.open_stream(path) {
-                        result.stream_sizes.insert(path.clone(), stream.len() as usize);
+                        result
+                            .stream_sizes
+                            .insert(path.clone(), stream.len() as usize);
                     }
                 }
                 result.streams = paths;
@@ -274,16 +293,21 @@ impl ExportValidator {
                 // Check Contents stream
                 if let Ok(mut contents) = cfb.open_stream("/Contents") {
                     result.contents_size = contents.len() as usize;
-                    
+
                     if contents.len() >= 0x1E {
                         let mut header = vec![0u8; 0x1E];
                         if contents.read_exact(&mut header).is_ok() {
                             // Trailer offset at 0x1A
                             let trailer_offset = u32::from_le_bytes([
-                                header[0x1A], header[0x1B], header[0x1C], header[0x1D]
+                                header[0x1A],
+                                header[0x1B],
+                                header[0x1C],
+                                header[0x1D],
                             ]);
-                            
-                            if trailer_offset > 0 && (trailer_offset as usize) < result.contents_size {
+
+                            if trailer_offset > 0
+                                && (trailer_offset as usize) < result.contents_size
+                            {
                                 result.valid_contents_header = true;
                                 result.trailer_offset = Some(trailer_offset);
                             }
@@ -312,10 +336,15 @@ impl ExportValidator {
         }
     }
 
-    fn validate_reimport(&self, data: &[u8], _original: &Document, result: &mut ExportValidationResult) {
+    fn validate_reimport(
+        &self,
+        data: &[u8],
+        _original: &Document,
+        result: &mut ExportValidationResult,
+    ) {
         // Write to temp file for import
         let temp_path = std::env::temp_dir().join("repub_export_validation.pub");
-        
+
         if std::fs::write(&temp_path, data).is_err() {
             result.reimport_error = Some("Failed to write temp file".to_string());
             return;
@@ -345,12 +374,16 @@ impl ExportValidator {
 
         // Export success (20%)
         let export_score = if result.success { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Export Success".to_string(), export_score);
+        result
+            .score_breakdown
+            .insert("Export Success".to_string(), export_score);
         scores.push((20.0, export_score));
 
         // Valid OLE (15%)
         let ole_score = if result.valid_ole { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Valid OLE".to_string(), ole_score);
+        result
+            .score_breakdown
+            .insert("Valid OLE".to_string(), ole_score);
         scores.push((15.0, ole_score));
 
         // Required streams (15%)
@@ -359,7 +392,9 @@ impl ExportValidator {
             .filter(|s| result.streams.iter().any(|x| x == *s))
             .count();
         let stream_score = stream_count as f64 / 3.0 * 100.0;
-        result.score_breakdown.insert("Required Streams".to_string(), stream_score);
+        result
+            .score_breakdown
+            .insert("Required Streams".to_string(), stream_score);
         scores.push((15.0, stream_score));
 
         // Contents structure (15%)
@@ -370,43 +405,62 @@ impl ExportValidator {
         } else {
             0.0
         };
-        result.score_breakdown.insert("Contents Structure".to_string(), contents_score);
+        result
+            .score_breakdown
+            .insert("Contents Structure".to_string(), contents_score);
         scores.push((15.0, contents_score));
 
         // Re-importable (25%)
         let reimport_score = if result.reimportable {
             // Check if page/object count matches
             let original_pages = original.pages().len();
-            let original_objects: usize = original.pages().iter()
+            let original_objects: usize = original
+                .pages()
+                .iter()
                 .flat_map(|p| p.layers().iter())
                 .map(|l| l.objects().len())
                 .sum();
-            
-            let page_match = if original_pages == result.reimport_pages { 50.0 } else { 0.0 };
+
+            let page_match = if original_pages == result.reimport_pages {
+                50.0
+            } else {
+                0.0
+            };
             let obj_match = if original_objects > 0 && result.reimport_objects > 0 {
-                (result.reimport_objects.min(original_objects) as f64 / 
-                 result.reimport_objects.max(original_objects) as f64) * 50.0
+                (result.reimport_objects.min(original_objects) as f64
+                    / result.reimport_objects.max(original_objects) as f64)
+                    * 50.0
             } else if original_objects == 0 && result.reimport_objects == 0 {
                 50.0
             } else {
                 0.0
             };
-            
+
             page_match + obj_match
         } else {
             0.0
         };
-        result.score_breakdown.insert("Re-importable".to_string(), reimport_score);
+        result
+            .score_breakdown
+            .insert("Re-importable".to_string(), reimport_score);
         scores.push((25.0, reimport_score));
 
         // Quill content (5%)
-        let quill_score = if result.has_quill && result.quill_size > 24 { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Quill Content".to_string(), quill_score);
+        let quill_score = if result.has_quill && result.quill_size > 24 {
+            100.0
+        } else {
+            0.0
+        };
+        result
+            .score_breakdown
+            .insert("Quill Content".to_string(), quill_score);
         scores.push((5.0, quill_score));
 
         // Escher content (5%)
         let escher_score = if result.has_escher { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Escher Content".to_string(), escher_score);
+        result
+            .score_breakdown
+            .insert("Escher Content".to_string(), escher_score);
         scores.push((5.0, escher_score));
 
         // Calculate weighted average

@@ -15,9 +15,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use egui::{Color32, ColorImage, Mesh, Pos2, Shape, TextureHandle, TextureOptions};
+use repub_color::Color;
 use repub_geometry::Rect;
 use repub_model::styles::{Fill, Pattern, TexturePattern, TileMode};
-use repub_color::Color;
 
 use crate::canvas::DocToScreen;
 
@@ -56,7 +56,13 @@ pub fn set_context(ctx: &egui::Context) {
 
 /// The pattern's colours mixed in proportion to its coverage.
 pub fn average_color(pattern: &Pattern) -> Color {
-    let on = pattern.pattern_type.bits().iter().map(|r| r.count_ones()).sum::<u32>() as f64 / 64.0;
+    let on = pattern
+        .pattern_type
+        .bits()
+        .iter()
+        .map(|r| r.count_ones())
+        .sum::<u32>() as f64
+        / 64.0;
     let (f, b) = (pattern.foreground, pattern.background);
     let mix = |x: f64, y: f64| x * on + y * (1.0 - on);
     Color::new(mix(f.r, b.r), mix(f.g, b.g), mix(f.b, b.b), mix(f.a, b.a))
@@ -77,13 +83,20 @@ pub fn tile_image(pattern: &Pattern) -> ColorImage {
             pixels.push(Color32::from_rgba_unmultiplied(r, g, b, a));
         }
     }
-    ColorImage { size: [8, 8], pixels }
+    ColorImage {
+        size: [8, 8],
+        pixels,
+    }
 }
 
 fn texture(pattern: &Pattern) -> Option<egui::TextureId> {
     TEXTURES.with_borrow_mut(|textures| {
         let textures = textures.as_mut()?;
-        let key = (pattern.pattern_type.bits(), rgba(&pattern.foreground), rgba(&pattern.background));
+        let key = (
+            pattern.pattern_type.bits(),
+            rgba(&pattern.foreground),
+            rgba(&pattern.background),
+        );
         let ctx = textures.ctx.clone();
         let handle = textures.tiles.entry(key).or_insert_with(|| {
             let options = TextureOptions {
@@ -101,7 +114,8 @@ fn texture(pattern: &Pattern) -> Option<egui::TextureId> {
 /// Tessellate `outline` (screen space, any flat colour) into one mesh whose
 /// vertex alpha is anti-aliasing coverage.
 fn coverage_mesh(outline: Vec<Shape>) -> Mesh {
-    let mut tessellator = egui::epaint::Tessellator::new(1.0, Default::default(), [1, 1], Vec::new());
+    let mut tessellator =
+        egui::epaint::Tessellator::new(1.0, Default::default(), [1, 1], Vec::new());
     let mut flat = Mesh::default();
     for shape in outline {
         tessellator.tessellate_shape(crate::gradient::recolor(shape), &mut flat);
@@ -112,7 +126,10 @@ fn coverage_mesh(outline: Vec<Shape>) -> Mesh {
 /// Screen point -> position in `frame`'s unrotated space, in screen units
 /// from its top-left corner.
 fn frame_space(frame: Rect, rotation: f64, map: DocToScreen) -> impl Fn(Pos2) -> (f32, f32) {
-    let centre = map.point(frame.origin.x + frame.size.width / 2.0, frame.origin.y + frame.size.height / 2.0);
+    let centre = map.point(
+        frame.origin.x + frame.size.width / 2.0,
+        frame.origin.y + frame.size.height / 2.0,
+    );
     let half = egui::Vec2::new(frame.size.width as f32, frame.size.height as f32) * map.scale / 2.0;
     let (sin, cos) = (-rotation as f32).to_radians().sin_cos();
     move |p: Pos2| {
@@ -177,9 +194,20 @@ pub fn texture_fill_shapes(
 /// Fill `outline` shapes (screen space, any flat colour) with `pattern`.
 /// `frame` is the object's bounds and `rotation` its rotation in degrees;
 /// `alpha` fades the result.
-pub fn fill_shapes(outline: Vec<Shape>, pattern: &Pattern, frame: Rect, rotation: f64, map: DocToScreen, alpha: f32) -> Shape {
+pub fn fill_shapes(
+    outline: Vec<Shape>,
+    pattern: &Pattern,
+    frame: Rect,
+    rotation: f64,
+    map: DocToScreen,
+    alpha: f32,
+) -> Shape {
     let tile = 8.0 * pattern.scale.max(0.01) as f32 * map.scale;
-    let texture = if tile >= MIN_TILE { texture(pattern) } else { None };
+    let texture = if tile >= MIN_TILE {
+        texture(pattern)
+    } else {
+        None
+    };
 
     let mut flat = coverage_mesh(outline);
 
@@ -250,11 +278,35 @@ mod tests {
         let id = egui::TextureId::User(7);
         let mut fill = TexturePattern::new("x.png");
         fill.tile = TileMode::Stretch;
-        let uv = far(texture_fill_shapes(rect(), &fill, id, [100, 100], frame, 0.0, map, 1.0));
-        assert!((uv.x - 1.0).abs() < 0.01 && (uv.y - 1.0).abs() < 0.01, "stretched: {uv:?}");
+        let uv = far(texture_fill_shapes(
+            rect(),
+            &fill,
+            id,
+            [100, 100],
+            frame,
+            0.0,
+            map,
+            1.0,
+        ));
+        assert!(
+            (uv.x - 1.0).abs() < 0.01 && (uv.y - 1.0).abs() < 0.01,
+            "stretched: {uv:?}"
+        );
         fill.tile = TileMode::Tile; // 100 px = 75 pt tiles: 2 x 1
-        let uv = far(texture_fill_shapes(rect(), &fill, id, [100, 100], frame, 0.0, map, 1.0));
-        assert!((uv.x - 2.0).abs() < 0.02 && (uv.y - 1.0).abs() < 0.02, "tiled: {uv:?}");
+        let uv = far(texture_fill_shapes(
+            rect(),
+            &fill,
+            id,
+            [100, 100],
+            frame,
+            0.0,
+            map,
+            1.0,
+        ));
+        assert!(
+            (uv.x - 2.0).abs() < 0.02 && (uv.y - 1.0).abs() < 0.02,
+            "tiled: {uv:?}"
+        );
     }
 
     #[test]
@@ -279,6 +331,9 @@ mod tests {
             .iter()
             .map(|v| v.uv)
             .fold(Pos2::ZERO, |a, b| Pos2::new(a.x.max(b.x), a.y.max(b.y)));
-        assert!((far.x - 5.0).abs() < 0.1 && (far.y - 2.0).abs() < 0.1, "{far:?}");
+        assert!(
+            (far.x - 5.0).abs() < 0.1 && (far.y - 2.0).abs() < 0.1,
+            "{far:?}"
+        );
     }
 }

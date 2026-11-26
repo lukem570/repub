@@ -44,7 +44,12 @@ impl NewDocumentDialog {
             return None;
         }
 
-        let (enter, escape) = ctx.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
+        let (enter, escape) = ctx.input(|i| {
+            (
+                i.key_pressed(egui::Key::Enter),
+                i.key_pressed(egui::Key::Escape),
+            )
+        });
         if escape {
             self.open = false;
             return None;
@@ -68,16 +73,27 @@ impl NewDocumentDialog {
 
                 // Title row: left-aligned title, close box on the right
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("New Publication").size(15.0).color(colors::text_primary()));
+                    ui.label(
+                        egui::RichText::new("New Publication")
+                            .size(15.0)
+                            .color(colors::text_primary()),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), egui::Sense::click());
+                        let (rect, resp) =
+                            ui.allocate_exact_size(egui::vec2(22.0, 22.0), egui::Sense::click());
                         if resp.hovered() {
                             ui.painter().rect_filled(rect, 0.0, colors::hover());
                         }
                         let c = rect.center();
                         let stroke = egui::Stroke::new(1.0, colors::text_secondary());
-                        ui.painter().line_segment([c + egui::vec2(-5.0, -5.0), c + egui::vec2(5.0, 5.0)], stroke);
-                        ui.painter().line_segment([c + egui::vec2(5.0, -5.0), c + egui::vec2(-5.0, 5.0)], stroke);
+                        ui.painter().line_segment(
+                            [c + egui::vec2(-5.0, -5.0), c + egui::vec2(5.0, 5.0)],
+                            stroke,
+                        );
+                        ui.painter().line_segment(
+                            [c + egui::vec2(5.0, -5.0), c + egui::vec2(-5.0, 5.0)],
+                            stroke,
+                        );
                         if resp.clicked() {
                             self.open = false;
                         }
@@ -94,34 +110,82 @@ impl NewDocumentDialog {
                             .width(200.0)
                             .selected_text(self.size_name())
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.size_preset, "letter".to_string(), "Letter (8.5 × 11 in)");
-                                ui.selectable_value(&mut self.size_preset, "legal".to_string(), "Legal (8.5 × 14 in)");
-                                ui.selectable_value(&mut self.size_preset, "tabloid".to_string(), "Tabloid (11 × 17 in)");
-                                ui.selectable_value(&mut self.size_preset, "a5".to_string(), "A5 (148 × 210 mm)");
-                                ui.selectable_value(&mut self.size_preset, "a4".to_string(), "A4 (210 × 297 mm)");
-                                ui.selectable_value(&mut self.size_preset, "a3".to_string(), "A3 (297 × 420 mm)");
-                                ui.selectable_value(&mut self.size_preset, "custom".to_string(), "Custom...");
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "letter".to_string(),
+                                    "Letter (8.5 × 11 in)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "legal".to_string(),
+                                    "Legal (8.5 × 14 in)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "tabloid".to_string(),
+                                    "Tabloid (11 × 17 in)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "a5".to_string(),
+                                    "A5 (148 × 210 mm)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "a4".to_string(),
+                                    "A4 (210 × 297 mm)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "a3".to_string(),
+                                    "A3 (297 × 420 mm)",
+                                );
+                                ui.selectable_value(
+                                    &mut self.size_preset,
+                                    "custom".to_string(),
+                                    "Custom...",
+                                );
                             });
                         ui.end_row();
 
                         if self.size_preset == "custom" {
                             ui.label("Width:");
-                            ui.add(egui::DragValue::new(&mut self.custom_width).speed(1.0).suffix(" pt"));
+                            ui.add(
+                                egui::DragValue::new(&mut self.custom_width)
+                                    .speed(1.0)
+                                    .suffix(" pt"),
+                            );
                             ui.end_row();
                             ui.label("Height:");
-                            ui.add(egui::DragValue::new(&mut self.custom_height).speed(1.0).suffix(" pt"));
+                            ui.add(
+                                egui::DragValue::new(&mut self.custom_height)
+                                    .speed(1.0)
+                                    .suffix(" pt"),
+                            );
                             ui.end_row();
                         }
 
                         ui.label("Orientation:");
                         ui.horizontal(|ui| {
-                            ui.radio_value(&mut self.orientation, PageOrientation::Portrait, "Portrait");
-                            ui.radio_value(&mut self.orientation, PageOrientation::Landscape, "Landscape");
+                            ui.radio_value(
+                                &mut self.orientation,
+                                PageOrientation::Portrait,
+                                "Portrait",
+                            );
+                            ui.radio_value(
+                                &mut self.orientation,
+                                PageOrientation::Landscape,
+                                "Landscape",
+                            );
                         });
                         ui.end_row();
 
                         ui.label("Pages:");
-                        ui.add(egui::DragValue::new(&mut self.pages).speed(1.0).range(1..=100));
+                        ui.add(
+                            egui::DragValue::new(&mut self.pages)
+                                .speed(1.0)
+                                .range(1..=100),
+                        );
                         ui.end_row();
                     });
 
@@ -131,15 +195,22 @@ impl NewDocumentDialog {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let size = egui::vec2(80.0, 26.0);
                     if ui
-                        .add(egui::Button::new("Cancel").min_size(size).fill(colors::bg_window()).stroke(egui::Stroke::new(1.0, colors::border_strong())))
+                        .add(
+                            egui::Button::new("Cancel")
+                                .min_size(size)
+                                .fill(colors::bg_window())
+                                .stroke(egui::Stroke::new(1.0, colors::border_strong())),
+                        )
                         .clicked()
                     {
                         self.open = false;
                     }
-                    let primary = egui::Button::new(egui::RichText::new("Create").color(colors::text_inverted()))
-                        .min_size(size)
-                        .fill(colors::accent())
-                        .stroke(egui::Stroke::new(1.0, colors::accent()));
+                    let primary = egui::Button::new(
+                        egui::RichText::new("Create").color(colors::text_inverted()),
+                    )
+                    .min_size(size)
+                    .fill(colors::accent())
+                    .stroke(egui::Stroke::new(1.0, colors::accent()));
                     if ui.add(primary).clicked() {
                         create = true;
                     }

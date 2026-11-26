@@ -121,8 +121,7 @@ fn write_pdf(scenes: &[Scene], options: &PdfOptions) -> VectorResult<Vec<u8>> {
 
     // Standard fonts (shared across pages).
     for i in 0..4 {
-        pdf.type1_font(font_refs[i])
-            .base_font(Name(font_base[i]));
+        pdf.type1_font(font_refs[i]).base_font(Name(font_base[i]));
     }
 
     // Document info.
@@ -187,7 +186,13 @@ fn build_content(scene: &Scene, font_names: &[&[u8]; 4]) -> Content {
             scene.size.width,
             scene.size.height,
         ));
-        fill_path(&mut content, &rect, Transform2D::IDENTITY, bg, FillRule::NonZero);
+        fill_path(
+            &mut content,
+            &rect,
+            Transform2D::IDENTITY,
+            bg,
+            FillRule::NonZero,
+        );
     }
 
     for prim in &scene.primitives {
@@ -317,12 +322,7 @@ fn append_path(content: &mut Content, path: &GeomPath, transform: Transform2D) {
                 let (c, e) = (tp(c), tp(e));
                 // Approximate: use the quad control as both cubic controls.
                 content.cubic_to(
-                    c.x as f32,
-                    c.y as f32,
-                    c.x as f32,
-                    c.y as f32,
-                    e.x as f32,
-                    e.y as f32,
+                    c.x as f32, c.y as f32, c.x as f32, c.y as f32, e.x as f32, e.y as f32,
                 );
             }
             PathSegment::CubicTo(c1, c2, e) => {

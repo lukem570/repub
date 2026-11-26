@@ -7,10 +7,10 @@ use repub_model::{Document, PageOrientation, PageSize};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use super::Tool;
 use crate::error::{McpError, McpResult};
 use crate::protocol::{ToolDefinition, ToolResult};
 use crate::session::Session;
-use super::Tool;
 
 /// Create a new document.
 pub struct CreateDocument;
@@ -25,9 +25,15 @@ struct CreateDocumentArgs {
     pages: u32,
 }
 
-fn default_size() -> String { "letter".to_string() }
-fn default_orientation() -> String { "portrait".to_string() }
-fn default_pages() -> u32 { 1 }
+fn default_size() -> String {
+    "letter".to_string()
+}
+fn default_orientation() -> String {
+    "portrait".to_string()
+}
+fn default_pages() -> u32 {
+    1
+}
 
 impl Tool for CreateDocument {
     fn definition(&self) -> ToolDefinition {
@@ -59,8 +65,8 @@ impl Tool for CreateDocument {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: CreateDocumentArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: CreateDocumentArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let page_size = parse_page_size(&args.size)?;
         let orientation = parse_orientation(&args.orientation)?;
@@ -109,18 +115,21 @@ impl Tool for OpenDocument {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: OpenDocumentArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: OpenDocumentArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let path = PathBuf::from(&args.path);
-        
+
         if !path.exists() {
-            return Err(McpError::InvalidArgument(format!("File not found: {}", args.path)));
+            return Err(McpError::InvalidArgument(format!(
+                "File not found: {}",
+                args.path
+            )));
         }
 
         let doc = native::load(&path)?;
         let page_count = doc.pages().len();
-        
+
         session.open_document(doc, path);
 
         Ok(ToolResult::json(json!({
@@ -165,8 +174,8 @@ impl Tool for SaveDocument {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: SaveDocumentArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: SaveDocumentArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document()?;
 
@@ -176,7 +185,7 @@ impl Tool for SaveDocument {
             p.clone()
         } else {
             return Err(McpError::InvalidArgument(
-                "No path specified and document has not been saved before".to_string()
+                "No path specified and document has not been saved before".to_string(),
             ));
         };
 
@@ -242,17 +251,23 @@ impl Tool for GetDocumentInfo {
     fn execute(&self, session: &mut Session, _args: Value) -> McpResult<ToolResult> {
         let doc = session.document()?;
 
-        let pages: Vec<Value> = doc.pages().iter().enumerate().map(|(i, page)| {
-            let obj_count: usize = page.layers().iter().map(|l| l.shapes().len()).sum();
-            json!({
-                "index": i,
-                "width": page.size.width,
-                "height": page.size.height,
-                "objects": obj_count
+        let pages: Vec<Value> = doc
+            .pages()
+            .iter()
+            .enumerate()
+            .map(|(i, page)| {
+                let obj_count: usize = page.layers().iter().map(|l| l.shapes().len()).sum();
+                json!({
+                    "index": i,
+                    "width": page.size.width,
+                    "height": page.size.height,
+                    "objects": obj_count
+                })
             })
-        }).collect();
+            .collect();
 
-        let total_objects: usize = pages.iter()
+        let total_objects: usize = pages
+            .iter()
             .filter_map(|p| p["objects"].as_u64())
             .sum::<u64>() as usize;
 
@@ -278,15 +293,25 @@ fn parse_page_size(s: &str) -> McpResult<PageSize> {
         custom if custom.contains('x') => {
             let parts: Vec<&str> = custom.split('x').collect();
             if parts.len() != 2 {
-                return Err(McpError::InvalidArgument(format!("Invalid size format: {}", s)));
+                return Err(McpError::InvalidArgument(format!(
+                    "Invalid size format: {}",
+                    s
+                )));
             }
-            let width: f64 = parts[0].trim().parse()
+            let width: f64 = parts[0]
+                .trim()
+                .parse()
                 .map_err(|_| McpError::InvalidArgument(format!("Invalid width: {}", parts[0])))?;
-            let height: f64 = parts[1].trim().parse()
+            let height: f64 = parts[1]
+                .trim()
+                .parse()
                 .map_err(|_| McpError::InvalidArgument(format!("Invalid height: {}", parts[1])))?;
             Ok(PageSize::Custom { width, height })
         }
-        _ => Err(McpError::InvalidArgument(format!("Unknown page size: {}", s))),
+        _ => Err(McpError::InvalidArgument(format!(
+            "Unknown page size: {}",
+            s
+        ))),
     }
 }
 
@@ -295,7 +320,10 @@ fn parse_orientation(s: &str) -> McpResult<PageOrientation> {
     match s.to_lowercase().as_str() {
         "portrait" => Ok(PageOrientation::Portrait),
         "landscape" => Ok(PageOrientation::Landscape),
-        _ => Err(McpError::InvalidArgument(format!("Unknown orientation: {}", s))),
+        _ => Err(McpError::InvalidArgument(format!(
+            "Unknown orientation: {}",
+            s
+        ))),
     }
 }
 
@@ -307,24 +335,38 @@ mod tests {
     fn test_parse_page_size() {
         assert!(matches!(parse_page_size("letter"), Ok(PageSize::Letter)));
         assert!(matches!(parse_page_size("A4"), Ok(PageSize::A4)));
-        assert!(matches!(parse_page_size("612x792"), Ok(PageSize::Custom { .. })));
+        assert!(matches!(
+            parse_page_size("612x792"),
+            Ok(PageSize::Custom { .. })
+        ));
     }
 
     #[test]
     fn test_parse_orientation() {
-        assert!(matches!(parse_orientation("portrait"), Ok(PageOrientation::Portrait)));
-        assert!(matches!(parse_orientation("LANDSCAPE"), Ok(PageOrientation::Landscape)));
+        assert!(matches!(
+            parse_orientation("portrait"),
+            Ok(PageOrientation::Portrait)
+        ));
+        assert!(matches!(
+            parse_orientation("LANDSCAPE"),
+            Ok(PageOrientation::Landscape)
+        ));
     }
 
     #[test]
     fn test_create_document() {
         let tool = CreateDocument;
         let mut session = Session::new();
-        
-        let result = tool.execute(&mut session, json!({
-            "size": "letter",
-            "pages": 2
-        })).unwrap();
+
+        let result = tool
+            .execute(
+                &mut session,
+                json!({
+                    "size": "letter",
+                    "pages": 2
+                }),
+            )
+            .unwrap();
 
         assert!(!result.is_error);
         assert!(session.document.is_some());

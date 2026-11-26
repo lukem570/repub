@@ -368,9 +368,9 @@ impl QuillParser {
 
     /// Find a chunk by name and optional ID.
     fn find_chunk(&self, name: &str, id: Option<u16>) -> Option<&ChunkReference> {
-        self.chunks.iter().find(|c| {
-            c.name == name && (id.is_none() || Some(c.id) == id)
-        })
+        self.chunks
+            .iter()
+            .find(|c| c.name == name && (id.is_none() || Some(c.id) == id))
     }
 
     /// Get chunk data by reference.
@@ -401,7 +401,7 @@ impl QuillParser {
 
         // Structure: unknown(4), numElements(4), skip(12), offsets[], names[]
         let num_elements = read_u32(&data, 4) as usize;
-        
+
         // Parse font names sequentially after offset table
         let names_start = 20 + num_elements * 4;
         let mut pos = names_start;
@@ -448,7 +448,7 @@ impl QuillParser {
         }
 
         let num_entries = read_u32(&data, 0) as usize;
-        
+
         // Parse color entries
         let mut pos = 12; // Skip header
         for _ in 0..num_entries {
@@ -501,14 +501,14 @@ impl QuillParser {
 
         // Get STRS chunk (string lengths)
         let strs_chunk = self.find_chunk("STRS", None).cloned();
-        
+
         // Get SYID chunk (text IDs)
         let syid_chunk = self.find_chunk("SYID", None).cloned();
 
         // Get FDPC chunk (character formatting)
         let fdpc_chunk = self.find_chunk("FDPC", None).cloned();
 
-        // Get FDPP chunk (paragraph formatting)  
+        // Get FDPP chunk (paragraph formatting)
         let fdpp_chunk = self.find_chunk("FDPP", None).cloned();
 
         // Parse string lengths and IDs
@@ -550,16 +550,14 @@ impl QuillParser {
                 })
                 .collect();
 
-            let paragraphs =
-                self.build_paragraphs(&text_slice, &relevant_char_styles, &relevant_para_styles, byte_start);
-
-            self.texts.insert(
-                id,
-                QuillText {
-                    id,
-                    paragraphs,
-                },
+            let paragraphs = self.build_paragraphs(
+                &text_slice,
+                &relevant_char_styles,
+                &relevant_para_styles,
+                byte_start,
             );
+
+            self.texts.insert(id, QuillText { id, paragraphs });
 
             char_offset = text_end;
             log::debug!(
@@ -646,7 +644,7 @@ impl QuillParser {
 
         // Structure: numEntries(u16), padding(6), textOffsets[], chunkOffsets[]
         let num_entries = read_u16(data, 0) as usize;
-        
+
         // Text offsets (u32 each)
         let mut text_offsets = Vec::with_capacity(num_entries);
         for i in 0..num_entries {
@@ -674,7 +672,7 @@ impl QuillParser {
             }
 
             let style = self.parse_character_style_block(&data[style_offset..]);
-            
+
             // Convert text offset to be relative to TEXT chunk start
             styles.push(StyleReference {
                 end_offset: text_offsets[i] + text_chunk.offset,
@@ -704,9 +702,9 @@ impl QuillParser {
                 0x08 | 0x0a => {
                     // Flag type - just the presence indicates true
                     match block_id {
-                        0x01 | 0x02 => style.bold = true,     // Bold flags
-                        0x03 | 0x04 => style.italic = true,   // Italic flags
-                        0x05 => style.underline = true,       // Underline
+                        0x01 | 0x02 => style.bold = true,   // Bold flags
+                        0x03 | 0x04 => style.italic = true, // Italic flags
+                        0x05 => style.underline = true,     // Underline
                         _ => {}
                     }
                     pos += 2;
@@ -954,8 +952,11 @@ impl QuillParser {
                     let span_end = style_char_end.min(para_text.len());
 
                     if span_end > span_start {
-                        let span_text: String =
-                            para_text.chars().skip(span_start).take(span_end - span_start).collect();
+                        let span_text: String = para_text
+                            .chars()
+                            .skip(span_start)
+                            .take(span_end - span_start)
+                            .collect();
 
                         if !span_text.is_empty() {
                             spans.push(self.build_span(&span_text, &char_style_ref.style));
@@ -1074,7 +1075,12 @@ fn read_u16(data: &[u8], offset: usize) -> u16 {
 
 fn read_u32(data: &[u8], offset: usize) -> u32 {
     if offset + 4 <= data.len() {
-        u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+        u32::from_le_bytes([
+            data[offset],
+            data[offset + 1],
+            data[offset + 2],
+            data[offset + 3],
+        ])
     } else {
         0
     }

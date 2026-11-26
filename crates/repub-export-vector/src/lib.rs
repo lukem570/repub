@@ -56,7 +56,10 @@ mod tests {
         let doc = sample_doc();
         let fonts = SystemFontProvider::new().unwrap();
         let bytes = export_pdf_bytes(&doc, &PdfOptions::default(), &fonts).unwrap();
-        assert!(bytes.starts_with(b"%PDF-"), "should begin with the PDF header");
+        assert!(
+            bytes.starts_with(b"%PDF-"),
+            "should begin with the PDF header"
+        );
         assert!(bytes.len() > 200, "a one-page PDF should be non-trivial");
         // A well-formed PDF ends with an EOF marker.
         let tail = &bytes[bytes.len().saturating_sub(16)..];
@@ -92,7 +95,10 @@ mod tests {
         let svg = String::from_utf8(bytes).unwrap();
         assert!(svg.contains("<svg"), "has an <svg> root");
         assert!(svg.contains("</svg>"), "closes the <svg> root");
-        assert!(svg.contains("<path"), "emits at least one <path> for the rectangle");
+        assert!(
+            svg.contains("<path"),
+            "emits at least one <path> for the rectangle"
+        );
         assert!(svg.contains("<text"), "emits <text> for the text frame");
     }
 
@@ -106,6 +112,9 @@ mod tests {
         let fonts = SystemFontProvider::new().unwrap();
         let bytes = export_svg_bytes(&doc, 0, &SvgOptions::default(), &fonts).unwrap();
         let svg = String::from_utf8(bytes).unwrap();
-        assert!(svg.contains("<linearGradient"), "gradient fill becomes a def");
+        assert!(
+            svg.contains("<linearGradient"),
+            "gradient fill becomes a def"
+        );
     }
 }

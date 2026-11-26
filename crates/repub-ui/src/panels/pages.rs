@@ -62,15 +62,26 @@ impl PagesPanel {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.add_space(8.0);
-            ui.label(egui::RichText::new("Pages").size(17.0).color(colors::accent()));
+            ui.label(
+                egui::RichText::new("Pages")
+                    .size(17.0)
+                    .color(colors::accent()),
+            );
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_space(4.0);
                 let (rect, response) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::click());
                 if response.hovered() {
                     ui.painter().rect_filled(rect, 2.0, colors::hover());
                 }
-                crate::icons::Icon::ChevronLeft.paint(ui, rect.shrink(4.0), colors::text_secondary());
-                if response.on_hover_text("Collapse the Page Navigation pane").clicked() {
+                crate::icons::Icon::ChevronLeft.paint(
+                    ui,
+                    rect.shrink(4.0),
+                    colors::text_secondary(),
+                );
+                if response
+                    .on_hover_text("Collapse the Page Navigation pane")
+                    .clicked()
+                {
                     self.collapse_requested = true;
                 }
             });
@@ -78,7 +89,7 @@ impl PagesPanel {
         ui.add_space(2.0);
 
         let page_count = state.page_count();
-        
+
         // Track panel focus for keyboard shortcuts
         let panel_response = ui.interact(
             ui.available_rect_before_wrap(),
@@ -88,16 +99,17 @@ impl PagesPanel {
         if panel_response.clicked() {
             self.focused = true;
         }
-        
+
         // Handle keyboard shortcuts when panel is focused
         if self.focused {
             // Handle delete key for selected pages
-            if ui.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) {
+            if ui.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace))
+            {
                 if !state.selected_pages.is_empty() && page_count > 1 {
                     state.delete_selected_pages();
                 }
             }
-            
+
             // Handle Cmd/Ctrl+A for select all pages
             if ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::A)) {
                 state.select_all_pages();
@@ -108,7 +120,7 @@ impl PagesPanel {
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 ui.add_space(8.0);
-                
+
                 // Track drop position
                 let mut drop_at: Option<usize> = None;
                 let mut perform_drop = false;
@@ -129,9 +141,13 @@ impl PagesPanel {
                     let heights: Vec<f32> = row
                         .iter()
                         .map(|&i| {
-                            state.document.as_ref()
+                            state
+                                .document
+                                .as_ref()
                                 .and_then(|d| d.pages().get(i))
-                                .map(|p| slot_width * (p.size.height / p.size.width.max(1.0)) as f32)
+                                .map(|p| {
+                                    slot_width * (p.size.height / p.size.width.max(1.0)) as f32
+                                })
                                 .unwrap_or(slot_width * 1.294)
                         })
                         .collect();
@@ -140,7 +156,8 @@ impl PagesPanel {
                     let row_rect = ui
                         .horizontal(|ui| {
                             ui.add_space(12.0);
-                            ui.allocate_exact_size(Vec2::new(row_width, row_height), Sense::hover()).0
+                            ui.allocate_exact_size(Vec2::new(row_width, row_height), Sense::hover())
+                                .0
                         })
                         .inner;
 
@@ -150,20 +167,35 @@ impl PagesPanel {
                         .enumerate()
                         .map(|(slot, (&i, &h))| {
                             let x = row_rect.left() + slot as f32 * slot_width;
-                            (i, Rect::from_min_size(Pos2::new(x, row_rect.top()), Vec2::new(slot_width, h + STRIP_HEIGHT)))
+                            (
+                                i,
+                                Rect::from_min_size(
+                                    Pos2::new(x, row_rect.top()),
+                                    Vec2::new(slot_width, h + STRIP_HEIGHT),
+                                ),
+                            )
                         })
                         .collect();
 
                     // Highlight frames first, so a facing page never paints over its neighbour's frame
                     for &(i, full_rect) in &rects {
                         if state.visible_pages().contains(&i) || state.is_page_selected(i) {
-                            let alpha = if state.page_drag.dragging_page == Some(i) { 0.5 } else { 1.0 };
-                            ui.painter().rect_filled(full_rect.expand(2.0), Rounding::ZERO, colors::accent_light().gamma_multiply(alpha));
+                            let alpha = if state.page_drag.dragging_page == Some(i) {
+                                0.5
+                            } else {
+                                1.0
+                            };
+                            ui.painter().rect_filled(
+                                full_rect.expand(2.0),
+                                Rounding::ZERO,
+                                colors::accent_light().gamma_multiply(alpha),
+                            );
                         }
                     }
 
                     for &(i, full_rect) in &rects {
-                        let (dropped_here, target) = self.page_thumbnail(ui, state, canvas, i, full_rect, spread, page_count);
+                        let (dropped_here, target) = self
+                            .page_thumbnail(ui, state, canvas, i, full_rect, spread, page_count);
                         if target.is_some() {
                             drop_at = target;
                         }
@@ -180,33 +212,42 @@ impl PagesPanel {
                                 Pos2::new(spine, row_rect.center().y),
                                 Vec2::new(4.0, row_rect.height()),
                             );
-                            ui.painter().rect_filled(bar, Rounding::same(2.0), colors::accent());
+                            ui.painter()
+                                .rect_filled(bar, Rounding::same(2.0), colors::accent());
                         }
                     }
 
                     ui.add_space(10.0);
                 }
-                
+
                 // Show drop indicator after last page
                 if state.page_drag.drop_target == Some(page_count) {
                     Self::drop_indicator(ui);
                 }
-                
+
                 // Check for drop zone after last page
-                let after_last_rect = ui.allocate_exact_size(Vec2::new(ui.available_width() - 24.0, 20.0), Sense::hover());
+                let after_last_rect = ui.allocate_exact_size(
+                    Vec2::new(ui.available_width() - 24.0, 20.0),
+                    Sense::hover(),
+                );
                 if after_last_rect.1.hovered() && state.page_drag.dragging_page.is_some() {
                     drop_at = Some(page_count);
                 }
-                
+
                 // Update drop target
                 state.page_drag.drop_target = drop_at;
-                
+
                 // Check for modifier key (Alt for duplicate on drag)
                 state.page_drag.duplicate_mode = ui.input(|i| i.modifiers.alt);
-                
+
                 // Handle drop
-                if perform_drop || (ui.input(|i| i.pointer.any_released()) && state.page_drag.dragging_page.is_some()) {
-                    if let (Some(from), Some(to)) = (state.page_drag.dragging_page, state.page_drag.drop_target) {
+                if perform_drop
+                    || (ui.input(|i| i.pointer.any_released())
+                        && state.page_drag.dragging_page.is_some())
+                {
+                    if let (Some(from), Some(to)) =
+                        (state.page_drag.dragging_page, state.page_drag.drop_target)
+                    {
                         Self::handle_drop(state, from, to);
                     }
                     // Clear drag state
@@ -222,8 +263,10 @@ impl PagesPanel {
     fn drop_indicator(ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.add_space(12.0);
-            let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width() - 24.0, 4.0), Sense::hover());
-            ui.painter().rect_filled(rect, Rounding::same(2.0), colors::accent());
+            let (rect, _) =
+                ui.allocate_exact_size(Vec2::new(ui.available_width() - 24.0, 4.0), Sense::hover());
+            ui.painter()
+                .rect_filled(rect, Rounding::same(2.0), colors::accent());
         });
     }
 
@@ -241,7 +284,10 @@ impl PagesPanel {
         spread: bool,
         page_count: usize,
     ) -> (bool, Option<usize>) {
-        let rect = Rect::from_min_max(full_rect.min, Pos2::new(full_rect.right(), full_rect.bottom() - STRIP_HEIGHT));
+        let rect = Rect::from_min_max(
+            full_rect.min,
+            Pos2::new(full_rect.right(), full_rect.bottom() - STRIP_HEIGHT),
+        );
         let strip_rect = Rect::from_min_max(rect.left_bottom(), full_rect.max);
 
         let is_selected = state.is_page_selected(index);
@@ -251,7 +297,11 @@ impl PagesPanel {
         let mut drop_target = None;
 
         // The clickable area covers the page and the number strip below it
-        let response = ui.interact(full_rect, ui.id().with(("page_thumbnail", index)), Sense::click_and_drag());
+        let response = ui.interact(
+            full_rect,
+            ui.id().with(("page_thumbnail", index)),
+            Sense::click_and_drag(),
+        );
 
         // Handle drag start
         if response.drag_started() {
@@ -264,7 +314,11 @@ impl PagesPanel {
         if let Some(dragging) = state.page_drag.dragging_page {
             if dragging != index && response.hovered() {
                 if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
-                    let before = if spread { pos.x < rect.center().x } else { pos.y < rect.center().y };
+                    let before = if spread {
+                        pos.x < rect.center().x
+                    } else {
+                        pos.y < rect.center().y
+                    };
                     drop_target = Some(if before { index } else { index + 1 });
                 }
                 if ui.input(|i| i.pointer.any_released()) {
@@ -292,14 +346,26 @@ impl PagesPanel {
                 if let Some(page) = doc.pages().get(index) {
                     let master = page.master_page.and_then(|id| doc.master_page(id));
                     let painter = ui.painter_at(rect);
-                    canvas.draw_page_thumbnail(&painter, rect, page, master, index as u32 + 1, page_count as u32);
+                    canvas.draw_page_thumbnail(
+                        &painter,
+                        rect,
+                        page,
+                        master,
+                        index as u32 + 1,
+                        page_count as u32,
+                    );
                 }
             }
             if is_dragging {
-                ui.painter().rect_filled(rect, Rounding::ZERO, Color32::from_white_alpha(140));
+                ui.painter()
+                    .rect_filled(rect, Rounding::ZERO, Color32::from_white_alpha(140));
             }
         }
-        ui.painter().rect_stroke(rect, Rounding::ZERO, Stroke::new(1.0, border_color.gamma_multiply(alpha)));
+        ui.painter().rect_stroke(
+            rect,
+            Rounding::ZERO,
+            Stroke::new(1.0, border_color.gamma_multiply(alpha)),
+        );
 
         // Page number centered in the strip under the thumbnail
         ui.painter().text(
@@ -339,7 +405,7 @@ impl PagesPanel {
         // Handle clicks with modifiers
         if response.clicked() {
             let modifiers = ui.input(|i| i.modifiers);
-            
+
             if modifiers.shift {
                 // Shift+click: select range
                 state.select_page_range(index);
@@ -373,7 +439,7 @@ impl PagesPanel {
                 self.pending_context_menu = Some((index, pos.x as f64, pos.y as f64));
             }
         }
-        
+
         // On other platforms, use egui's built-in context menu
         #[cfg(not(target_os = "macos"))]
         response.context_menu(|ui| {
@@ -382,9 +448,9 @@ impl PagesPanel {
                 state.clear_page_selection();
                 state.select_page(index, false);
             }
-            
+
             let selected_count = state.selected_pages.len().max(1);
-            
+
             if ui.button("Add Page Above").clicked() {
                 state.insert_page_at(index);
                 ui.close_menu();
@@ -397,19 +463,27 @@ impl PagesPanel {
                 state.insert_spread_after(index);
                 ui.close_menu();
             }
-            
+
             ui.separator();
-            
+
             // Duplicate (objects included)
-            let duplicate_label = if selected_count == 1 { "Duplicate Page".to_owned() } else { format!("Duplicate {} Pages", selected_count) };
+            let duplicate_label = if selected_count == 1 {
+                "Duplicate Page".to_owned()
+            } else {
+                format!("Duplicate {} Pages", selected_count)
+            };
             if ui.button(duplicate_label).clicked() {
-                let pages = if selected_count == 1 { vec![index] } else { state.selected_pages.clone() };
+                let pages = if selected_count == 1 {
+                    vec![index]
+                } else {
+                    state.selected_pages.clone()
+                };
                 state.duplicate_pages(&pages);
                 ui.close_menu();
             }
-            
+
             ui.separator();
-            
+
             // Delete
             let delete_enabled = page_count > selected_count;
             if selected_count == 1 {
@@ -419,17 +493,26 @@ impl PagesPanel {
                 } else {
                     "Delete Page"
                 };
-                if ui.add_enabled(delete_enabled, egui::Button::new(delete_label)).clicked() {
+                if ui
+                    .add_enabled(delete_enabled, egui::Button::new(delete_label))
+                    .clicked()
+                {
                     state.delete_pages(&[index]);
                     ui.close_menu();
                 }
             } else {
-                if ui.add_enabled(delete_enabled, egui::Button::new(format!("Delete {} Pages", selected_count))).clicked() {
+                if ui
+                    .add_enabled(
+                        delete_enabled,
+                        egui::Button::new(format!("Delete {} Pages", selected_count)),
+                    )
+                    .clicked()
+                {
                     state.delete_selected_pages();
                     ui.close_menu();
                 }
             }
-            
+
             ui.separator();
             if selected_count == 1 && ui.button("Page Properties…").clicked() {
                 state.page_properties_requested = Some(index);
@@ -482,13 +565,16 @@ impl PagesPanel {
     }
 
     /// Apply a master page to all selected pages.
-    fn apply_master_to_selected(state: &mut AppState, master_id: Option<repub_model::MasterPageId>) {
+    fn apply_master_to_selected(
+        state: &mut AppState,
+        master_id: Option<repub_model::MasterPageId>,
+    ) {
         let indices: Vec<usize> = if state.selected_pages.is_empty() {
             vec![state.current_page]
         } else {
             state.selected_pages.clone()
         };
-        
+
         if let Some(ref mut doc) = state.document {
             for index in indices {
                 if let Some(page) = doc.pages_mut().get_mut(index) {

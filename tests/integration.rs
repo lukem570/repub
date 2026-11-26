@@ -8,7 +8,8 @@ fn test_create_document_with_objects() {
     let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
 
     // Add a text frame
-    let text_frame = Shape::text_frame_with_text(Rect::new(72.0, 72.0, 468.0, 100.0), "Hello, Repub!");
+    let text_frame =
+        Shape::text_frame_with_text(Rect::new(72.0, 72.0, 468.0, 100.0), "Hello, Repub!");
     doc.page_mut(0).unwrap().add_shape(text_frame);
 
     // Add a shape

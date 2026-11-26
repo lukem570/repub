@@ -7,15 +7,15 @@ use repub_export_vector::{export_pdf_bytes, export_svg_bytes, PdfOptions, SvgOpt
 use repub_fonts::SystemFontProvider;
 use repub_format_native::{load_bytes, save_bytes, SaveOptions};
 use repub_geometry::{Point, Rect};
-use repub_model::shape::{Shape, ShapeKind};
 use repub_model::geometry::ShapeGeometry;
+use repub_model::shape::{Shape, ShapeKind};
 use repub_model::{Document, PageOrientation, PageSize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 
 use crate::platform;
-use crate::storage::{WebSettings, AutoSave};
+use crate::storage::{AutoSave, WebSettings};
 
 /// Tool types available in the editor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -49,7 +49,9 @@ impl Tool {
         match self {
             Tool::Select => egui::CursorIcon::Default,
             Tool::Text => egui::CursorIcon::Text,
-            Tool::Rectangle | Tool::Ellipse | Tool::Polygon | Tool::Star | Tool::Line => egui::CursorIcon::Crosshair,
+            Tool::Rectangle | Tool::Ellipse | Tool::Polygon | Tool::Star | Tool::Line => {
+                egui::CursorIcon::Crosshair
+            }
             Tool::Pan => egui::CursorIcon::Grab,
         }
     }
@@ -94,16 +96,26 @@ impl DrawState {
 
         if self.constrain {
             let size = (max_x - min_x).max(max_y - min_y);
-            if end.x < start.x { min_x = start.x - size; max_x = start.x; }
-            else { max_x = start.x + size; }
-            if end.y < start.y { min_y = start.y - size; max_y = start.y; }
-            else { max_y = start.y + size; }
+            if end.x < start.x {
+                min_x = start.x - size;
+                max_x = start.x;
+            } else {
+                max_x = start.x + size;
+            }
+            if end.y < start.y {
+                min_y = start.y - size;
+                max_y = start.y;
+            } else {
+                max_y = start.y + size;
+            }
         }
 
         let width = max_x - min_x;
         let height = max_y - min_y;
 
-        if width < 1.0 || height < 1.0 { return None; }
+        if width < 1.0 || height < 1.0 {
+            return None;
+        }
 
         Some(Rect::new(min_x, min_y, width, height))
     }
@@ -179,10 +191,11 @@ impl WebApp {
         // Set up file input for opening files
         let pending_file = Rc::new(RefCell::new(None));
         let pending_clone = pending_file.clone();
-        
+
         let file_input = platform::create_file_input(".pcd,.pcdz,.json", move |data, name| {
             *pending_clone.borrow_mut() = Some((data, name));
-        }).ok();
+        })
+        .ok();
 
         Self {
             document: None,
@@ -222,10 +235,13 @@ impl WebApp {
         self.dirty = true;
         self.current_page = 0;
         self.selection.clear();
-        
+
         // Set up auto-save
         if self.settings.auto_save {
-            self.auto_save = Some(AutoSave::new(&self.document_name, self.settings.auto_save_interval));
+            self.auto_save = Some(AutoSave::new(
+                &self.document_name,
+                self.settings.auto_save_interval,
+            ));
         }
     }
 
@@ -235,12 +251,14 @@ impl WebApp {
             // DTO layer (compact JSON).
             match save_bytes(doc, &SaveOptions::compact()) {
                 Ok(bytes) => {
-                    let filename = if self.document_name.ends_with(".pcd") || self.document_name.ends_with(".json") {
+                    let filename = if self.document_name.ends_with(".pcd")
+                        || self.document_name.ends_with(".json")
+                    {
                         self.document_name.clone()
                     } else {
                         format!("{}.pcd", self.document_name)
                     };
-                    
+
                     if let Err(e) = platform::download_file(&filename, &bytes, "application/json") {
                         log::error!("Failed to download: {:?}", e);
                     } else {
@@ -292,7 +310,8 @@ impl WebApp {
 
             match export_svg_bytes(doc, self.current_page, &opts, &fonts) {
                 Ok(svg) => {
-                    let filename = format!("{}-page{}.svg", 
+                    let filename = format!(
+                        "{}-page{}.svg",
                         self.document_name.trim_end_matches(".pcd"),
                         self.current_page + 1
                     );
@@ -342,17 +361,26 @@ impl WebApp {
                     ui.close_menu();
                 }
                 ui.separator();
-                if ui.add_enabled(self.document.is_some(), egui::Button::new("Save")).clicked() {
+                if ui
+                    .add_enabled(self.document.is_some(), egui::Button::new("Save"))
+                    .clicked()
+                {
                     self.save_document();
                     ui.close_menu();
                 }
                 ui.separator();
                 ui.menu_button("Export", |ui| {
-                    if ui.add_enabled(self.document.is_some(), egui::Button::new("PDF")).clicked() {
+                    if ui
+                        .add_enabled(self.document.is_some(), egui::Button::new("PDF"))
+                        .clicked()
+                    {
                         self.export_pdf();
                         ui.close_menu();
                     }
-                    if ui.add_enabled(self.document.is_some(), egui::Button::new("SVG")).clicked() {
+                    if ui
+                        .add_enabled(self.document.is_some(), egui::Button::new("SVG"))
+                        .clicked()
+                    {
                         self.export_svg();
                         ui.close_menu();
                     }
@@ -383,16 +411,25 @@ impl WebApp {
 
             ui.menu_button("Insert", |ui| {
                 let has_doc = self.document.is_some();
-                if ui.add_enabled(has_doc, egui::Button::new("Text Frame")).clicked() {
+                if ui
+                    .add_enabled(has_doc, egui::Button::new("Text Frame"))
+                    .clicked()
+                {
                     self.current_tool = Tool::Text;
                     ui.close_menu();
                 }
                 ui.separator();
-                if ui.add_enabled(has_doc, egui::Button::new("Rectangle")).clicked() {
+                if ui
+                    .add_enabled(has_doc, egui::Button::new("Rectangle"))
+                    .clicked()
+                {
                     self.current_tool = Tool::Rectangle;
                     ui.close_menu();
                 }
-                if ui.add_enabled(has_doc, egui::Button::new("Ellipse")).clicked() {
+                if ui
+                    .add_enabled(has_doc, egui::Button::new("Ellipse"))
+                    .clicked()
+                {
                     self.current_tool = Tool::Ellipse;
                     ui.close_menu();
                 }
@@ -401,7 +438,10 @@ impl WebApp {
                     ui.close_menu();
                 }
                 ui.separator();
-                if ui.add_enabled(has_doc, egui::Button::new("New Page")).clicked() {
+                if ui
+                    .add_enabled(has_doc, egui::Button::new("New Page"))
+                    .clicked()
+                {
                     if let Some(ref mut doc) = self.document {
                         doc.add_page();
                         self.dirty = true;
@@ -455,11 +495,17 @@ impl WebApp {
             // Page navigation
             if let Some(ref doc) = self.document {
                 let page_count = doc.pages().len();
-                if ui.add_enabled(self.current_page > 0, egui::Button::new("◀")).clicked() {
+                if ui
+                    .add_enabled(self.current_page > 0, egui::Button::new("◀"))
+                    .clicked()
+                {
                     self.current_page -= 1;
                 }
                 ui.label(format!("{}/{}", self.current_page + 1, page_count));
-                if ui.add_enabled(self.current_page < page_count - 1, egui::Button::new("▶")).clicked() {
+                if ui
+                    .add_enabled(self.current_page < page_count - 1, egui::Button::new("▶"))
+                    .clicked()
+                {
                     self.current_page += 1;
                 }
             }
@@ -469,7 +515,7 @@ impl WebApp {
     fn tool_button(&mut self, ui: &mut egui::Ui, tool: Tool, icon: &str, size: egui::Vec2) {
         let is_selected = self.current_tool == tool;
         let button = egui::Button::new(icon).min_size(size);
-        
+
         let response = if is_selected {
             ui.add(button.fill(egui::Color32::from_rgb(59, 130, 246)))
         } else {
@@ -483,25 +529,27 @@ impl WebApp {
     }
 
     fn show_canvas(&mut self, ui: &mut egui::Ui) {
-        let (response, painter) = ui.allocate_painter(
-            ui.available_size(),
-            egui::Sense::click_and_drag(),
-        );
+        let (response, painter) =
+            ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
 
         let rect = response.rect;
 
         // Background
-        painter.rect_filled(rect, egui::Rounding::ZERO, egui::Color32::from_rgb(80, 80, 80));
+        painter.rect_filled(
+            rect,
+            egui::Rounding::ZERO,
+            egui::Color32::from_rgb(80, 80, 80),
+        );
 
         if let Some(ref doc) = self.document {
             if let Some(page) = doc.pages().get(self.current_page) {
                 // Calculate page position
                 let page_width = page.size.width as f32 * self.zoom;
                 let page_height = page.size.height as f32 * self.zoom;
-                
+
                 let page_x = rect.center().x - page_width / 2.0 + self.pan_offset.x as f32;
                 let page_y = rect.center().y - page_height / 2.0 + self.pan_offset.y as f32;
-                
+
                 let page_rect = egui::Rect::from_min_size(
                     egui::pos2(page_x, page_y),
                     egui::vec2(page_width, page_height),
@@ -509,11 +557,19 @@ impl WebApp {
 
                 // Page shadow
                 let shadow_rect = page_rect.translate(egui::vec2(4.0, 4.0));
-                painter.rect_filled(shadow_rect, egui::Rounding::same(2.0), egui::Color32::from_black_alpha(60));
+                painter.rect_filled(
+                    shadow_rect,
+                    egui::Rounding::same(2.0),
+                    egui::Color32::from_black_alpha(60),
+                );
 
                 // Page background
                 painter.rect_filled(page_rect, egui::Rounding::ZERO, egui::Color32::WHITE);
-                painter.rect_stroke(page_rect, egui::Rounding::ZERO, egui::Stroke::new(1.0, egui::Color32::GRAY));
+                painter.rect_stroke(
+                    page_rect,
+                    egui::Rounding::ZERO,
+                    egui::Stroke::new(1.0, egui::Color32::GRAY),
+                );
 
                 // Draw objects
                 self.draw_objects(&painter, page_rect, page);
@@ -543,10 +599,17 @@ impl WebApp {
         }
     }
 
-    fn draw_objects(&self, painter: &egui::Painter, page_rect: egui::Rect, page: &repub_model::Page) {
+    fn draw_objects(
+        &self,
+        painter: &egui::Painter,
+        page_rect: egui::Rect,
+        page: &repub_model::Page,
+    ) {
         for layer in page.layers() {
-            if !layer.visible { continue; }
-            
+            if !layer.visible {
+                continue;
+            }
+
             for obj in layer.shapes() {
                 self.draw_object(painter, page_rect, obj);
             }
@@ -595,10 +658,22 @@ impl WebApp {
 
                 match &auto.geometry {
                     ShapeGeometry::Rectangle { corner_radius } => {
-                        painter.rect(screen_rect, egui::Rounding::same(*corner_radius as f32 * self.zoom), fill, stroke);
+                        painter.rect(
+                            screen_rect,
+                            egui::Rounding::same(*corner_radius as f32 * self.zoom),
+                            fill,
+                            stroke,
+                        );
                     }
                     ShapeGeometry::Ellipse => {
-                        painter.rect(screen_rect, egui::Rounding::same(screen_rect.width().min(screen_rect.height()) / 2.0), fill, stroke);
+                        painter.rect(
+                            screen_rect,
+                            egui::Rounding::same(
+                                screen_rect.width().min(screen_rect.height()) / 2.0,
+                            ),
+                            fill,
+                            stroke,
+                        );
                     }
                     _ => {
                         painter.rect(screen_rect, egui::Rounding::ZERO, fill, stroke);
@@ -606,9 +681,17 @@ impl WebApp {
                 }
             }
             ShapeKind::TextFrame(tf) => {
-                painter.rect_filled(screen_rect, egui::Rounding::ZERO, egui::Color32::from_rgba_unmultiplied(255, 255, 255, 200));
-                painter.rect_stroke(screen_rect, egui::Rounding::ZERO, egui::Stroke::new(1.0, egui::Color32::LIGHT_GRAY));
-                
+                painter.rect_filled(
+                    screen_rect,
+                    egui::Rounding::ZERO,
+                    egui::Color32::from_rgba_unmultiplied(255, 255, 255, 200),
+                );
+                painter.rect_stroke(
+                    screen_rect,
+                    egui::Rounding::ZERO,
+                    egui::Stroke::new(1.0, egui::Color32::LIGHT_GRAY),
+                );
+
                 let text = tf.content.plain_text();
                 if !text.is_empty() {
                     painter.text(
@@ -645,7 +728,11 @@ impl WebApp {
                 painter.line_segment([start, end], egui::Stroke::new(width, color));
             }
             _ => {
-                painter.rect_stroke(screen_rect, egui::Rounding::ZERO, egui::Stroke::new(1.0, egui::Color32::GRAY));
+                painter.rect_stroke(
+                    screen_rect,
+                    egui::Rounding::ZERO,
+                    egui::Stroke::new(1.0, egui::Color32::GRAY),
+                );
             }
         }
     }
@@ -662,8 +749,11 @@ impl WebApp {
                     bounds.height() as f32 * self.zoom,
                 ),
             );
-            painter.rect_stroke(screen_rect, egui::Rounding::ZERO, 
-                egui::Stroke::new(1.0, egui::Color32::from_rgb(59, 130, 246)));
+            painter.rect_stroke(
+                screen_rect,
+                egui::Rounding::ZERO,
+                egui::Stroke::new(1.0, egui::Color32::from_rgb(59, 130, 246)),
+            );
         } else if let Some((start, end)) = self.draw_state.line() {
             let screen_start = egui::pos2(
                 page_rect.left() + (start.x as f32) * self.zoom,
@@ -673,8 +763,10 @@ impl WebApp {
                 page_rect.left() + (end.x as f32) * self.zoom,
                 page_rect.top() + (end.y as f32) * self.zoom,
             );
-            painter.line_segment([screen_start, screen_end],
-                egui::Stroke::new(1.0, egui::Color32::from_rgb(59, 130, 246)));
+            painter.line_segment(
+                [screen_start, screen_end],
+                egui::Stroke::new(1.0, egui::Color32::from_rgb(59, 130, 246)),
+            );
         }
     }
 
@@ -698,7 +790,12 @@ impl WebApp {
                         self.pan_offset.y += delta.y as f64;
                     }
                 }
-                tool @ (Tool::Rectangle | Tool::Ellipse | Tool::Line | Tool::Polygon | Tool::Star | Tool::Text) => {
+                tool @ (Tool::Rectangle
+                | Tool::Ellipse
+                | Tool::Line
+                | Tool::Polygon
+                | Tool::Star
+                | Tool::Text) => {
                     if response.drag_started() {
                         self.draw_state.start(doc_pos);
                     } else if response.dragged() {
@@ -739,7 +836,9 @@ impl WebApp {
     }
 
     fn show_new_dialog(&mut self, ctx: &egui::Context) {
-        if !self.show_new_dialog { return; }
+        if !self.show_new_dialog {
+            return;
+        }
 
         egui::Window::new("New Document")
             .collapsible(false)
@@ -753,17 +852,37 @@ impl WebApp {
                     egui::ComboBox::from_id_salt("page_size")
                         .selected_text(&self.new_doc_size)
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.new_doc_size, "letter".to_string(), "Letter");
+                            ui.selectable_value(
+                                &mut self.new_doc_size,
+                                "letter".to_string(),
+                                "Letter",
+                            );
                             ui.selectable_value(&mut self.new_doc_size, "a4".to_string(), "A4");
-                            ui.selectable_value(&mut self.new_doc_size, "legal".to_string(), "Legal");
-                            ui.selectable_value(&mut self.new_doc_size, "tabloid".to_string(), "Tabloid");
+                            ui.selectable_value(
+                                &mut self.new_doc_size,
+                                "legal".to_string(),
+                                "Legal",
+                            );
+                            ui.selectable_value(
+                                &mut self.new_doc_size,
+                                "tabloid".to_string(),
+                                "Tabloid",
+                            );
                         });
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Orientation:");
-                    ui.selectable_value(&mut self.new_doc_orientation, PageOrientation::Portrait, "Portrait");
-                    ui.selectable_value(&mut self.new_doc_orientation, PageOrientation::Landscape, "Landscape");
+                    ui.selectable_value(
+                        &mut self.new_doc_orientation,
+                        PageOrientation::Portrait,
+                        "Portrait",
+                    );
+                    ui.selectable_value(
+                        &mut self.new_doc_orientation,
+                        PageOrientation::Landscape,
+                        "Landscape",
+                    );
                 });
 
                 ui.add_space(16.0);
@@ -791,7 +910,9 @@ impl WebApp {
     }
 
     fn show_about_dialog(&mut self, ctx: &egui::Context) {
-        if !self.show_about_dialog { return; }
+        if !self.show_about_dialog {
+            return;
+        }
 
         egui::Window::new("About Repub")
             .collapsible(false)
@@ -836,11 +957,15 @@ impl eframe::App for WebApp {
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if let Some(ref doc) = self.document {
-                    ui.label(format!("Page {} of {}", self.current_page + 1, doc.pages().len()));
+                    ui.label(format!(
+                        "Page {} of {}",
+                        self.current_page + 1,
+                        doc.pages().len()
+                    ));
                     ui.separator();
                 }
                 ui.label(format!("Zoom: {:.0}%", self.zoom * 100.0));
-                
+
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if self.dirty {
                         ui.label("● Unsaved changes");

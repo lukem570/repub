@@ -69,7 +69,10 @@ impl ExportFormat {
 
     /// Whether the format is a picture of each page (it has a resolution).
     pub fn is_raster(self) -> bool {
-        matches!(self, ExportFormat::Png | ExportFormat::Jpeg | ExportFormat::Tiff)
+        matches!(
+            self,
+            ExportFormat::Png | ExportFormat::Jpeg | ExportFormat::Tiff
+        )
     }
 
     /// Whether every chosen page goes into one file (the rest write a file per page).
@@ -115,7 +118,12 @@ impl ExportDialog {
 
     /// Show the dialog. Returns export options if confirmed.
     /// `current_page` is the 0-based page shown on the canvas (for "Current").
-    pub fn show(&mut self, ctx: &egui::Context, page_count: usize, current_page: usize) -> Option<ExportOptions> {
+    pub fn show(
+        &mut self,
+        ctx: &egui::Context,
+        page_count: usize,
+        current_page: usize,
+    ) -> Option<ExportOptions> {
         let mut result = None;
 
         if !self.open {
@@ -220,13 +228,16 @@ impl ExportDialog {
 
 fn parse_page_range(range: &str, max: usize) -> Vec<usize> {
     let mut pages = Vec::new();
-    
+
     for part in range.split(',') {
         let part = part.trim();
         if part.contains('-') {
             let parts: Vec<&str> = part.split('-').collect();
             if parts.len() == 2 {
-                if let (Ok(start), Ok(end)) = (parts[0].trim().parse::<usize>(), parts[1].trim().parse::<usize>()) {
+                if let (Ok(start), Ok(end)) = (
+                    parts[0].trim().parse::<usize>(),
+                    parts[1].trim().parse::<usize>(),
+                ) {
                     for i in start.saturating_sub(1)..end.min(max) {
                         if !pages.contains(&i) {
                             pages.push(i);
@@ -241,7 +252,7 @@ fn parse_page_range(range: &str, max: usize) -> Vec<usize> {
             }
         }
     }
-    
+
     pages.sort();
     pages
 }
@@ -264,7 +275,10 @@ mod tests {
 
     #[test]
     fn current_means_the_page_on_screen() {
-        let dialog = ExportDialog { page_range: PageRange::Current, ..Default::default() };
+        let dialog = ExportDialog {
+            page_range: PageRange::Current,
+            ..Default::default()
+        };
         assert_eq!(dialog.resolve_pages(5, 3), vec![3]);
     }
 

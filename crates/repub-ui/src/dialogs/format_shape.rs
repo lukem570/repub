@@ -5,17 +5,27 @@ use egui::Ui;
 use repub_color::{Color, GradientStop, LinearGradient, Pattern, PatternType, RadialGradient};
 use repub_geometry::{Point, Rect};
 use repub_model::geometry::ShapeGeometry;
-use repub_model::shape::{ConnectorType, ImageFit, LineEnding, LineEndingStyle, Margins, Shape, ShapeKind, TextFitMode, VerticalAlignment};
+use repub_model::shape::{
+    ConnectorType, ImageFit, LineEnding, LineEndingStyle, Margins, Shape, ShapeKind, TextFitMode,
+    VerticalAlignment,
+};
 use repub_model::styles::{
-    Bevel, BevelStyle, BevelTechnique, DropShadow, Effects, Fill, Glow, InnerGlow, InnerGlowSource, InnerShadow, LineCap, LineJoin,
-    Reflection, SoftEdges, Stroke, TexturePattern, TileMode,
+    Bevel, BevelStyle, BevelTechnique, DropShadow, Effects, Fill, Glow, InnerGlow, InnerGlowSource,
+    InnerShadow, LineCap, LineJoin, Reflection, SoftEdges, Stroke, TexturePattern, TileMode,
 };
 use repub_model::ObjectId;
 
 use super::controls::{choice, color_edit, number, number_row, ok_cancel, row, tab_strip};
 use crate::state::AppState;
 
-const TABS: [&str; 6] = ["Fill", "Line", "Effects", "Text box", "Size & position", "Properties"];
+const TABS: [&str; 6] = [
+    "Fill",
+    "Line",
+    "Effects",
+    "Text box",
+    "Size & position",
+    "Properties",
+];
 
 /// Which kind of fill is being edited.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -42,14 +52,20 @@ impl FillKind {
 
     /// A starting fill of this kind, keeping `from`'s main color.
     fn make(self, from: &Fill) -> Fill {
-        let base = if from.is_none() { Color::from_rgb8(0x44, 0x72, 0xC4) } else { from.primary_color() };
+        let base = if from.is_none() {
+            Color::from_rgb8(0x44, 0x72, 0xC4)
+        } else {
+            from.primary_color()
+        };
         let darker = Color::new(base.r * 0.55, base.g * 0.55, base.b * 0.55, base.a);
         match self {
             Self::None => Fill::None,
             Self::Solid => Fill::Solid(base),
             Self::Linear => Fill::LinearGradient(LinearGradient::horizontal(base, darker)),
             Self::Radial => Fill::RadialGradient(RadialGradient::centered(base, darker)),
-            Self::Pattern => Fill::Pattern(Pattern::new(PatternType::Percent25, base, Color::WHITE)),
+            Self::Pattern => {
+                Fill::Pattern(Pattern::new(PatternType::Percent25, base, Color::WHITE))
+            }
             Self::Picture => Fill::Texture(TexturePattern::new("")),
         }
     }
@@ -92,9 +108,18 @@ impl FormatShapeDialog {
             return;
         };
         let single = self.ids.len() == 1;
-        let has_fill = matches!(work.kind, ShapeKind::AutoShape(_) | ShapeKind::TextFrame(_) | ShapeKind::Picture(_) | ShapeKind::TextEffect(_));
+        let has_fill = matches!(
+            work.kind,
+            ShapeKind::AutoShape(_)
+                | ShapeKind::TextFrame(_)
+                | ShapeKind::Picture(_)
+                | ShapeKind::TextEffect(_)
+        );
         let has_line = has_fill || matches!(work.kind, ShapeKind::Line(_));
-        let has_effects = matches!(work.kind, ShapeKind::AutoShape(_) | ShapeKind::TextFrame(_) | ShapeKind::Picture(_));
+        let has_effects = matches!(
+            work.kind,
+            ShapeKind::AutoShape(_) | ShapeKind::TextFrame(_) | ShapeKind::Picture(_)
+        );
 
         let mut tabs: Vec<usize> = Vec::new();
         if has_fill {
@@ -128,14 +153,17 @@ impl FormatShapeDialog {
                 let names: Vec<&str> = tabs.iter().map(|&t| TABS[t]).collect();
                 let current = tabs.iter().position(|&t| t == *tab).unwrap_or(0);
                 *tab = tabs[tab_strip(ui, current, &names)];
-                egui::ScrollArea::vertical().max_height(440.0).auto_shrink([false, true]).show(ui, |ui| match *tab {
-                    0 => fill_tab(ui, work),
-                    1 => line_tab(ui, work),
-                    2 => effects_tab(ui, work),
-                    3 => text_box_tab(ui, work),
-                    4 => size_tab(ui, work, single, units, lock_aspect),
-                    _ => properties_tab(ui, work),
-                });
+                egui::ScrollArea::vertical()
+                    .max_height(440.0)
+                    .auto_shrink([false, true])
+                    .show(ui, |ui| match *tab {
+                        0 => fill_tab(ui, work),
+                        1 => line_tab(ui, work),
+                        2 => effects_tab(ui, work),
+                        3 => text_box_tab(ui, work),
+                        4 => size_tab(ui, work, single, units, lock_aspect),
+                        _ => properties_tab(ui, work),
+                    });
                 result = ok_cancel(ui);
             });
 
@@ -156,7 +184,9 @@ impl FormatShapeDialog {
         let single = self.ids.len() == 1;
         if let Some(page) = state.current_page_mut() {
             for id in &self.ids {
-                let Some(shape) = page.get_shape_mut(*id) else { continue };
+                let Some(shape) = page.get_shape_mut(*id) else {
+                    continue;
+                };
                 apply_to(shape, original, work, single);
             }
         }
@@ -218,7 +248,11 @@ fn apply_to(shape: &mut Shape, original: &Shape, work: &Shape, single: bool) {
             if w.effective_margins() != o.effective_margins() {
                 s.margins = w.effective_margins();
                 // All-zero margins read as unset, so the inset goes to zero with them
-                s.inset = if margins_are_zero(&s.margins) { 0.0 } else { s.inset };
+                s.inset = if margins_are_zero(&s.margins) {
+                    0.0
+                } else {
+                    s.inset
+                };
             }
             if w.columns.count != o.columns.count {
                 s.columns.count = w.columns.count;
@@ -289,7 +323,8 @@ pub(crate) fn fill_editor(ui: &mut Ui, fill: &mut Fill) {
             stops_editor(ui, &mut g.stops);
         }
         Fill::RadialGradient(g) => {
-            let (mut cx, mut cy, mut r) = (g.center.x * 100.0, g.center.y * 100.0, g.radius * 100.0);
+            let (mut cx, mut cy, mut r) =
+                (g.center.x * 100.0, g.center.y * 100.0, g.radius * 100.0);
             if number_row(ui, "Center x", &mut cx, 0.0..=100.0, 1.0, "%") {
                 g.center.x = cx / 100.0;
             }
@@ -303,11 +338,14 @@ pub(crate) fn fill_editor(ui: &mut Ui, fill: &mut Fill) {
         }
         Fill::Pattern(p) => {
             row(ui, "Pattern", |ui| {
-                egui::ComboBox::from_id_salt("fill_pattern").selected_text(p.pattern_type.name()).height(280.0).show_ui(ui, |ui| {
-                    for t in PatternType::all() {
-                        ui.selectable_value(&mut p.pattern_type, *t, t.name());
-                    }
-                });
+                egui::ComboBox::from_id_salt("fill_pattern")
+                    .selected_text(p.pattern_type.name())
+                    .height(280.0)
+                    .show_ui(ui, |ui| {
+                        for t in PatternType::all() {
+                            ui.selectable_value(&mut p.pattern_type, *t, t.name());
+                        }
+                    });
             });
             row(ui, "Foreground", |ui| color_edit(ui, &mut p.foreground));
             row(ui, "Background", |ui| color_edit(ui, &mut p.background));
@@ -316,10 +354,18 @@ pub(crate) fn fill_editor(ui: &mut Ui, fill: &mut Fill) {
         }
         Fill::Texture(t) => {
             row(ui, "Picture", |ui| {
-                let name = std::path::Path::new(&t.source).file_name().map_or("(none)".to_string(), |n| n.to_string_lossy().into_owned());
+                let name = std::path::Path::new(&t.source)
+                    .file_name()
+                    .map_or("(none)".to_string(), |n| n.to_string_lossy().into_owned());
                 ui.label(name);
                 if ui.button("Choose…").clicked() {
-                    if let Some(path) = rfd::FileDialog::new().add_filter("Pictures", &["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff"]).pick_file() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .add_filter(
+                            "Pictures",
+                            &["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff"],
+                        )
+                        .pick_file()
+                    {
                         t.source = path.to_string_lossy().into_owned();
                     }
                 }
@@ -359,7 +405,14 @@ fn fill_tab(ui: &mut Ui, shape: &mut Shape) {
     fill_editor(ui, &mut shape.fill);
     ui.add_space(8.0);
     let mut transparency = (1.0 - shape.opacity) * 100.0;
-    if number_row(ui, "Object transparency", &mut transparency, 0.0..=100.0, 1.0, "%") {
+    if number_row(
+        ui,
+        "Object transparency",
+        &mut transparency,
+        0.0..=100.0,
+        1.0,
+        "%",
+    ) {
         shape.opacity = 1.0 - transparency / 100.0;
     }
 }
@@ -376,7 +429,10 @@ fn stops_editor(ui: &mut Ui, stops: &mut Vec<GradientStop>) {
                 stop.position = pos / 100.0;
             }
             color_edit(ui, &mut stop.color);
-            if ui.add_enabled(count > 2, egui::Button::new("Remove")).clicked() {
+            if ui
+                .add_enabled(count > 2, egui::Button::new("Remove"))
+                .clicked()
+            {
                 remove = Some(i);
             }
         });
@@ -401,10 +457,17 @@ const DASHES: [(&str, &[f64]); 6] = [
 ];
 
 fn dash_name(stroke: &Stroke) -> &'static str {
-    let Some(pattern) = stroke.dash_pattern.as_ref().filter(|p| !p.is_empty()) else { return "Solid" };
+    let Some(pattern) = stroke.dash_pattern.as_ref().filter(|p| !p.is_empty()) else {
+        return "Solid";
+    };
     DASHES
         .iter()
-        .find(|(_, d)| d.len() == pattern.len() && d.iter().zip(pattern).all(|(a, b)| (a * stroke.width - b).abs() < 1e-6))
+        .find(|(_, d)| {
+            d.len() == pattern.len()
+                && d.iter()
+                    .zip(pattern)
+                    .all(|(a, b)| (a * stroke.width - b).abs() < 1e-6)
+        })
         .map_or("Custom", |(name, _)| *name)
 }
 
@@ -418,31 +481,79 @@ fn line_tab(ui: &mut Ui, shape: &mut Shape) {
         row(ui, "Color", |ui| color_edit(ui, &mut stroke.color));
         let old_width = stroke.width;
         let was = dash_name(stroke);
-        if number_row(ui, "Weight", &mut stroke.width, 0.0..=100.0, 0.25, " pt") && was != "Solid" && was != "Custom" {
+        if number_row(ui, "Weight", &mut stroke.width, 0.0..=100.0, 0.25, " pt")
+            && was != "Solid"
+            && was != "Custom"
+        {
             // Dashes stay in proportion to the weight
-            let ratio = if old_width > 0.0 { stroke.width / old_width } else { 1.0 };
+            let ratio = if old_width > 0.0 {
+                stroke.width / old_width
+            } else {
+                1.0
+            };
             if let Some(p) = &mut stroke.dash_pattern {
                 p.iter_mut().for_each(|d| *d *= ratio);
             }
         }
         row(ui, "Dash", |ui| {
             let current = dash_name(stroke);
-            egui::ComboBox::from_id_salt("line_dash").selected_text(current).show_ui(ui, |ui| {
-                for (name, multiples) in DASHES {
-                    if ui.selectable_label(current == name, name).clicked() {
-                        stroke.dash_pattern = (!multiples.is_empty()).then(|| multiples.iter().map(|m| m * stroke.width.max(0.25)).collect());
-                        stroke.dash_offset = 0.0;
+            egui::ComboBox::from_id_salt("line_dash")
+                .selected_text(current)
+                .show_ui(ui, |ui| {
+                    for (name, multiples) in DASHES {
+                        if ui.selectable_label(current == name, name).clicked() {
+                            stroke.dash_pattern = (!multiples.is_empty()).then(|| {
+                                multiples
+                                    .iter()
+                                    .map(|m| m * stroke.width.max(0.25))
+                                    .collect()
+                            });
+                            stroke.dash_offset = 0.0;
+                        }
                     }
-                }
-            });
+                });
         });
         if stroke.dash_pattern.is_some() {
-            number_row(ui, "Dash offset", &mut stroke.dash_offset, 0.0..=1000.0, 0.25, " pt");
+            number_row(
+                ui,
+                "Dash offset",
+                &mut stroke.dash_offset,
+                0.0..=1000.0,
+                0.25,
+                " pt",
+            );
         }
-        choice(ui, "line_cap", "Cap", &mut stroke.cap, &[(LineCap::Butt, "Flat"), (LineCap::Round, "Round"), (LineCap::Square, "Square")]);
-        choice(ui, "line_join", "Join", &mut stroke.join, &[(LineJoin::Miter, "Miter"), (LineJoin::Round, "Round"), (LineJoin::Bevel, "Bevel")]);
+        choice(
+            ui,
+            "line_cap",
+            "Cap",
+            &mut stroke.cap,
+            &[
+                (LineCap::Butt, "Flat"),
+                (LineCap::Round, "Round"),
+                (LineCap::Square, "Square"),
+            ],
+        );
+        choice(
+            ui,
+            "line_join",
+            "Join",
+            &mut stroke.join,
+            &[
+                (LineJoin::Miter, "Miter"),
+                (LineJoin::Round, "Round"),
+                (LineJoin::Bevel, "Bevel"),
+            ],
+        );
         if stroke.join == LineJoin::Miter {
-            number_row(ui, "Miter limit", &mut stroke.miter_limit, 1.0..=20.0, 0.1, "");
+            number_row(
+                ui,
+                "Miter limit",
+                &mut stroke.miter_limit,
+                1.0..=20.0,
+                0.1,
+                "",
+            );
         }
     }
     shape_specific_line(ui, shape);
@@ -460,7 +571,11 @@ fn shape_specific_line(ui: &mut Ui, shape: &mut Shape) {
                 "connector",
                 "Type",
                 &mut line.connector_type,
-                &[(ConnectorType::Straight, "Straight"), (ConnectorType::Elbow, "Elbow"), (ConnectorType::Curved, "Curved")],
+                &[
+                    (ConnectorType::Straight, "Straight"),
+                    (ConnectorType::Elbow, "Elbow"),
+                    (ConnectorType::Curved, "Curved"),
+                ],
             );
             ending_editor(ui, "start_ending", "Start", &mut line.start_ending);
             ending_editor(ui, "end_ending", "End", &mut line.end_ending);
@@ -468,7 +583,14 @@ fn shape_specific_line(ui: &mut Ui, shape: &mut Shape) {
         ShapeKind::AutoShape(auto) => match &mut auto.geometry {
             ShapeGeometry::Rectangle { corner_radius } => {
                 ui.add_space(10.0);
-                number_row(ui, "Corner radius", corner_radius, 0.0..=(w.min(h) / 2.0).max(0.0), 0.5, " pt");
+                number_row(
+                    ui,
+                    "Corner radius",
+                    corner_radius,
+                    0.0..=(w.min(h) / 2.0).max(0.0),
+                    0.5,
+                    " pt",
+                );
             }
             ShapeGeometry::Polygon { sides } => {
                 ui.add_space(10.0);
@@ -477,7 +599,10 @@ fn shape_specific_line(ui: &mut Ui, shape: &mut Shape) {
                     *sides = n.round() as u32;
                 }
             }
-            ShapeGeometry::Star { points, inner_ratio } => {
+            ShapeGeometry::Star {
+                points,
+                inner_ratio,
+            } => {
                 ui.add_space(10.0);
                 let mut n = *points as f64;
                 if number_row(ui, "Points", &mut n, 3.0..=64.0, 0.1, "") {
@@ -519,9 +644,17 @@ fn ending_editor(ui: &mut Ui, id: &str, label: &str, ending: &mut LineEnding) {
 }
 
 /// An optional effect: a checkbox that creates it from its default, and its fields when on.
-fn effect<T: Default>(ui: &mut Ui, title: &str, slot: &mut Option<T>, fields: impl FnOnce(&mut Ui, &mut T)) {
+fn effect<T: Default>(
+    ui: &mut Ui,
+    title: &str,
+    slot: &mut Option<T>,
+    fields: impl FnOnce(&mut Ui, &mut T),
+) {
     let mut on = slot.is_some();
-    if ui.checkbox(&mut on, egui::RichText::new(title).strong()).changed() {
+    if ui
+        .checkbox(&mut on, egui::RichText::new(title).strong())
+        .changed()
+    {
         *slot = on.then(T::default);
     }
     if let Some(value) = slot {
@@ -532,75 +665,144 @@ fn effect<T: Default>(ui: &mut Ui, title: &str, slot: &mut Option<T>, fields: im
 
 fn effects_tab(ui: &mut Ui, shape: &mut Shape) {
     let e: &mut Effects = &mut shape.effects;
-    effect(ui, "Shadow", &mut e.drop_shadow, |ui, s: &mut DropShadow| {
-        row(ui, "Color", |ui| color_edit(ui, &mut s.color));
-        number_row(ui, "Offset x", &mut s.offset_x, -200.0..=200.0, 0.5, " pt");
-        number_row(ui, "Offset y", &mut s.offset_y, -200.0..=200.0, 0.5, " pt");
-        number_row(ui, "Blur", &mut s.blur_radius, 0.0..=100.0, 0.5, " pt");
-        number_row(ui, "Spread", &mut s.spread, -50.0..=100.0, 0.5, " pt");
-    });
+    effect(
+        ui,
+        "Shadow",
+        &mut e.drop_shadow,
+        |ui, s: &mut DropShadow| {
+            row(ui, "Color", |ui| color_edit(ui, &mut s.color));
+            number_row(ui, "Offset x", &mut s.offset_x, -200.0..=200.0, 0.5, " pt");
+            number_row(ui, "Offset y", &mut s.offset_y, -200.0..=200.0, 0.5, " pt");
+            number_row(ui, "Blur", &mut s.blur_radius, 0.0..=100.0, 0.5, " pt");
+            number_row(ui, "Spread", &mut s.spread, -50.0..=100.0, 0.5, " pt");
+        },
+    );
     effect(ui, "Glow", &mut e.outer_glow, |ui, g: &mut Glow| {
         row(ui, "Color", |ui| color_edit(ui, &mut g.color));
         number_row(ui, "Radius", &mut g.radius, 0.0..=100.0, 0.5, " pt");
         number_row(ui, "Spread", &mut g.spread, 0.0..=100.0, 0.5, " pt");
     });
-    effect(ui, "Inner shadow", &mut e.inner_shadow, |ui, s: &mut InnerShadow| {
-        row(ui, "Color", |ui| color_edit(ui, &mut s.color));
-        number_row(ui, "Offset x", &mut s.offset_x, -100.0..=100.0, 0.5, " pt");
-        number_row(ui, "Offset y", &mut s.offset_y, -100.0..=100.0, 0.5, " pt");
-        number_row(ui, "Blur", &mut s.blur_radius, 0.0..=100.0, 0.5, " pt");
-        number_row(ui, "Choke", &mut s.choke, 0.0..=100.0, 0.5, " pt");
-    });
-    effect(ui, "Inner glow", &mut e.inner_glow, |ui, g: &mut InnerGlow| {
-        row(ui, "Color", |ui| color_edit(ui, &mut g.color));
-        number_row(ui, "Radius", &mut g.radius, 0.0..=100.0, 0.5, " pt");
-        choice(ui, "inner_glow_source", "Source", &mut g.source, &[(InnerGlowSource::Edge, "Edge"), (InnerGlowSource::Center, "Center")]);
-        number_row(ui, "Choke", &mut g.choke, 0.0..=100.0, 0.5, " pt");
-    });
-    effect(ui, "Reflection", &mut e.reflection, |ui, r: &mut Reflection| {
-        let mut opacity = r.opacity * 100.0;
-        if number_row(ui, "Opacity", &mut opacity, 0.0..=100.0, 1.0, "%") {
-            r.opacity = opacity / 100.0;
-        }
-        let mut size = r.size * 100.0;
-        if number_row(ui, "Size", &mut size, 0.0..=100.0, 1.0, "%") {
-            r.size = size / 100.0;
-        }
-        number_row(ui, "Distance", &mut r.gap, 0.0..=100.0, 0.5, " pt");
-        number_row(ui, "Blur", &mut r.blur, 0.0..=100.0, 0.5, " pt");
-        number_row(ui, "Fade length", &mut r.fade_length, 0.0..=100.0, 0.5, " pt");
-        number_row(ui, "Direction", &mut r.direction, 0.0..=360.0, 1.0, "°");
-    });
-    effect(ui, "Soft edges", &mut e.soft_edges, |ui, s: &mut SoftEdges| {
-        number_row(ui, "Radius", &mut s.radius, 0.0..=100.0, 0.5, " pt");
-    });
+    effect(
+        ui,
+        "Inner shadow",
+        &mut e.inner_shadow,
+        |ui, s: &mut InnerShadow| {
+            row(ui, "Color", |ui| color_edit(ui, &mut s.color));
+            number_row(ui, "Offset x", &mut s.offset_x, -100.0..=100.0, 0.5, " pt");
+            number_row(ui, "Offset y", &mut s.offset_y, -100.0..=100.0, 0.5, " pt");
+            number_row(ui, "Blur", &mut s.blur_radius, 0.0..=100.0, 0.5, " pt");
+            number_row(ui, "Choke", &mut s.choke, 0.0..=100.0, 0.5, " pt");
+        },
+    );
+    effect(
+        ui,
+        "Inner glow",
+        &mut e.inner_glow,
+        |ui, g: &mut InnerGlow| {
+            row(ui, "Color", |ui| color_edit(ui, &mut g.color));
+            number_row(ui, "Radius", &mut g.radius, 0.0..=100.0, 0.5, " pt");
+            choice(
+                ui,
+                "inner_glow_source",
+                "Source",
+                &mut g.source,
+                &[
+                    (InnerGlowSource::Edge, "Edge"),
+                    (InnerGlowSource::Center, "Center"),
+                ],
+            );
+            number_row(ui, "Choke", &mut g.choke, 0.0..=100.0, 0.5, " pt");
+        },
+    );
+    effect(
+        ui,
+        "Reflection",
+        &mut e.reflection,
+        |ui, r: &mut Reflection| {
+            let mut opacity = r.opacity * 100.0;
+            if number_row(ui, "Opacity", &mut opacity, 0.0..=100.0, 1.0, "%") {
+                r.opacity = opacity / 100.0;
+            }
+            let mut size = r.size * 100.0;
+            if number_row(ui, "Size", &mut size, 0.0..=100.0, 1.0, "%") {
+                r.size = size / 100.0;
+            }
+            number_row(ui, "Distance", &mut r.gap, 0.0..=100.0, 0.5, " pt");
+            number_row(ui, "Blur", &mut r.blur, 0.0..=100.0, 0.5, " pt");
+            number_row(
+                ui,
+                "Fade length",
+                &mut r.fade_length,
+                0.0..=100.0,
+                0.5,
+                " pt",
+            );
+            number_row(ui, "Direction", &mut r.direction, 0.0..=360.0, 1.0, "°");
+        },
+    );
+    effect(
+        ui,
+        "Soft edges",
+        &mut e.soft_edges,
+        |ui, s: &mut SoftEdges| {
+            number_row(ui, "Radius", &mut s.radius, 0.0..=100.0, 0.5, " pt");
+        },
+    );
     effect(ui, "Bevel", &mut e.bevel, |ui, b: &mut Bevel| {
         choice(
             ui,
             "bevel_style",
             "Style",
             &mut b.style,
-            &[(BevelStyle::Outer, "Outer"), (BevelStyle::Inner, "Inner"), (BevelStyle::Emboss, "Emboss"), (BevelStyle::PillowEmboss, "Pillow emboss")],
+            &[
+                (BevelStyle::Outer, "Outer"),
+                (BevelStyle::Inner, "Inner"),
+                (BevelStyle::Emboss, "Emboss"),
+                (BevelStyle::PillowEmboss, "Pillow emboss"),
+            ],
         );
         choice(
             ui,
             "bevel_technique",
             "Technique",
             &mut b.technique,
-            &[(BevelTechnique::Smooth, "Smooth"), (BevelTechnique::ChiselHard, "Chisel hard"), (BevelTechnique::ChiselSoft, "Chisel soft")],
+            &[
+                (BevelTechnique::Smooth, "Smooth"),
+                (BevelTechnique::ChiselHard, "Chisel hard"),
+                (BevelTechnique::ChiselSoft, "Chisel soft"),
+            ],
         );
         number_row(ui, "Depth", &mut b.depth, 0.0..=100.0, 0.5, " pt");
         number_row(ui, "Size", &mut b.size, 0.0..=100.0, 0.5, " pt");
         number_row(ui, "Soften", &mut b.soften, 0.0..=100.0, 0.5, " pt");
         number_row(ui, "Light angle", &mut b.light_angle, 0.0..=360.0, 1.0, "°");
-        number_row(ui, "Light altitude", &mut b.light_altitude, 0.0..=90.0, 1.0, "°");
+        number_row(
+            ui,
+            "Light altitude",
+            &mut b.light_altitude,
+            0.0..=90.0,
+            1.0,
+            "°",
+        );
         row(ui, "Highlight", |ui| color_edit(ui, &mut b.highlight_color));
         row(ui, "Shadow", |ui| color_edit(ui, &mut b.shadow_color));
     });
-    ui.label(egui::RichText::new("Shadow and glow are drawn on the canvas; the other effects are saved with the shape.").weak().small());
+    ui.label(
+        egui::RichText::new(
+            "Shadow and glow are drawn on the canvas; the other effects are saved with the shape.",
+        )
+        .weak()
+        .small(),
+    );
 }
 
-fn size_tab(ui: &mut Ui, shape: &mut Shape, single: bool, units: crate::state::DisplayUnit, lock_aspect: &mut bool) {
+fn size_tab(
+    ui: &mut Ui,
+    shape: &mut Shape,
+    single: bool,
+    units: crate::state::DisplayUnit,
+    lock_aspect: &mut bool,
+) {
     if !single {
         ui.label("Select one object to change its size and position.");
         return;
@@ -609,7 +811,11 @@ fn size_tab(ui: &mut Ui, shape: &mut Shape, single: bool, units: crate::state::D
     let b = shape.common.bounds;
     let (mut x, mut y) = (units.from_points(b.origin.x), units.from_points(b.origin.y));
     let (mut w, mut h) = (units.from_points(b.width()), units.from_points(b.height()));
-    let ratio = if b.height() > 1e-9 { b.width() / b.height() } else { 1.0 };
+    let ratio = if b.height() > 1e-9 {
+        b.width() / b.height()
+    } else {
+        1.0
+    };
     let speed = units.from_points(0.5);
     let big = units.from_points(20000.0);
     let mut bounds = b;
@@ -632,10 +838,22 @@ fn size_tab(ui: &mut Ui, shape: &mut Shape, single: bool, units: crate::state::D
             bounds.size.width = bounds.size.height * ratio;
         }
     }
-    shape.common.bounds = Rect::new(bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height);
+    shape.common.bounds = Rect::new(
+        bounds.origin.x,
+        bounds.origin.y,
+        bounds.size.width,
+        bounds.size.height,
+    );
     row(ui, "", |ui| ui.checkbox(lock_aspect, "Lock aspect ratio"));
     ui.add_space(6.0);
-    number_row(ui, "Rotation", &mut shape.common.rotation, -360.0..=360.0, 1.0, "°");
+    number_row(
+        ui,
+        "Rotation",
+        &mut shape.common.rotation,
+        -360.0..=360.0,
+        1.0,
+        "°",
+    );
     row(ui, "Flip", |ui| {
         ui.checkbox(&mut shape.common.flip_h, "Horizontal");
         ui.checkbox(&mut shape.common.flip_v, "Vertical");
@@ -647,13 +865,19 @@ fn margins_are_zero(m: &Margins) -> bool {
 }
 
 fn text_box_tab(ui: &mut Ui, shape: &mut Shape) {
-    let ShapeKind::TextFrame(tf) = &mut shape.kind else { return };
+    let ShapeKind::TextFrame(tf) = &mut shape.kind else {
+        return;
+    };
     choice(
         ui,
         "text_vertical",
         "Vertical alignment",
         &mut tf.vertical_align,
-        &[(VerticalAlignment::Top, "Top"), (VerticalAlignment::Center, "Middle"), (VerticalAlignment::Bottom, "Bottom")],
+        &[
+            (VerticalAlignment::Top, "Top"),
+            (VerticalAlignment::Center, "Middle"),
+            (VerticalAlignment::Bottom, "Bottom"),
+        ],
     );
     ui.add_space(6.0);
     ui.label(egui::RichText::new("Margins").strong());
@@ -694,18 +918,35 @@ fn text_box_tab(ui: &mut Ui, shape: &mut Shape) {
 fn properties_tab(ui: &mut Ui, shape: &mut Shape) {
     row(ui, "Name", |ui| {
         let mut name = shape.common.name.clone().unwrap_or_default();
-        if ui.add(egui::TextEdit::singleline(&mut name).desired_width(240.0)).changed() {
+        if ui
+            .add(egui::TextEdit::singleline(&mut name).desired_width(240.0))
+            .changed()
+        {
             shape.common.name = (!name.is_empty()).then_some(name);
         }
     });
-    row(ui, "", |ui| ui.checkbox(&mut shape.common.visible, "Visible"));
-    row(ui, "", |ui| ui.checkbox(&mut shape.common.locked, "Locked (can't be selected or edited)"));
+    row(ui, "", |ui| {
+        ui.checkbox(&mut shape.common.visible, "Visible")
+    });
+    row(ui, "", |ui| {
+        ui.checkbox(
+            &mut shape.common.locked,
+            "Locked (can't be selected or edited)",
+        )
+    });
     if let ShapeKind::Picture(pic) = &mut shape.kind {
         ui.add_space(10.0);
         ui.label(egui::RichText::new("Picture").strong());
         row(ui, "Alternative text", |ui| {
             let mut alt = pic.alt_text.clone().unwrap_or_default();
-            if ui.add(egui::TextEdit::multiline(&mut alt).desired_rows(2).desired_width(240.0)).changed() {
+            if ui
+                .add(
+                    egui::TextEdit::multiline(&mut alt)
+                        .desired_rows(2)
+                        .desired_width(240.0),
+                )
+                .changed()
+            {
                 pic.alt_text = (!alt.is_empty()).then_some(alt);
             }
         });
@@ -724,7 +965,10 @@ fn properties_tab(ui: &mut Ui, shape: &mut Shape) {
         );
         let crop = pic.crop.unwrap_or_else(|| Rect::new(0.0, 0.0, 1.0, 1.0));
         let (mut left, mut top) = (crop.origin.x * 100.0, crop.origin.y * 100.0);
-        let (mut right, mut bottom) = ((1.0 - crop.origin.x - crop.width()) * 100.0, (1.0 - crop.origin.y - crop.height()) * 100.0);
+        let (mut right, mut bottom) = (
+            (1.0 - crop.origin.x - crop.width()) * 100.0,
+            (1.0 - crop.origin.y - crop.height()) * 100.0,
+        );
         let mut changed = false;
         changed |= number_row(ui, "Crop left", &mut left, 0.0..=95.0, 0.5, "%");
         changed |= number_row(ui, "Crop top", &mut top, 0.0..=95.0, 0.5, "%");
@@ -789,10 +1033,20 @@ mod tests {
     #[test]
     fn fill_kinds_round_trip() {
         let solid = Fill::Solid(Color::from_rgb8(10, 20, 30));
-        for kind in [FillKind::None, FillKind::Solid, FillKind::Linear, FillKind::Radial, FillKind::Pattern, FillKind::Picture] {
+        for kind in [
+            FillKind::None,
+            FillKind::Solid,
+            FillKind::Linear,
+            FillKind::Radial,
+            FillKind::Pattern,
+            FillKind::Picture,
+        ] {
             assert!(FillKind::of(&kind.make(&solid)) == kind);
         }
-        assert_eq!(FillKind::Radial.make(&solid).primary_color(), solid.primary_color());
+        assert_eq!(
+            FillKind::Radial.make(&solid).primary_color(),
+            solid.primary_color()
+        );
     }
 
     #[test]

@@ -98,7 +98,9 @@ impl SpellSession {
         self.current = 0;
         for (page_idx, page) in doc.pages().iter().enumerate() {
             for shape in page.all_shapes() {
-                let ShapeKind::TextFrame(data) = &shape.kind else { continue };
+                let ShapeKind::TextFrame(data) = &shape.kind else {
+                    continue;
+                };
                 for (para_idx, para) in data.content.paragraphs.iter().enumerate() {
                     let chars = text_edit::para_chars(para);
                     for (start, len) in word_ranges(&chars) {
@@ -168,7 +170,9 @@ impl SpellSession {
 
     /// Replace the current word in `doc`. Returns false when nothing could be changed.
     pub fn change_current(&mut self, doc: &mut Document, replacement: &str) -> bool {
-        let Some(err) = self.current_error().cloned() else { return false };
+        let Some(err) = self.current_error().cloned() else {
+            return false;
+        };
         if !replace_word(doc, &err, replacement) {
             return false;
         }
@@ -181,9 +185,16 @@ impl SpellSession {
 
     /// Replace every occurrence of the current word in `doc`.
     pub fn change_all_current(&mut self, doc: &mut Document, replacement: &str) -> bool {
-        let Some(err) = self.current_error().cloned() else { return false };
+        let Some(err) = self.current_error().cloned() else {
+            return false;
+        };
         let key = err.key();
-        let mut targets: Vec<Misspelled> = self.errors.iter().filter(|e| e.key() == key).cloned().collect();
+        let mut targets: Vec<Misspelled> = self
+            .errors
+            .iter()
+            .filter(|e| e.key() == key)
+            .cloned()
+            .collect();
         // Reverse document order so earlier offsets stay valid per object.
         targets.sort_by_key(|e| std::cmp::Reverse((e.page, e.para, e.offset)));
         let mut changed = false;
@@ -197,14 +208,19 @@ impl SpellSession {
 
     /// Suggestions for the current word, best first.
     pub fn suggestions(&self) -> Vec<String> {
-        self.current_error().map(|e| suggest(&e.word)).unwrap_or_default()
+        self.current_error()
+            .map(|e| suggest(&e.word))
+            .unwrap_or_default()
     }
 }
 
 /// Replace the word located by `err` with `replacement` in `doc`.
 pub fn replace_word(doc: &mut Document, err: &Misspelled, replacement: &str) -> bool {
-    let Some(page) = doc.pages_mut().get_mut(err.page) else { return false };
-    let Some(ShapeKind::TextFrame(data)) = page.get_shape_mut(err.object).map(|s| &mut s.kind) else {
+    let Some(page) = doc.pages_mut().get_mut(err.page) else {
+        return false;
+    };
+    let Some(ShapeKind::TextFrame(data)) = page.get_shape_mut(err.object).map(|s| &mut s.kind)
+    else {
         return false;
     };
     if err.para >= data.content.paragraphs.len() {
@@ -215,7 +231,10 @@ pub fn replace_word(doc: &mut Document, err: &Misspelled, replacement: &str) -> 
     let end = TextPos::new(err.para, err.offset + err.len);
     text_edit::delete_range(&mut content, start, end);
     text_edit::insert_text(&mut content, start, replacement);
-    if let Some(ShapeKind::TextFrame(data)) = doc.pages_mut()[err.page].get_shape_mut(err.object).map(|s| &mut s.kind) {
+    if let Some(ShapeKind::TextFrame(data)) = doc.pages_mut()[err.page]
+        .get_shape_mut(err.object)
+        .map(|s| &mut s.kind)
+    {
         data.content = content;
     }
     true
@@ -314,7 +333,10 @@ mod tests {
     fn word_ranges_skips_acronyms_and_single_letters() {
         let chars: Vec<char> = "a hello WORLD CamelCase don't".chars().collect();
         let ranges = word_ranges(&chars);
-        let words: Vec<String> = ranges.iter().map(|&(s, l)| chars[s..s + l].iter().collect()).collect();
+        let words: Vec<String> = ranges
+            .iter()
+            .map(|&(s, l)| chars[s..s + l].iter().collect())
+            .collect();
         assert!(words.contains(&"hello".to_string()));
         assert!(words.contains(&"don't".to_string()));
         assert!(!words.iter().any(|w| w == "WORLD"));
@@ -327,7 +349,10 @@ mod tests {
         let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
         doc.page_mut(0)
             .unwrap()
-            .add_shape(Shape::text_frame_with_text(Rect::new(0.0, 0.0, 200.0, 50.0), "hello wrld"));
+            .add_shape(Shape::text_frame_with_text(
+                Rect::new(0.0, 0.0, 200.0, 50.0),
+                "hello wrld",
+            ));
         let mut session = SpellSession::new();
         // Force the fallback dictionary path by relying on "wrld" not being a word.
         session.scan(&doc);
@@ -335,10 +360,15 @@ mod tests {
         if let Some(err) = session.current_error().cloned() {
             assert_eq!(err.word, "wrld");
             assert!(session.change_current(&mut doc, "world"));
-            let text = doc.page(0).unwrap().all_shapes().next().map(|s| match &s.kind {
-                ShapeKind::TextFrame(d) => d.content.plain_text(),
-                _ => String::new(),
-            });
+            let text = doc
+                .page(0)
+                .unwrap()
+                .all_shapes()
+                .next()
+                .map(|s| match &s.kind {
+                    ShapeKind::TextFrame(d) => d.content.plain_text(),
+                    _ => String::new(),
+                });
             assert_eq!(text.as_deref(), Some("hello world"));
         }
     }

@@ -49,8 +49,7 @@ fn main() -> Result<()> {
     std::fs::create_dir_all(&args.output)?;
 
     println!("Loading {}...", args.input.display());
-    let doc = repub_format_pub::import(&args.input)
-        .context("Failed to import Publisher file")?;
+    let doc = repub_format_pub::import(&args.input).context("Failed to import Publisher file")?;
 
     println!("Document has {} pages", doc.pages().len());
 
@@ -67,7 +66,10 @@ fn main() -> Result<()> {
         total_pages += 1;
         let page_num = i + 1;
 
-        println!("\n--- Page {} ({:.0}x{:.0}pt) ---", page_num, page.size.width, page.size.height);
+        println!(
+            "\n--- Page {} ({:.0}x{:.0}pt) ---",
+            page_num, page.size.width, page.size.height
+        );
 
         // Render the page
         let rendered_path = args.output.join(format!("rendered_page_{}.png", page_num));
@@ -82,12 +84,14 @@ fn main() -> Result<()> {
                     if ref_path.exists() {
                         compared_pages += 1;
                         let result = compare_images(&rendered_path, &ref_path, args.verbose)?;
-                        
+
                         println!("  Reference: {}", ref_path.display());
                         println!("  Similarity: {:.2}%", result.similarity * 100.0);
-                        println!("  Different pixels: {} ({:.2}%)", 
-                            result.different_pixels, 
-                            result.different_pixels as f64 / result.total_pixels as f64 * 100.0);
+                        println!(
+                            "  Different pixels: {} ({:.2}%)",
+                            result.different_pixels,
+                            result.different_pixels as f64 / result.total_pixels as f64 * 100.0
+                        );
 
                         if result.similarity > 0.95 {
                             matching_pages += 1;
@@ -139,7 +143,11 @@ struct CompareResult {
     max_diff: u32,
 }
 
-fn compare_images(rendered_path: &PathBuf, reference_path: &PathBuf, verbose: bool) -> Result<CompareResult> {
+fn compare_images(
+    rendered_path: &PathBuf,
+    reference_path: &PathBuf,
+    verbose: bool,
+) -> Result<CompareResult> {
     let rendered = image::open(rendered_path).context("Failed to open rendered image")?;
     let reference = image::open(reference_path).context("Failed to open reference image")?;
 
@@ -149,7 +157,10 @@ fn compare_images(rendered_path: &PathBuf, reference_path: &PathBuf, verbose: bo
     // If sizes differ, resize reference to match rendered
     let reference = if (w1, h1) != (w2, h2) {
         if verbose {
-            println!("  Size mismatch: rendered={}x{}, reference={}x{}", w1, h1, w2, h2);
+            println!(
+                "  Size mismatch: rendered={}x{}, reference={}x{}",
+                w1, h1, w2, h2
+            );
         }
         reference.resize_exact(w1, h1, image::imageops::FilterType::Lanczos3)
     } else {
@@ -202,43 +213,49 @@ fn pixel_diff(a: &Rgba<u8>, b: &Rgba<u8>) -> u32 {
     let dg = (a[1] as i32 - b[1] as i32).unsigned_abs();
     let db = (a[2] as i32 - b[2] as i32).unsigned_abs();
     let da = (a[3] as i32 - b[3] as i32).unsigned_abs();
-    
+
     // Consider pixels matching if difference is small (anti-aliasing tolerance)
     let total = dr + dg + db + da;
-    if total <= 32 { // Tolerance for anti-aliasing
+    if total <= 32 {
+        // Tolerance for anti-aliasing
         0
     } else {
         total
     }
 }
 
-fn generate_diff_image(rendered_path: &PathBuf, reference_path: &PathBuf, diff_path: &PathBuf) -> Result<()> {
+fn generate_diff_image(
+    rendered_path: &PathBuf,
+    reference_path: &PathBuf,
+    diff_path: &PathBuf,
+) -> Result<()> {
     let rendered = image::open(rendered_path)?.to_rgba8();
     let reference = image::open(reference_path)?;
-    
+
     let (w, h) = rendered.dimensions();
-    let reference = reference.resize_exact(w, h, image::imageops::FilterType::Lanczos3).to_rgba8();
+    let reference = reference
+        .resize_exact(w, h, image::imageops::FilterType::Lanczos3)
+        .to_rgba8();
 
     let mut diff_img = RgbaImage::new(w, h);
 
     for (x, y, r_pixel) in rendered.enumerate_pixels() {
         let ref_pixel = reference.get_pixel(x, y);
         let diff = pixel_diff(r_pixel, ref_pixel);
-        
+
         if diff == 0 {
             // Matching - show dimmed version of rendered
-            diff_img.put_pixel(x, y, Rgba([
-                r_pixel[0] / 2,
-                r_pixel[1] / 2,
-                r_pixel[2] / 2,
-                255,
-            ]));
+            diff_img.put_pixel(
+                x,
+                y,
+                Rgba([r_pixel[0] / 2, r_pixel[1] / 2, r_pixel[2] / 2, 255]),
+            );
         } else {
             // Different - highlight in red/green
             // Red = only in rendered, Green = only in reference, Yellow = both but different
             let r_bright = (r_pixel[0] as u32 + r_pixel[1] as u32 + r_pixel[2] as u32) / 3;
             let ref_bright = (ref_pixel[0] as u32 + ref_pixel[1] as u32 + ref_pixel[2] as u32) / 3;
-            
+
             if r_bright > ref_bright + 50 {
                 // Rendered has more content - red
                 diff_img.put_pixel(x, y, Rgba([255, 0, 0, 255]));

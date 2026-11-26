@@ -5,10 +5,10 @@
 
 use std::collections::HashMap;
 
-use repub_model::Page;
-use repub_model::ObjectId;
 use repub_model::shape::{Shape, ShapeKind};
 use repub_model::text::StyledText;
+use repub_model::ObjectId;
+use repub_model::Page;
 
 use crate::text_edit::{delete_range, end_pos, TextPos};
 
@@ -41,7 +41,11 @@ pub fn overflow_pos(tf: &Shape) -> Option<TextPos> {
     let margins = data(tf)?.effective_margins();
     let b = tf.common.bounds;
     let bottom = (b.origin.y + b.size.height - margins.bottom) as f32;
-    layout.lines.iter().find(|l| l.bottom > bottom + 0.5).map(|l| TextPos::new(l.para, l.start))
+    layout
+        .lines
+        .iter()
+        .find(|l| l.bottom > bottom + 0.5)
+        .map(|l| TextPos::new(l.para, l.start))
 }
 
 /// `text` from `pos` on.
@@ -94,7 +98,10 @@ fn text_frames(page: &Page) -> HashMap<ObjectId, &Shape> {
 
 /// The box that links to `id`, if any.
 pub fn previous(page: &Page, id: ObjectId) -> Option<ObjectId> {
-    text_frames(page).values().find(|tf| data(tf).and_then(|d| d.linked_frame) == Some(id)).map(|tf| tf.common.id)
+    text_frames(page)
+        .values()
+        .find(|tf| data(tf).and_then(|d| d.linked_frame) == Some(id))
+        .map(|tf| tf.common.id)
 }
 
 /// The first box of `id`'s chain (`id` itself if nothing links to it).
@@ -102,7 +109,10 @@ pub fn head(page: &Page, id: ObjectId) -> ObjectId {
     let frames = text_frames(page);
     let mut current = id;
     for _ in 0..MAX_CHAIN {
-        match frames.values().find(|tf| data(tf).and_then(|d| d.linked_frame) == Some(current)) {
+        match frames
+            .values()
+            .find(|tf| data(tf).and_then(|d| d.linked_frame) == Some(current))
+        {
             Some(prev) if prev.common.id != id => current = prev.common.id,
             _ => break,
         }
@@ -115,7 +125,9 @@ pub fn chain(page: &Page, id: ObjectId) -> Vec<ObjectId> {
     let frames = text_frames(page);
     let mut out = vec![head(page, id)];
     while out.len() < MAX_CHAIN {
-        let next = frames.get(out.last().unwrap()).and_then(|tf| data(tf).and_then(|d| d.linked_frame));
+        let next = frames
+            .get(out.last().unwrap())
+            .and_then(|tf| data(tf).and_then(|d| d.linked_frame));
         match next {
             Some(n) if frames.contains_key(&n) && !out.contains(&n) => out.push(n),
             _ => break,
@@ -131,7 +143,10 @@ pub fn layout_chains(page: &Page) -> HashMap<ObjectId, ChainFrame> {
     let mut out = HashMap::new();
     for tf in frames.values() {
         let tf_linked = data(tf).and_then(|d| d.linked_frame);
-        let starts_chain = tf_linked.is_some() && !frames.values().any(|o| data(o).and_then(|d| d.linked_frame) == Some(tf.common.id));
+        let starts_chain = tf_linked.is_some()
+            && !frames
+                .values()
+                .any(|o| data(o).and_then(|d| d.linked_frame) == Some(tf.common.id));
         if !starts_chain {
             continue;
         }
@@ -150,7 +165,15 @@ pub fn layout_chains(page: &Page) -> HashMap<ObjectId, ChainFrame> {
                     d.content = text_before(&story, pos);
                 }
             }
-            out.insert(*id, ChainFrame { frame, start, head: tf.common.id, last });
+            out.insert(
+                *id,
+                ChainFrame {
+                    frame,
+                    start,
+                    head: tf.common.id,
+                    last,
+                },
+            );
             match split {
                 Some(pos) => {
                     story = text_from(&story, pos);
@@ -198,7 +221,10 @@ pub fn break_link(page: &mut Page, from: ObjectId) {
         }
         _ => None,
     };
-    if let Some(ShapeKind::TextFrame(t)) = next.and_then(|n| page.get_shape_mut(n)).map(|s| &mut s.kind) {
+    if let Some(ShapeKind::TextFrame(t)) = next
+        .and_then(|n| page.get_shape_mut(n))
+        .map(|s| &mut s.kind)
+    {
         t.is_continuation = false;
     }
 }
@@ -207,11 +233,14 @@ pub fn break_link(page: &mut Page, from: ObjectId) {
 /// deleted boxes, and a deleted first box hands the story to the next one.
 pub fn before_delete(page: &mut Page, ids: &[ObjectId]) {
     for &id in ids {
-        let Some(ShapeKind::TextFrame(tf)) = page.get_shape(id).map(|s| &s.kind) else { continue };
+        let Some(ShapeKind::TextFrame(tf)) = page.get_shape(id).map(|s| &s.kind) else {
+            continue;
+        };
         let (next, content) = (tf.linked_frame, tf.content.clone());
         match previous(page, id) {
             Some(prev) => {
-                if let Some(ShapeKind::TextFrame(p)) = page.get_shape_mut(prev).map(|s| &mut s.kind) {
+                if let Some(ShapeKind::TextFrame(p)) = page.get_shape_mut(prev).map(|s| &mut s.kind)
+                {
                     p.linked_frame = next;
                     if next.is_none() {
                         p.overflow = Default::default();
@@ -219,7 +248,10 @@ pub fn before_delete(page: &mut Page, ids: &[ObjectId]) {
                 }
             }
             None => {
-                if let Some(ShapeKind::TextFrame(n)) = next.and_then(|n| page.get_shape_mut(n)).map(|s| &mut s.kind) {
+                if let Some(ShapeKind::TextFrame(n)) = next
+                    .and_then(|n| page.get_shape_mut(n))
+                    .map(|s| &mut s.kind)
+                {
                     n.content = content;
                     n.is_continuation = false;
                 }

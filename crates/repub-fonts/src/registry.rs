@@ -60,7 +60,11 @@ pub fn try_registry() -> Option<&'static Registry> {
 impl Registry {
     /// Family names for a font menu: the bundled family and every installed one.
     pub fn family_names(&self) -> Vec<String> {
-        let mut out: Vec<String> = self.families.values().map(|(name, _)| name.clone()).collect();
+        let mut out: Vec<String> = self
+            .families
+            .values()
+            .map(|(name, _)| name.clone())
+            .collect();
         if !self.families.contains_key(&BUNDLED.to_lowercase()) {
             out.push(BUNDLED.to_owned());
         }
@@ -91,8 +95,8 @@ fn font_dirs() -> Vec<PathBuf> {
         dirs.extend(["/System/Library/Fonts", "/Library/Fonts"].map(PathBuf::from));
         dirs.extend(home.map(|h| h.join("Library/Fonts")));
     } else if cfg!(target_os = "windows") {
-        let windir = std::env::var_os("WINDIR")
-            .map_or_else(|| PathBuf::from("C:\\Windows"), PathBuf::from);
+        let windir =
+            std::env::var_os("WINDIR").map_or_else(|| PathBuf::from("C:\\Windows"), PathBuf::from);
         dirs.push(windir.join("Fonts"));
         if let Some(local) = std::env::var_os("LOCALAPPDATA") {
             dirs.push(PathBuf::from(local).join("Microsoft\\Windows\\Fonts"));
@@ -108,7 +112,9 @@ fn font_dirs() -> Vec<PathBuf> {
 }
 
 fn walk(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
@@ -143,13 +149,19 @@ pub fn faces_in(path: &Path) -> Vec<(String, FontFile)> {
     if std::fs::metadata(path).map_or(true, |m| m.len() > MAX_FILE) {
         return Vec::new();
     }
-    let Ok(data) = std::fs::read(path) else { return Vec::new() };
+    let Ok(data) = std::fs::read(path) else {
+        return Vec::new();
+    };
     let count = ttf_parser::fonts_in_collection(&data).unwrap_or(1);
     let mut out = Vec::new();
     for index in 0..count {
-        let Ok(face) = ttf_parser::Face::parse(&data, index) else { continue };
+        let Ok(face) = ttf_parser::Face::parse(&data, index) else {
+            continue;
+        };
         // Hidden system families (".SF NS", ".Aqua...") aren't for documents
-        let Some(name) = family_name(&face).filter(|n| !n.starts_with('.')) else { continue };
+        let Some(name) = family_name(&face).filter(|n| !n.starts_with('.')) else {
+            continue;
+        };
         // Glyph outlines are needed (bitmap-only emoji fonts are skipped)
         if face.tables().glyf.is_none() && face.tables().cff.is_none() {
             continue;
@@ -280,7 +292,9 @@ fn scan() -> Registry {
     let mut entries: Vec<CachedFile> = Vec::new();
     let mut to_read: Vec<(PathBuf, u64, u64)> = Vec::new();
     for path in files {
-        let Some((size, modified)) = file_stamp(&path) else { continue };
+        let Some((size, modified)) = file_stamp(&path) else {
+            continue;
+        };
         match cached.get(&path) {
             Some(c) if c.size == size && c.modified == modified => {
                 entries.push(CachedFile {

@@ -82,12 +82,24 @@ impl PagePropertiesDialog {
         };
         let Some(page) = page else { return };
         self.page_index = Some(index);
-        self.orientation = if page.size.width > page.size.height { PageOrientation::Landscape } else { PageOrientation::Portrait };
-        let (w, h) = (page.size.width.min(page.size.height), page.size.width.max(page.size.height));
+        self.orientation = if page.size.width > page.size.height {
+            PageOrientation::Landscape
+        } else {
+            PageOrientation::Portrait
+        };
+        let (w, h) = (
+            page.size.width.min(page.size.height),
+            page.size.width.max(page.size.height),
+        );
         self.width = w;
         self.height = h;
         self.size = matching_size(w, h);
-        self.margins = [page.margins.top, page.margins.bottom, page.margins.left, page.margins.right];
+        self.margins = [
+            page.margins.top,
+            page.margins.bottom,
+            page.margins.left,
+            page.margins.right,
+        ];
         self.background = page.background.clone().unwrap_or(Fill::None);
         self.all_pages = false;
         self.units = state.units;
@@ -100,11 +112,18 @@ impl PagePropertiesDialog {
             return None;
         }
         let mut result = None;
-        egui::Window::new("Page Properties").collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.set_min_width(400.0);
-            egui::ScrollArea::vertical().max_height(450.0).auto_shrink([false, true]).show(ui, |ui| self.fields(ui));
-            result = ok_cancel(ui);
-        });
+        egui::Window::new("Page Properties")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.set_min_width(400.0);
+                egui::ScrollArea::vertical()
+                    .max_height(450.0)
+                    .auto_shrink([false, true])
+                    .show(ui, |ui| self.fields(ui));
+                result = ok_cancel(ui);
+            });
         match result {
             Some(true) => {
                 if let Some(index) = self.page_index {
@@ -121,7 +140,11 @@ impl PagePropertiesDialog {
     fn fields(&mut self, ui: &mut Ui) {
         let units = self.units;
         ui.label(egui::RichText::new("Page size").strong());
-        let mut options: Vec<(SizeChoice, &str)> = SIZES.iter().enumerate().map(|(i, (_, name))| (SizeChoice::Preset(i), *name)).collect();
+        let mut options: Vec<(SizeChoice, &str)> = SIZES
+            .iter()
+            .enumerate()
+            .map(|(i, (_, name))| (SizeChoice::Preset(i), *name))
+            .collect();
         options.push((SizeChoice::Custom, "Custom"));
         let before = self.size;
         choice(ui, "page_size_preset", "Size", &mut self.size, &options);
@@ -136,23 +159,58 @@ impl PagePropertiesDialog {
             let range = units.from_points(18.0)..=units.from_points(5000.0);
             let mut w = units.from_points(self.width);
             let mut h = units.from_points(self.height);
-            if number_row(ui, "Width", &mut w, range.clone(), units.from_points(1.0), units.suffix()) {
+            if number_row(
+                ui,
+                "Width",
+                &mut w,
+                range.clone(),
+                units.from_points(1.0),
+                units.suffix(),
+            ) {
                 self.width = units.to_points(w);
             }
-            if number_row(ui, "Height", &mut h, range, units.from_points(1.0), units.suffix()) {
+            if number_row(
+                ui,
+                "Height",
+                &mut h,
+                range,
+                units.from_points(1.0),
+                units.suffix(),
+            ) {
                 self.height = units.to_points(h);
             }
         }
-        choice(ui, "page_orientation", "Orientation", &mut self.orientation, &[(PageOrientation::Portrait, "Portrait"), (PageOrientation::Landscape, "Landscape")]);
+        choice(
+            ui,
+            "page_orientation",
+            "Orientation",
+            &mut self.orientation,
+            &[
+                (PageOrientation::Portrait, "Portrait"),
+                (PageOrientation::Landscape, "Landscape"),
+            ],
+        );
         ui.add_space(8.0);
         ui.label(egui::RichText::new("Margins").strong());
-        for (label, value) in ["Top", "Bottom", "Left", "Right"].into_iter().zip(self.margins.iter_mut()) {
+        for (label, value) in ["Top", "Bottom", "Left", "Right"]
+            .into_iter()
+            .zip(self.margins.iter_mut())
+        {
             let mut shown = units.from_points(*value);
-            if number_row(ui, label, &mut shown, 0.0..=units.from_points(500.0), units.from_points(0.5), units.suffix()) {
+            if number_row(
+                ui,
+                label,
+                &mut shown,
+                0.0..=units.from_points(500.0),
+                units.from_points(0.5),
+                units.suffix(),
+            ) {
                 *value = units.to_points(shown);
             }
         }
-        row(ui, "", |ui| ui.checkbox(&mut self.all_pages, "Apply size and margins to every page"));
+        row(ui, "", |ui| {
+            ui.checkbox(&mut self.all_pages, "Apply size and margins to every page")
+        });
         ui.add_space(8.0);
         ui.label(egui::RichText::new("Background").strong());
         fill_editor(ui, &mut self.background);
@@ -183,7 +241,11 @@ impl PagePropertiesDialog {
                 setup(page);
                 page.background = background;
             }
-        } else if let Some(page) = state.document.as_mut().and_then(|d| d.pages_mut().get_mut(index)) {
+        } else if let Some(page) = state
+            .document
+            .as_mut()
+            .and_then(|d| d.pages_mut().get_mut(index))
+        {
             setup(page);
             page.background = background;
         }
@@ -219,7 +281,10 @@ mod tests {
         use repub_model::{Document, PageOrientation as O};
         let mut state = AppState::new();
         let mut doc = Document::new(PageSize::Letter, O::Portrait);
-        let gradient = Fill::LinearGradient(repub_color::LinearGradient::horizontal(repub_color::Color::WHITE, repub_color::Color::BLACK));
+        let gradient = Fill::LinearGradient(repub_color::LinearGradient::horizontal(
+            repub_color::Color::WHITE,
+            repub_color::Color::BLACK,
+        ));
         doc.pages_mut()[0].background = Some(gradient.clone());
         state.document = Some(doc);
         let mut dialog = PagePropertiesDialog::new();

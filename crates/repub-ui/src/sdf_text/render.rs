@@ -161,19 +161,27 @@ pub fn install(render_state: &egui_wgpu::RenderState) {
 
     let params = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("sdf_text params"),
-        contents: bytemuck::bytes_of(&Params { spread: SPREAD, dilate_px: 0.0, _pad: [0.0; 2] }),
+        contents: bytemuck::bytes_of(&Params {
+            spread: SPREAD,
+            dilate_px: 0.0,
+            _pad: [0.0; 2],
+        }),
         usage: wgpu::BufferUsages::UNIFORM,
     });
 
-    render_state.renderer.write().callback_resources.insert(Resources {
-        pipeline,
-        bind_group_layout,
-        sampler,
-        params,
-        bind_group: None,
+    render_state
+        .renderer
+        .write()
+        .callback_resources
+        .insert(Resources {
+            pipeline,
+            bind_group_layout,
+            sampler,
+            params,
+            bind_group: None,
             texture: None,
-        slots: Vec::new(),
-    });
+            slots: Vec::new(),
+        });
     INSTALLED.store(true, Ordering::Release);
     atlas::build_in_background();
 }
@@ -201,10 +209,23 @@ impl egui_wgpu::CallbackTrait for TextCallback {
         if let (Some((texture, uploaded)), Some(atlas)) = (res.texture.as_mut(), atlas::get()) {
             if *uploaded != atlas.generation {
                 queue.write_texture(
-                    wgpu::ImageCopyTexture { texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                    wgpu::ImageCopyTexture {
+                        texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d::ZERO,
+                        aspect: wgpu::TextureAspect::All,
+                    },
                     &atlas.pixels,
-                    wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some((ATLAS_SIZE * atlas::CHANNELS) as u32), rows_per_image: Some(ATLAS_SIZE as u32) },
-                    wgpu::Extent3d { width: ATLAS_SIZE as u32, height: ATLAS_SIZE as u32, depth_or_array_layers: 1 },
+                    wgpu::ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row: Some((ATLAS_SIZE * atlas::CHANNELS) as u32),
+                        rows_per_image: Some(ATLAS_SIZE as u32),
+                    },
+                    wgpu::Extent3d {
+                        width: ATLAS_SIZE as u32,
+                        height: ATLAS_SIZE as u32,
+                        depth_or_array_layers: 1,
+                    },
                 );
                 *uploaded = atlas.generation;
             }
@@ -217,7 +238,11 @@ impl egui_wgpu::CallbackTrait for TextCallback {
                     queue,
                     &wgpu::TextureDescriptor {
                         label: Some("sdf_text atlas"),
-                        size: wgpu::Extent3d { width: ATLAS_SIZE as u32, height: ATLAS_SIZE as u32, depth_or_array_layers: 1 },
+                        size: wgpu::Extent3d {
+                            width: ATLAS_SIZE as u32,
+                            height: ATLAS_SIZE as u32,
+                            depth_or_array_layers: 1,
+                        },
                         mip_level_count: 1,
                         sample_count: 1,
                         dimension: wgpu::TextureDimension::D2,
@@ -235,9 +260,18 @@ impl egui_wgpu::CallbackTrait for TextCallback {
                     label: Some("sdf_text"),
                     layout: &res.bind_group_layout,
                     entries: &[
-                        wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) },
-                        wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&res.sampler) },
-                        wgpu::BindGroupEntry { binding: 2, resource: res.params.as_entire_binding() },
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&res.sampler),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: res.params.as_entire_binding(),
+                        },
                     ],
                 }));
             }

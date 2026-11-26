@@ -250,9 +250,7 @@ mod tests {
         let text = format!("Column 1{}Column 2", COLUMN_BREAK_CHAR);
         let segments = breaker.word_segments(&text);
 
-        let col_break_seg = segments
-            .iter()
-            .find(|s| s.text.contains(COLUMN_BREAK_CHAR));
+        let col_break_seg = segments.iter().find(|s| s.text.contains(COLUMN_BREAK_CHAR));
         assert!(col_break_seg.is_some());
         assert_eq!(
             col_break_seg.unwrap().break_after,

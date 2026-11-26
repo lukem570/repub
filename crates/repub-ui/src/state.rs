@@ -2,10 +2,10 @@
 
 use std::path::PathBuf;
 
-use repub_model::Document;
-use repub_model::shape::{Shape, ShapeKind};
-use repub_model::ObjectId;
 use repub_geometry::Point;
+use repub_model::shape::{Shape, ShapeKind};
+use repub_model::Document;
+use repub_model::ObjectId;
 
 use crate::commands::CommandHistory;
 use crate::tools::Tool;
@@ -32,13 +32,20 @@ impl Guide {
     fn from_model(g: repub_model::Guide) -> Self {
         Self {
             position: g.position,
-            orientation: if g.horizontal { GuideOrientation::Horizontal } else { GuideOrientation::Vertical },
+            orientation: if g.horizontal {
+                GuideOrientation::Horizontal
+            } else {
+                GuideOrientation::Vertical
+            },
             locked: false,
         }
     }
 
     fn to_model(self) -> repub_model::Guide {
-        repub_model::Guide { position: self.position, horizontal: self.orientation == GuideOrientation::Horizontal }
+        repub_model::Guide {
+            position: self.position,
+            horizontal: self.orientation == GuideOrientation::Horizontal,
+        }
     }
 
     /// Create a new horizontal guide at the given Y position.
@@ -323,13 +330,20 @@ impl AppState {
         if let Some(edit) = &mut self.master_edit {
             return Some(&mut edit.page);
         }
-        self.document.as_mut()?.pages_mut().get_mut(self.current_page)
+        self.document
+            .as_mut()?
+            .pages_mut()
+            .get_mut(self.current_page)
     }
 
     /// Whether object `id` on the current page is locked, or on a locked layer.
     pub fn is_locked(&self, id: repub_model::ObjectId) -> bool {
         self.current_page().is_some_and(|page| {
-            page.layers().iter().any(|l| l.shapes().iter().any(|o| o.id() == id && (l.locked || o.common.locked)))
+            page.layers().iter().any(|l| {
+                l.shapes()
+                    .iter()
+                    .any(|o| o.id() == id && (l.locked || o.common.locked))
+            })
         })
     }
 
@@ -344,8 +358,14 @@ impl AppState {
     /// Start editing master page `id` in place of the current page.
     pub fn begin_master_edit(&mut self, id: repub_model::MasterPageId) {
         self.end_master_edit();
-        let Some(master) = self.document.as_ref().and_then(|d| d.master_page(id)) else { return };
-        self.master_edit = Some(MasterEdit { id, page: master.to_page(), synced: master.to_page() });
+        let Some(master) = self.document.as_ref().and_then(|d| d.master_page(id)) else {
+            return;
+        };
+        self.master_edit = Some(MasterEdit {
+            id,
+            page: master.to_page(),
+            synced: master.to_page(),
+        });
         self.text_edit = None;
         self.selection.clear();
         self.fit_page_pending = true;
@@ -367,8 +387,14 @@ impl AppState {
     /// instead (undo, redo), the session reloads it. Called every frame and
     /// before anything snapshots or restores the document.
     pub fn sync_master_edit(&mut self) {
-        let Some(edit) = self.master_edit.as_mut() else { return };
-        let Some(master) = self.document.as_mut().and_then(|d| d.master_page_mut(edit.id)) else {
+        let Some(edit) = self.master_edit.as_mut() else {
+            return;
+        };
+        let Some(master) = self
+            .document
+            .as_mut()
+            .and_then(|d| d.master_page_mut(edit.id))
+        else {
             self.master_edit = None;
             return;
         };
@@ -408,7 +434,11 @@ impl AppState {
         if !self.two_page_spread || count < 2 || current == 0 || self.master_edit.is_some() {
             return vec![current];
         }
-        let left = if current % 2 == 1 { current } else { current - 1 };
+        let left = if current % 2 == 1 {
+            current
+        } else {
+            current - 1
+        };
         if left + 1 < count {
             vec![left, left + 1]
         } else {
@@ -495,7 +525,9 @@ impl AppState {
         self.sync_master_edit();
         self.pending_undo = None;
         self.last_coalesced_undo = None;
-        let Some(doc) = self.document.as_mut() else { return false };
+        let Some(doc) = self.document.as_mut() else {
+            return false;
+        };
         let undone = self.history.undo(doc);
         if undone {
             self.after_history_change();
@@ -506,7 +538,9 @@ impl AppState {
     /// Redo the last undone change. Returns true if something was redone.
     pub fn redo(&mut self) -> bool {
         self.sync_master_edit();
-        let Some(doc) = self.document.as_mut() else { return false };
+        let Some(doc) = self.document.as_mut() else {
+            return false;
+        };
         let redone = self.history.redo(doc);
         if redone {
             self.after_history_change();
@@ -545,8 +579,12 @@ impl AppState {
     /// Select an object.
     /// Copy the first selected object's formatting for the Format Painter.
     pub fn copy_format_from_selection(&mut self) -> bool {
-        let Some(&id) = self.selection.first() else { return false };
-        let Some(obj) = self.current_page().and_then(|p| p.get_shape(id)) else { return false };
+        let Some(&id) = self.selection.first() else {
+            return false;
+        };
+        let Some(obj) = self.current_page().and_then(|p| p.get_shape(id)) else {
+            return false;
+        };
         self.copied_format = Some(match &obj.kind {
             ShapeKind::TextFrame(tf) => CopiedFormat::Text {
                 shape: ShapeFormat::from_shape(obj),
@@ -574,15 +612,23 @@ impl AppState {
 
     /// Apply the copied formatting to an object. Returns true when applied.
     pub fn apply_copied_format_to(&mut self, id: ObjectId) -> bool {
-        let Some(copied) = self.copied_format.clone() else { return false };
-        let Some(page) = self.current_page_mut() else { return false };
-        let Some(obj) = page.get_shape_mut(id) else { return false };
+        let Some(copied) = self.copied_format.clone() else {
+            return false;
+        };
+        let Some(page) = self.current_page_mut() else {
+            return false;
+        };
+        let Some(obj) = page.get_shape_mut(id) else {
+            return false;
+        };
         let format = match &copied {
             CopiedFormat::Shape(style) => style.clone(),
             CopiedFormat::Text { shape, .. } => shape.clone(),
         };
         format.apply_to(obj);
-        if let (ShapeKind::TextFrame(tf), CopiedFormat::Text { character, .. }) = (&mut obj.kind, &copied) {
+        if let (ShapeKind::TextFrame(tf), CopiedFormat::Text { character, .. }) =
+            (&mut obj.kind, &copied)
+        {
             for para in &mut tf.content.paragraphs {
                 para.style.default_char_style = character.clone();
             }
@@ -619,7 +665,11 @@ impl AppState {
     /// Get selected objects.
     pub fn selected_objects(&self) -> Vec<&Shape> {
         // In stacking order, looking inside groups for selected members
-        fn collect<'a>(obj: &'a Shape, selection: &[repub_model::ObjectId], out: &mut Vec<&'a Shape>) {
+        fn collect<'a>(
+            obj: &'a Shape,
+            selection: &[repub_model::ObjectId],
+            out: &mut Vec<&'a Shape>,
+        ) {
             if selection.contains(&obj.id()) {
                 out.push(obj);
             } else if let ShapeKind::Group(group) = &obj.kind {
@@ -754,7 +804,11 @@ impl AppState {
         if indices.is_empty() {
             return;
         }
-        self.record_undo(if indices.len() == 1 { "Duplicate Page" } else { "Duplicate Pages" });
+        self.record_undo(if indices.len() == 1 {
+            "Duplicate Page"
+        } else {
+            "Duplicate Pages"
+        });
         if let Some(doc) = self.document.as_mut() {
             // From the end, so earlier indices stay valid
             for &i in indices.iter().rev() {
@@ -779,7 +833,11 @@ impl AppState {
         if indices.is_empty() || indices.len() >= count {
             return;
         }
-        self.record_undo(if indices.len() == 1 { "Delete Page" } else { "Delete Pages" });
+        self.record_undo(if indices.len() == 1 {
+            "Delete Page"
+        } else {
+            "Delete Pages"
+        });
         let below_current = indices.iter().filter(|&&i| i < self.current_page).count();
         let current_deleted = indices.contains(&self.current_page);
         if let Some(doc) = self.document.as_mut() {
@@ -823,11 +881,11 @@ impl AppState {
         if let Some((width, height)) = self.visible_pages_size() {
             let page_width = width as f32;
             let page_height = height as f32;
-            
+
             // Leave a workspace border around the page, as Publisher's Whole Page view does
             let zoom_x = (viewport_width - 64.0) / page_width;
             let zoom_y = (viewport_height - 64.0) / page_height;
-            
+
             self.zoom = zoom_x.min(zoom_y).max(0.1).min(8.0);
         }
     }
@@ -855,7 +913,9 @@ impl AppState {
 
     /// The current page's ruler guides.
     pub fn guides(&self) -> Vec<Guide> {
-        self.current_page().map_or_else(Vec::new, |p| p.guides.iter().map(|g| Guide::from_model(*g)).collect())
+        self.current_page().map_or_else(Vec::new, |p| {
+            p.guides.iter().map(|g| Guide::from_model(*g)).collect()
+        })
     }
 
     /// Add a guide to the current page.
@@ -907,14 +967,18 @@ impl AppState {
     /// Take the document's saved measurement and snapping settings, unless they are the
     /// defaults of a document that never set any (then the app's own preferences stand).
     pub fn apply_document_settings(&mut self) {
-        let Some(doc) = self.document.as_ref() else { return };
+        let Some(doc) = self.document.as_ref() else {
+            return;
+        };
         let s = doc.settings.clone();
         if s == repub_model::DocumentSettings::default() {
             return;
         }
         self.units = match s.display_unit {
             repub_geometry::Unit::Points => DisplayUnit::Points,
-            repub_geometry::Unit::Millimeters | repub_geometry::Unit::Centimeters => DisplayUnit::Millimeters,
+            repub_geometry::Unit::Millimeters | repub_geometry::Unit::Centimeters => {
+                DisplayUnit::Millimeters
+            }
             _ => DisplayUnit::Inches,
         };
         self.show_rulers = s.show_rulers;
@@ -936,7 +1000,9 @@ impl AppState {
             self.snap_to_guides,
             self.snap_to_objects,
         );
-        let Some(doc) = self.document.as_mut() else { return };
+        let Some(doc) = self.document.as_mut() else {
+            return;
+        };
         doc.settings = repub_model::DocumentSettings {
             display_unit: match units {
                 DisplayUnit::Points => repub_geometry::Unit::Points,
@@ -985,7 +1051,7 @@ impl AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{PageSize, PageOrientation};
+    use repub_model::{PageOrientation, PageSize};
 
     #[test]
     fn test_app_state_default() {
@@ -998,10 +1064,10 @@ mod tests {
     fn test_window_title() {
         let mut state = AppState::new();
         assert_eq!(state.window_title(), "Repub");
-        
+
         state.document = Some(Document::new(PageSize::Letter, PageOrientation::Portrait));
         assert_eq!(state.window_title(), "Untitled - Repub");
-        
+
         state.dirty = true;
         assert_eq!(state.window_title(), "* Untitled - Repub");
     }
@@ -1011,11 +1077,11 @@ mod tests {
         let mut state = AppState::new();
         state.zoom_in();
         assert!(state.zoom > 1.0);
-        
+
         state.zoom_out();
         state.zoom_out();
         assert!(state.zoom < 1.0);
-        
+
         state.zoom_actual();
         assert_eq!(state.zoom, 1.0);
     }
@@ -1062,39 +1128,39 @@ mod tests {
         let mut state = AppState::new();
         state.document = Some(Document::new(PageSize::Letter, PageOrientation::Portrait));
         state.dirty = false;
-        
+
         // Add guides
         state.add_guide(Guide::horizontal(100.0));
         assert_eq!(state.guides().len(), 1);
         assert!(state.dirty);
-        
+
         state.dirty = false;
         state.add_guide(Guide::vertical(50.0));
         assert_eq!(state.guides().len(), 2);
-        
+
         // Test guide retrieval
         assert_eq!(state.horizontal_guides(), vec![100.0]);
         assert_eq!(state.vertical_guides(), vec![50.0]);
-        
+
         // Test find_guide_at
         let (idx, _) = state.find_guide_at(Point::new(52.0, 200.0), 5.0).unwrap();
         assert_eq!(idx, 1); // vertical guide at x=50
-        
+
         let (idx, _) = state.find_guide_at(Point::new(200.0, 98.0), 5.0).unwrap();
         assert_eq!(idx, 0); // horizontal guide at y=100
-        
+
         // Test update_guide
         state.dirty = false;
         state.update_guide(0, 150.0);
         assert_eq!(state.guides()[0].position, 150.0);
         assert!(state.dirty);
-        
+
         // Test remove_guide
         state.dirty = false;
         state.remove_guide(0);
         assert_eq!(state.guides().len(), 1);
         assert!(state.dirty);
-        
+
         // Test clear_guides
         state.dirty = false;
         state.add_guide(Guide::horizontal(200.0));
@@ -1108,19 +1174,19 @@ mod tests {
     fn test_guides_locked() {
         let mut state = AppState::new();
         state.document = Some(Document::new(PageSize::Letter, PageOrientation::Portrait));
-        
+
         state.add_guide(Guide::horizontal(100.0));
         state.guides_locked = true;
-        
+
         // Should not modify when locked
         state.dirty = false;
         state.update_guide(0, 200.0);
         assert_eq!(state.guides()[0].position, 100.0);
         assert!(!state.dirty);
-        
+
         state.remove_guide(0);
         assert_eq!(state.guides().len(), 1);
-        
+
         state.clear_guides();
         assert_eq!(state.guides().len(), 1);
     }
@@ -1210,4 +1276,3 @@ impl DisplayUnit {
         }
     }
 }
-

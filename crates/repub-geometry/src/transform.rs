@@ -165,7 +165,10 @@ mod tests {
     #[test]
     fn translate_moves_point() {
         let t = Transform2D::translate(5.0, 10.0);
-        assert_eq!(t.transform_point(Point::new(10.0, 20.0)), Point::new(15.0, 30.0));
+        assert_eq!(
+            t.transform_point(Point::new(10.0, 20.0)),
+            Point::new(15.0, 30.0)
+        );
     }
 
     #[test]
@@ -174,7 +177,10 @@ mod tests {
         let scale = Transform2D::scale(2.0, 2.0);
         let translate = Transform2D::translate(1.0, 1.0);
         let combined = translate.concat(&scale);
-        assert_eq!(combined.transform_point(Point::new(3.0, 4.0)), Point::new(7.0, 9.0));
+        assert_eq!(
+            combined.transform_point(Point::new(3.0, 4.0)),
+            Point::new(7.0, 9.0)
+        );
     }
 
     #[test]

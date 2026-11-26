@@ -9,16 +9,16 @@
 #[allow(missing_docs)]
 mod block_coverage;
 #[allow(missing_docs)]
-mod import_validator;
-#[allow(missing_docs)]
 mod export_validator;
 #[allow(missing_docs)]
-mod roundtrip;
+mod import_validator;
 #[allow(missing_docs)]
 mod report;
+#[allow(missing_docs)]
+mod roundtrip;
 
 pub use block_coverage::{BlockCoverage, BlockStats};
-pub use import_validator::{ImportValidator, ImportValidationResult};
-pub use export_validator::{ExportValidator, ExportValidationResult};
-pub use roundtrip::{RoundtripTest, RoundtripResult};
-pub use report::{CompatibilityReport, generate_report, check_file};
+pub use export_validator::{ExportValidationResult, ExportValidator};
+pub use import_validator::{ImportValidationResult, ImportValidator};
+pub use report::{check_file, generate_report, CompatibilityReport};
+pub use roundtrip::{RoundtripResult, RoundtripTest};

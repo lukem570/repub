@@ -6,8 +6,8 @@
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
-use repub_model::ObjectId;
 use repub_model::shape::ShapeKind;
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::text_edit::{self, TextPos};
@@ -86,10 +86,14 @@ impl SpellSession {
     pub fn scan(&mut self, state: &AppState) {
         self.errors.clear();
         self.current = 0;
-        let Some(doc) = state.document.as_ref() else { return };
+        let Some(doc) = state.document.as_ref() else {
+            return;
+        };
         for (page_idx, page) in doc.pages().iter().enumerate() {
             for obj in page.layers().iter().flat_map(|l| l.shapes()) {
-                let ShapeKind::TextFrame(tf) = &obj.kind else { continue };
+                let ShapeKind::TextFrame(tf) = &obj.kind else {
+                    continue;
+                };
                 for (para_idx, para) in tf.content.paragraphs.iter().enumerate() {
                     let chars = text_edit::para_chars(para);
                     for (start, len) in word_ranges(&chars) {
@@ -159,7 +163,9 @@ impl SpellSession {
 
     /// Replace the current word. Returns false when nothing could be changed.
     pub fn change_current(&mut self, state: &mut AppState, replacement: &str) -> bool {
-        let Some(err) = self.current_error().cloned() else { return false };
+        let Some(err) = self.current_error().cloned() else {
+            return false;
+        };
         if !replace_word(state, &err, replacement) {
             return false;
         }
@@ -172,9 +178,16 @@ impl SpellSession {
 
     /// Replace every occurrence of the current word.
     pub fn change_all_current(&mut self, state: &mut AppState, replacement: &str) -> bool {
-        let Some(err) = self.current_error().cloned() else { return false };
+        let Some(err) = self.current_error().cloned() else {
+            return false;
+        };
         let key = err.key();
-        let mut targets: Vec<Misspelled> = self.errors.iter().filter(|e| e.key() == key).cloned().collect();
+        let mut targets: Vec<Misspelled> = self
+            .errors
+            .iter()
+            .filter(|e| e.key() == key)
+            .cloned()
+            .collect();
         // Reverse document order so earlier offsets stay valid per object.
         targets.sort_by_key(|m| std::cmp::Reverse((m.page, m.para, m.offset)));
         let mut changed = false;
@@ -188,15 +201,24 @@ impl SpellSession {
 
     /// Suggestions for the current word, best first.
     pub fn suggestions(&self) -> Vec<String> {
-        self.current_error().map(|e| suggest(&e.word)).unwrap_or_default()
+        self.current_error()
+            .map(|e| suggest(&e.word))
+            .unwrap_or_default()
     }
 
     /// Select the current error and start text editing over it.
     pub fn select_current(&mut self, state: &mut AppState, now: f64) {
-        let Some(err) = self.current_error().cloned() else { return };
+        let Some(err) = self.current_error().cloned() else {
+            return;
+        };
         state.current_page = err.page;
         state.selection = vec![err.object];
-        text_edit::begin(state, err.object, Some(TextPos::new(err.para, err.offset)), now);
+        text_edit::begin(
+            state,
+            err.object,
+            Some(TextPos::new(err.para, err.offset)),
+            now,
+        );
         if let Some(edit) = state.text_edit.as_mut() {
             edit.anchor = TextPos::new(err.para, err.offset + err.len);
         }
@@ -204,11 +226,19 @@ impl SpellSession {
 }
 
 fn replace_word(state: &mut AppState, err: &Misspelled, replacement: &str) -> bool {
-    let Some(page) = state.document.as_mut().and_then(|d| d.pages_mut().get_mut(err.page)) else {
+    let Some(page) = state
+        .document
+        .as_mut()
+        .and_then(|d| d.pages_mut().get_mut(err.page))
+    else {
         return false;
     };
-    let Some(shape) = page.get_shape_mut(err.object) else { return false };
-    let ShapeKind::TextFrame(tf) = &mut shape.kind else { return false };
+    let Some(shape) = page.get_shape_mut(err.object) else {
+        return false;
+    };
+    let ShapeKind::TextFrame(tf) = &mut shape.kind else {
+        return false;
+    };
     if err.para >= tf.content.paragraphs.len() {
         return false;
     }

@@ -87,7 +87,9 @@ impl Tool {
         match self {
             Tool::Select => CursorKind::Default,
             Tool::Text => CursorKind::Text,
-            Tool::Rectangle | Tool::Ellipse | Tool::Polygon | Tool::Star | Tool::Preset(_) => CursorKind::Crosshair,
+            Tool::Rectangle | Tool::Ellipse | Tool::Polygon | Tool::Star | Tool::Preset(_) => {
+                CursorKind::Crosshair
+            }
             Tool::Line => CursorKind::Crosshair,
             Tool::Image => CursorKind::Crosshair,
             Tool::Table => CursorKind::Crosshair,
@@ -100,7 +102,14 @@ impl Tool {
     pub fn is_creation_tool(&self) -> bool {
         matches!(
             self,
-            Tool::Rectangle | Tool::Ellipse | Tool::Line | Tool::Polygon | Tool::Star | Tool::Text | Tool::Table | Tool::Preset(_)
+            Tool::Rectangle
+                | Tool::Ellipse
+                | Tool::Line
+                | Tool::Polygon
+                | Tool::Star
+                | Tool::Text
+                | Tool::Table
+                | Tool::Preset(_)
         )
     }
 }
@@ -238,9 +247,13 @@ impl DrawState {
             let dx = end.x - start.x;
             let dy = end.y - start.y;
             let angle = dy.atan2(dx);
-            let snapped_angle = (angle / (std::f64::consts::PI / 4.0)).round() * (std::f64::consts::PI / 4.0);
+            let snapped_angle =
+                (angle / (std::f64::consts::PI / 4.0)).round() * (std::f64::consts::PI / 4.0);
             let length = (dx * dx + dy * dy).sqrt();
-            end = Point::new(start.x + length * snapped_angle.cos(), start.y + length * snapped_angle.sin());
+            end = Point::new(
+                start.x + length * snapped_angle.cos(),
+                start.y + length * snapped_angle.sin(),
+            );
         }
 
         Some((start, end))
@@ -302,7 +315,10 @@ impl DrawState {
                 let bounds = self.bounds()?;
                 let rows = self.table_rows.max(1);
                 let cols = self.table_cols.max(1);
-                Some(Shape::new(bounds, ShapeKind::Table(TableData::new(bounds, rows, cols))))
+                Some(Shape::new(
+                    bounds,
+                    ShapeKind::Table(TableData::new(bounds, rows, cols)),
+                ))
             }
             Tool::Image => {
                 let bounds = self.bounds()?;
@@ -438,7 +454,10 @@ impl ResizeHandle {
             ResizeHandle::BottomRight => (1.0, 1.0),
         };
 
-        Point::new(bounds.origin.x + bounds.width() * x_ratio, bounds.origin.y + bounds.height() * y_ratio)
+        Point::new(
+            bounds.origin.x + bounds.width() * x_ratio,
+            bounds.origin.y + bounds.height() * y_ratio,
+        )
     }
 }
 

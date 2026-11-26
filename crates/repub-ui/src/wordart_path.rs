@@ -32,8 +32,8 @@ impl PathPoint {
 enum PathSegment {
     MoveTo(PathPoint),
     LineTo(PathPoint),
-    QuadTo(PathPoint, PathPoint),  // control, end
-    CubicTo(PathPoint, PathPoint, PathPoint),  // control1, control2, end
+    QuadTo(PathPoint, PathPoint),             // control, end
+    CubicTo(PathPoint, PathPoint, PathPoint), // control1, control2, end
     Close,
 }
 
@@ -87,12 +87,14 @@ impl OutlineBuilder {
 impl ttf_parser::OutlineBuilder for OutlineBuilder {
     fn move_to(&mut self, x: f32, y: f32) {
         self.update_bounds(x, y);
-        self.segments.push(PathSegment::MoveTo(PathPoint::new(x, y)));
+        self.segments
+            .push(PathSegment::MoveTo(PathPoint::new(x, y)));
     }
 
     fn line_to(&mut self, x: f32, y: f32) {
         self.update_bounds(x, y);
-        self.segments.push(PathSegment::LineTo(PathPoint::new(x, y)));
+        self.segments
+            .push(PathSegment::LineTo(PathPoint::new(x, y)));
     }
 
     fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
@@ -131,8 +133,10 @@ fn extract_glyph_outline(face: &ttf_parser::Face, c: char) -> Option<GlyphOutlin
 
     // Normalize to em units (0-1 range roughly)
     let scale = 1.0 / units_per_em;
-    let segments: Vec<PathSegment> = builder.segments.iter().map(|seg| {
-        match seg {
+    let segments: Vec<PathSegment> = builder
+        .segments
+        .iter()
+        .map(|seg| match seg {
             PathSegment::MoveTo(p) => PathSegment::MoveTo(PathPoint::new(p.x * scale, p.y * scale)),
             PathSegment::LineTo(p) => PathSegment::LineTo(PathPoint::new(p.x * scale, p.y * scale)),
             PathSegment::QuadTo(c, e) => PathSegment::QuadTo(
@@ -145,15 +149,19 @@ fn extract_glyph_outline(face: &ttf_parser::Face, c: char) -> Option<GlyphOutlin
                 PathPoint::new(e.x * scale, e.y * scale),
             ),
             PathSegment::Close => PathSegment::Close,
-        }
-    }).collect();
+        })
+        .collect();
 
     let bounds = Rect::from_min_max(
         Pos2::new(builder.min_x * scale, builder.min_y * scale),
         Pos2::new(builder.max_x * scale, builder.max_y * scale),
     );
 
-    Some(GlyphOutline { segments, advance, bounds })
+    Some(GlyphOutline {
+        segments,
+        advance,
+        bounds,
+    })
 }
 
 /// Get the warp envelope Y positions at a given X percentage
@@ -162,7 +170,7 @@ fn get_warp_envelope(preset: WarpPreset, x_pct: f32, height: f32) -> (f32, f32) 
 }
 
 /// Transform a point according to the warp envelope
-/// 
+///
 /// Per ECMA-376 text warp algorithm:
 /// 1. Find the point's (x%, y%) position in the original text rectangle
 /// 2. Find point at x% along top path, and x% along bottom path
@@ -173,126 +181,149 @@ fn get_warp_envelope(preset: WarpPreset, x_pct: f32, height: f32) -> (f32, f32) 
 /// text_rect: in font units where min_y=descent (negative), max_y=ascent (positive)
 fn warp_point(
     point: PathPoint,
-    text_min_x: f32,  // 0 for text starting at origin
-    text_max_x: f32,  // total advance width
-    text_min_y: f32,  // descent (negative, e.g., -0.25)
-    text_max_y: f32,  // ascent (positive, e.g., 0.75)
+    text_min_x: f32, // 0 for text starting at origin
+    text_max_x: f32, // total advance width
+    text_min_y: f32, // descent (negative, e.g., -0.25)
+    text_max_y: f32, // ascent (positive, e.g., 0.75)
     screen_rect: Rect,
     preset: WarpPreset,
 ) -> Pos2 {
     let text_width = text_max_x - text_min_x;
     let text_height = text_max_y - text_min_y;
-    
+
     // Calculate x% (0 = left, 1 = right)
     let x_pct = if text_width > 0.0 {
         (point.x - text_min_x) / text_width
     } else {
         0.5
     };
-    
+
     // Calculate y% in font coordinates (0 = bottom/descent, 1 = top/ascent)
     // Then invert for screen coordinates (0 = top of text, 1 = bottom of text)
     let y_pct_font = if text_height > 0.0 {
-        (point.y - text_min_y) / text_height  // 0 at descent, 1 at ascent
+        (point.y - text_min_y) / text_height // 0 at descent, 1 at ascent
     } else {
         0.5
     };
     // Invert: in screen space, top of text (ascent) should be y_pct=0
     let y_pct = 1.0 - y_pct_font;
-    
+
     // Get warp envelope at this x position
-    let (env_top, env_bottom) = get_warp_envelope(preset, x_pct.clamp(0.0, 1.0), screen_rect.height());
-    
+    let (env_top, env_bottom) =
+        get_warp_envelope(preset, x_pct.clamp(0.0, 1.0), screen_rect.height());
+
     // Interpolate Y position between top and bottom of envelope
     let warped_y = screen_rect.top() + env_top + y_pct.clamp(0.0, 1.0) * (env_bottom - env_top);
-    
+
     // X position maps linearly across the screen rect width
     let warped_x = screen_rect.left() + x_pct * screen_rect.width();
-    
+
     Pos2::new(warped_x, warped_y)
 }
 
 /// Transform an entire glyph outline according to the warp envelope
 fn warp_outline(
     outline: &GlyphOutline,
-    glyph_offset_x: f32,  // Offset of this glyph from text start (em units)
-    text_min_x: f32,      // 0 for text starting at origin
-    text_max_x: f32,      // total advance width  
-    text_min_y: f32,      // descent (negative)
-    text_max_y: f32,      // ascent (positive)
-    screen_rect: Rect,    // Target screen rect
+    glyph_offset_x: f32, // Offset of this glyph from text start (em units)
+    text_min_x: f32,     // 0 for text starting at origin
+    text_max_x: f32,     // total advance width
+    text_min_y: f32,     // descent (negative)
+    text_max_y: f32,     // ascent (positive)
+    screen_rect: Rect,   // Target screen rect
     preset: WarpPreset,
 ) -> Vec<PathSegment> {
     let text_width = text_max_x - text_min_x;
     let text_height = text_max_y - text_min_y;
-    
+
     // For Plain preset, use simple linear transform (no warp distortion)
     // This avoids any numerical precision issues from the warp algorithm
     if preset == WarpPreset::Plain {
-        let scale_x = if text_width > 0.0 { screen_rect.width() / text_width } else { 1.0 };
-        let scale_y = if text_height > 0.0 { screen_rect.height() / text_height } else { 1.0 };
-        
-        return outline.segments.iter().map(|seg| {
+        let scale_x = if text_width > 0.0 {
+            screen_rect.width() / text_width
+        } else {
+            1.0
+        };
+        let scale_y = if text_height > 0.0 {
+            screen_rect.height() / text_height
+        } else {
+            1.0
+        };
+
+        return outline
+            .segments
+            .iter()
+            .map(|seg| {
+                let transform = |p: &PathPoint| -> PathPoint {
+                    let text_x = glyph_offset_x + p.x;
+                    let text_y = p.y;
+
+                    // Simple linear transform: scale and translate
+                    let screen_x = screen_rect.left() + (text_x - text_min_x) * scale_x;
+                    // Font Y is up, screen Y is down: flip and offset
+                    let screen_y = screen_rect.top() + (text_max_y - text_y) * scale_y;
+
+                    PathPoint::new(screen_x, screen_y)
+                };
+
+                match seg {
+                    PathSegment::MoveTo(p) => PathSegment::MoveTo(transform(p)),
+                    PathSegment::LineTo(p) => PathSegment::LineTo(transform(p)),
+                    PathSegment::QuadTo(c, e) => PathSegment::QuadTo(transform(c), transform(e)),
+                    PathSegment::CubicTo(c1, c2, e) => {
+                        PathSegment::CubicTo(transform(c1), transform(c2), transform(e))
+                    }
+                    PathSegment::Close => PathSegment::Close,
+                }
+            })
+            .collect();
+    }
+
+    // For warped presets, use the full warp algorithm
+    outline
+        .segments
+        .iter()
+        .map(|seg| {
             let transform = |p: &PathPoint| -> PathPoint {
+                // Position the point in text coordinate system
+                // glyph_offset_x positions the glyph, p.x/p.y are relative to glyph origin
                 let text_x = glyph_offset_x + p.x;
-                let text_y = p.y;
-                
-                // Simple linear transform: scale and translate
-                let screen_x = screen_rect.left() + (text_x - text_min_x) * scale_x;
-                // Font Y is up, screen Y is down: flip and offset
-                let screen_y = screen_rect.top() + (text_max_y - text_y) * scale_y;
-                
-                PathPoint::new(screen_x, screen_y)
+                let text_y = p.y; // Already in font coordinates (Y up, baseline at 0)
+
+                // Transform through warp
+                let warped = warp_point(
+                    PathPoint::new(text_x, text_y),
+                    text_min_x,
+                    text_max_x,
+                    text_min_y,
+                    text_max_y,
+                    screen_rect,
+                    preset,
+                );
+
+                PathPoint::new(warped.x, warped.y)
             };
-            
+
             match seg {
                 PathSegment::MoveTo(p) => PathSegment::MoveTo(transform(p)),
                 PathSegment::LineTo(p) => PathSegment::LineTo(transform(p)),
                 PathSegment::QuadTo(c, e) => PathSegment::QuadTo(transform(c), transform(e)),
-                PathSegment::CubicTo(c1, c2, e) => PathSegment::CubicTo(transform(c1), transform(c2), transform(e)),
+                PathSegment::CubicTo(c1, c2, e) => {
+                    PathSegment::CubicTo(transform(c1), transform(c2), transform(e))
+                }
                 PathSegment::Close => PathSegment::Close,
             }
-        }).collect();
-    }
-    
-    // For warped presets, use the full warp algorithm
-    outline.segments.iter().map(|seg| {
-        let transform = |p: &PathPoint| -> PathPoint {
-            // Position the point in text coordinate system
-            // glyph_offset_x positions the glyph, p.x/p.y are relative to glyph origin
-            let text_x = glyph_offset_x + p.x;
-            let text_y = p.y;  // Already in font coordinates (Y up, baseline at 0)
-            
-            // Transform through warp
-            let warped = warp_point(
-                PathPoint::new(text_x, text_y),
-                text_min_x, text_max_x,
-                text_min_y, text_max_y,
-                screen_rect,
-                preset,
-            );
-            
-            PathPoint::new(warped.x, warped.y)
-        };
-        
-        match seg {
-            PathSegment::MoveTo(p) => PathSegment::MoveTo(transform(p)),
-            PathSegment::LineTo(p) => PathSegment::LineTo(transform(p)),
-            PathSegment::QuadTo(c, e) => PathSegment::QuadTo(transform(c), transform(e)),
-            PathSegment::CubicTo(c1, c2, e) => PathSegment::CubicTo(transform(c1), transform(c2), transform(e)),
-            PathSegment::Close => PathSegment::Close,
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 /// Build a lyon Path directly from path segments, preserving curves
 /// Lyon's tessellator will handle curve subdivision with proper tolerance
 fn build_lyon_path_from_segments(segments: &[PathSegment]) -> lyon::path::Path {
-    use lyon::path::Path;
     use lyon::geom::point;
-    
+    use lyon::path::Path;
+
     let mut builder = Path::builder();
-    
+
     for seg in segments {
         match seg {
             PathSegment::MoveTo(p) => {
@@ -312,7 +343,7 @@ fn build_lyon_path_from_segments(segments: &[PathSegment]) -> lyon::path::Path {
             }
         }
     }
-    
+
     // End any unclosed path
     builder.build()
 }
@@ -322,35 +353,37 @@ enum TriangulationFill<'a> {
     Solid(Color32),
     Gradient {
         fill: &'a repub_model::styles::Fill,
-        bounds: Rect,  // Bounding rect for gradient calculation
+        bounds: Rect, // Bounding rect for gradient calculation
     },
 }
 
-
-
 /// Triangulate path segments into a filled mesh using lyon
 /// Simple solid fill - antialiasing handled separately or by MSAA if enabled
-fn triangulate_path_fill(segments: &[PathSegment], fill: &TriangulationFill<'_>, tolerance: f32) -> Mesh {
+fn triangulate_path_fill(
+    segments: &[PathSegment],
+    fill: &TriangulationFill<'_>,
+    tolerance: f32,
+) -> Mesh {
     use lyon::tessellation::{
         BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers,
     };
-    
+
     let mut mesh = Mesh::default();
-    
+
     if segments.is_empty() {
         return mesh;
     }
-    
+
     let path = build_lyon_path_from_segments(segments);
-    
+
     // Tessellate the fill - lyon handles curve subdivision
     let mut geometry: VertexBuffers<Pos2, u32> = VertexBuffers::new();
     let mut tessellator = FillTessellator::new();
-    
+
     let fill_options = FillOptions::default()
         .with_fill_rule(lyon::tessellation::FillRule::NonZero)
         .with_tolerance(tolerance);
-    
+
     let result = tessellator.tessellate_path(
         &path,
         &fill_options,
@@ -358,19 +391,22 @@ fn triangulate_path_fill(segments: &[PathSegment], fill: &TriangulationFill<'_>,
             Pos2::new(vertex.position().x, vertex.position().y)
         }),
     );
-    
+
     if result.is_err() {
         log::warn!("WordArt fill tessellation failed");
         return mesh;
     }
-    
+
     // Convert fill to egui mesh with appropriate colors
     let base_idx = mesh.vertices.len() as u32;
-    
+
     for pos in geometry.vertices {
         let color = match fill {
             TriangulationFill::Solid(c) => *c,
-            TriangulationFill::Gradient { fill: gradient_fill, bounds } => {
+            TriangulationFill::Gradient {
+                fill: gradient_fill,
+                bounds,
+            } => {
                 let x_pct = if bounds.width() > 0.0 {
                     (pos.x - bounds.left()) / bounds.width()
                 } else {
@@ -381,43 +417,49 @@ fn triangulate_path_fill(segments: &[PathSegment], fill: &TriangulationFill<'_>,
                 } else {
                     0.5
                 };
-                let core_color = crate::gradient::color_at(gradient_fill, x_pct as f64, y_pct as f64);
+                let core_color =
+                    crate::gradient::color_at(gradient_fill, x_pct as f64, y_pct as f64);
                 crate::canvas::core_color_to_egui(&core_color, 1.0)
             }
         };
-        
+
         mesh.vertices.push(egui::epaint::Vertex {
             pos,
             uv: egui::epaint::WHITE_UV,
             color,
         });
     }
-    
+
     for idx in geometry.indices {
         mesh.indices.push(base_idx + idx);
     }
-    
+
     mesh
 }
 
 /// Tessellate path segments as a stroke/outline using lyon
 /// Solid stroke with round joins for smooth corners
-fn tessellate_path_stroke(segments: &[PathSegment], stroke_color: Color32, stroke_width: f32, tolerance: f32) -> Mesh {
+fn tessellate_path_stroke(
+    segments: &[PathSegment],
+    stroke_color: Color32,
+    stroke_width: f32,
+    tolerance: f32,
+) -> Mesh {
     use lyon::tessellation::{
         BuffersBuilder, StrokeOptions, StrokeTessellator, StrokeVertex, VertexBuffers,
     };
-    
+
     let mut mesh = Mesh::default();
-    
+
     if segments.is_empty() || stroke_width < 0.1 {
         return mesh;
     }
-    
+
     let path = build_lyon_path_from_segments(segments);
-    
+
     let mut geometry: VertexBuffers<Pos2, u32> = VertexBuffers::new();
     let mut tessellator = StrokeTessellator::new();
-    
+
     // Use round joins for smooth corners
     let stroke_options = StrokeOptions::default()
         .with_line_width(stroke_width)
@@ -425,7 +467,7 @@ fn tessellate_path_stroke(segments: &[PathSegment], stroke_color: Color32, strok
         .with_line_cap(lyon::tessellation::LineCap::Round)
         .with_miter_limit(4.0)
         .with_tolerance(tolerance);
-    
+
     let result = tessellator.tessellate_path(
         &path,
         &stroke_options,
@@ -433,14 +475,14 @@ fn tessellate_path_stroke(segments: &[PathSegment], stroke_color: Color32, strok
             Pos2::new(vertex.position().x, vertex.position().y)
         }),
     );
-    
+
     if result.is_err() {
         log::debug!("WordArt stroke tessellation failed");
         return mesh;
     }
-    
+
     let base_idx = mesh.vertices.len() as u32;
-    
+
     for pos in geometry.vertices {
         mesh.vertices.push(egui::epaint::Vertex {
             pos,
@@ -448,11 +490,11 @@ fn tessellate_path_stroke(segments: &[PathSegment], stroke_color: Color32, strok
             color: stroke_color,
         });
     }
-    
+
     for idx in geometry.indices {
         mesh.indices.push(base_idx + idx);
     }
-    
+
     mesh
 }
 
@@ -580,7 +622,18 @@ pub fn render_wordart_path(
     bold: bool,
     italic: bool,
 ) {
-    render_wordart_path_3d(painter, text, screen_rect, preset, fill, outline, font_family, bold, italic, None);
+    render_wordart_path_3d(
+        painter,
+        text,
+        screen_rect,
+        preset,
+        fill,
+        outline,
+        font_family,
+        bold,
+        italic,
+        None,
+    );
 }
 
 /// Render warped WordArt text with optional 3D extrusion
@@ -599,9 +652,9 @@ pub fn render_wordart_path_3d(
     if text.is_empty() || screen_rect.width() < 1.0 || screen_rect.height() < 1.0 {
         return;
     }
-    
+
     // All presets now use path-based rendering for proper outlines
-    
+
     // Try to load the specified font from system fonts
     let font_data: Option<Vec<u8>> = font_family.and_then(|family| {
         crate::sdf_text::fonts::try_registry().and_then(|reg| {
@@ -611,71 +664,82 @@ pub fn render_wordart_path_3d(
             })
         })
     });
-    
+
     // Fall back to bundled Selawik
     static BUNDLED_FONT: &[u8] = include_bytes!("../assets/fonts/selawk.ttf");
     let font_bytes: &[u8] = font_data.as_deref().unwrap_or_else(|| {
         if font_family.is_some() {
-            log::debug!("WordArt: Font {:?} not found, using Selawik fallback", font_family);
+            log::debug!(
+                "WordArt: Font {:?} not found, using Selawik fallback",
+                font_family
+            );
         }
         BUNDLED_FONT
     });
-    
+
     let Ok(face) = ttf_parser::Face::parse(font_bytes, 0) else {
         // Fall back to grid-cell renderer if font parsing fails
         crate::wordart_warp::render_warped_text_with_fill(
-            painter, text, screen_rect, preset, fill, outline, 0.0, 0.0, 0.0,
+            painter,
+            text,
+            screen_rect,
+            preset,
+            fill,
+            outline,
+            0.0,
+            0.0,
+            0.0,
         );
         return;
     };
-    
+
     // Extract outlines for all characters
     let mut glyph_outlines: Vec<(char, GlyphOutline)> = Vec::new();
     let mut total_advance = 0.0_f32;
-    
+
     for c in text.chars() {
         if let Some(outline) = extract_glyph_outline(&face, c) {
             glyph_outlines.push((c, outline.clone()));
             total_advance += outline.advance;
         }
     }
-    
+
     if glyph_outlines.is_empty() || total_advance < 0.001 {
         return;
     }
-    
+
     // Calculate text bounding box in em units
     let ascent = face.ascender() as f32 / face.units_per_em() as f32;
-    let descent = face.descender() as f32 / face.units_per_em() as f32;  // Negative
+    let descent = face.descender() as f32 / face.units_per_em() as f32; // Negative
     let _text_height = ascent - descent;
     let text_width = total_advance;
-    
+
     // Text bounds in em coordinates
     let text_min_x = 0.0_f32;
     let text_max_x = text_width;
-    let text_min_y = descent;  // Negative (bottom of descenders)
-    let text_max_y = ascent;   // Positive (top of ascenders)
-    
+    let text_min_y = descent; // Negative (bottom of descenders)
+    let text_max_y = ascent; // Positive (top of ascenders)
+
     // Apply padding to screen rect
     let padding = screen_rect.width() * 0.03;
     let padded_rect = Rect::from_min_max(
         screen_rect.min + Vec2::new(padding, padding),
         screen_rect.max - Vec2::new(padding, padding),
     );
-    
+
     // Tessellation tolerance - smaller = smoother curves but more triangles
     // Scale based on screen size for consistent visual quality
     let tolerance = (screen_rect.width() / 2000.0).clamp(0.05, 0.5);
-    
+
     // Prepare fill for triangulation
     let triangulation_fill = match fill {
         WarpFill::Solid(c) => TriangulationFill::Solid(*c),
         WarpFill::Gradient(f) => TriangulationFill::Gradient {
             fill: f,
-            bounds: padded_rect,  // Use the padded rect as bounds for gradient
+            bounds: padded_rect, // Use the padded rect as bounds for gradient
         },
     };
-    
+
     // Calculate 3D parameters if effect is enabled
     let extrusion_config = extrusion.map(|ext| {
         // Get base colors
@@ -686,27 +750,28 @@ pub fn render_wordart_path_3d(
                 crate::canvas::core_color_to_egui(&c, 1.0)
             }
         };
-        
+
         let extrusion_base_color = ext.color.unwrap_or_else(|| darken_color(fill_color, 0.5));
-        
+
         // Calculate direction based on rotation angles
         // Convert angles to direction vector (simulate 3D projection)
         let rot_x_rad = ext.rotation_x.to_radians();
         let rot_y_rad = ext.rotation_y.to_radians();
-        
+
         // Direction is derived from rotation:
         // - Y rotation makes extrusion go left/right
         // - X rotation makes extrusion go up/down
         let dir_x = rot_y_rad.sin() * 0.8;
-        let dir_y = -rot_x_rad.sin() * 0.6 + 0.4;  // Default slight down-right
-        let direction = if ext.direction != (0.0, 0.0) && (ext.rotation_x == 0.0 && ext.rotation_y == 0.0) {
-            ext.direction
-        } else if ext.rotation_x != 0.0 || ext.rotation_y != 0.0 {
-            (dir_x, dir_y)
-        } else {
-            (0.3, 0.3)  // Default direction
-        };
-        
+        let dir_y = -rot_x_rad.sin() * 0.6 + 0.4; // Default slight down-right
+        let direction =
+            if ext.direction != (0.0, 0.0) && (ext.rotation_x == 0.0 && ext.rotation_y == 0.0) {
+                ext.direction
+            } else if ext.rotation_x != 0.0 || ext.rotation_y != 0.0 {
+                (dir_x, dir_y)
+            } else {
+                (0.3, 0.3) // Default direction
+            };
+
         // Calculate lighting factors based on preset
         let (ambient, diffuse, specular) = match ext.lighting {
             Lighting3D::Bright => (0.5, 0.6, 0.4),
@@ -717,7 +782,7 @@ pub fn render_wordart_path_3d(
             Lighting3D::ThreePoint => (0.3, 0.6, 0.4),
             Lighting3D::Contrasting => (0.2, 0.8, 0.5),
         };
-        
+
         // Material affects specularity and edge appearance
         let material_shininess = match ext.material {
             Material3D::Matte => 0.1,
@@ -729,73 +794,98 @@ pub fn render_wordart_path_3d(
             Material3D::Wireframe => 0.0,
             Material3D::Flat => 0.0,
         };
-        
-        (extrusion_base_color, direction, ambient, diffuse, specular, material_shininess)
+
+        (
+            extrusion_base_color,
+            direction,
+            ambient,
+            diffuse,
+            specular,
+            material_shininess,
+        )
     });
-    
+
     // Calculate extrusion layers if 3D effect is enabled
     let extrusion_layers: Vec<(f32, Color32)> = if let Some(ext) = extrusion {
         if ext.depth > 0.5 {
-            let (base_color, direction, ambient, diffuse, _specular, _material_shininess) = extrusion_config.unwrap();
-            
+            let (base_color, direction, ambient, diffuse, _specular, _material_shininess) =
+                extrusion_config.unwrap();
+
             // Create layers from back to front
             // More layers for deeper extrusions for smooth appearance
             let num_layers = ((ext.depth / 0.5).ceil() as usize).min(100);
-            
-            (0..num_layers).map(|i| {
-                let t = (num_layers - 1 - i) as f32 / num_layers.max(1) as f32;
-                let offset = ext.depth * t;
-                
-                // Calculate lighting based on layer depth
-                // Surfaces facing the light are brighter
-                let light_dir = (-0.5_f32, -0.5_f32, 0.7_f32);  // Light from upper-left-front
-                
-                // Approximate normal for this extrusion direction
-                let extrude_normal = (direction.0, direction.1, -1.0_f32);
-                let normal_len = (extrude_normal.0.powi(2) + extrude_normal.1.powi(2) + extrude_normal.2.powi(2)).sqrt();
-                let normal = (extrude_normal.0 / normal_len, extrude_normal.1 / normal_len, extrude_normal.2 / normal_len);
-                
-                // Dot product for diffuse lighting
-                let n_dot_l = (normal.0 * light_dir.0 + normal.1 * light_dir.1 + normal.2 * light_dir.2).max(0.0);
-                
-                let brightness = ambient + diffuse * n_dot_l;
-                let layer_color = adjust_brightness(base_color, brightness);
-                (offset, layer_color)
-            }).collect()
+
+            (0..num_layers)
+                .map(|i| {
+                    let t = (num_layers - 1 - i) as f32 / num_layers.max(1) as f32;
+                    let offset = ext.depth * t;
+
+                    // Calculate lighting based on layer depth
+                    // Surfaces facing the light are brighter
+                    let light_dir = (-0.5_f32, -0.5_f32, 0.7_f32); // Light from upper-left-front
+
+                    // Approximate normal for this extrusion direction
+                    let extrude_normal = (direction.0, direction.1, -1.0_f32);
+                    let normal_len = (extrude_normal.0.powi(2)
+                        + extrude_normal.1.powi(2)
+                        + extrude_normal.2.powi(2))
+                    .sqrt();
+                    let normal = (
+                        extrude_normal.0 / normal_len,
+                        extrude_normal.1 / normal_len,
+                        extrude_normal.2 / normal_len,
+                    );
+
+                    // Dot product for diffuse lighting
+                    let n_dot_l =
+                        (normal.0 * light_dir.0 + normal.1 * light_dir.1 + normal.2 * light_dir.2)
+                            .max(0.0);
+
+                    let brightness = ambient + diffuse * n_dot_l;
+                    let layer_color = adjust_brightness(base_color, brightness);
+                    (offset, layer_color)
+                })
+                .collect()
         } else {
             Vec::new()
         }
     } else {
         Vec::new()
     };
-    
+
     // Transform and render each glyph
     let mut glyph_x = 0.0_f32;
-    
+
     for (_c, glyph_outline) in &glyph_outlines {
         // Warp the outline - this preserves Bezier curves
         let warped_segments = warp_outline(
-            glyph_outline, 
-            glyph_x, 
-            text_min_x, text_max_x,
-            text_min_y, text_max_y,
-            padded_rect, 
-            preset
+            glyph_outline,
+            glyph_x,
+            text_min_x,
+            text_max_x,
+            text_min_y,
+            text_max_y,
+            padded_rect,
+            preset,
         );
-        
+
         if warped_segments.is_empty() {
             glyph_x += glyph_outline.advance;
             continue;
         }
-        
+
         // Render extrusion layers (back to front)
         if let Some(ext) = extrusion {
             let (base_color, direction, ..) = extrusion_config.as_ref().unwrap();
-            
+
             for (offset, layer_color) in &extrusion_layers {
                 // Offset the segments
-                let offset_segments = offset_path_segments(&warped_segments, direction.0 * offset, direction.1 * offset);
-                
+                let offset_segments = offset_path_segments(
+                    &warped_segments,
+                    direction.0 * offset,
+                    direction.1 * offset,
+                );
+
                 // Draw extrusion layer fill
                 let ext_fill = TriangulationFill::Solid(*layer_color);
                 let ext_mesh = triangulate_path_fill(&offset_segments, &ext_fill, tolerance);
@@ -803,12 +893,19 @@ pub fn render_wordart_path_3d(
                     painter.add(Shape::mesh(ext_mesh));
                 }
             }
-            
+
             // Draw extrusion edge strips (connecting back to front)
             if !extrusion_layers.is_empty() {
-                render_extrusion_edges(painter, &warped_segments, ext, *direction, *base_color, tolerance);
+                render_extrusion_edges(
+                    painter,
+                    &warped_segments,
+                    ext,
+                    *direction,
+                    *base_color,
+                    tolerance,
+                );
             }
-            
+
             // Draw contour/edge highlight if specified
             if ext.contour_width > 0.5 {
                 let contour_color = ext.contour_color.unwrap_or_else(|| {
@@ -821,35 +918,41 @@ pub fn render_wordart_path_3d(
                         }
                     }
                 });
-                let contour_mesh = tessellate_path_stroke(&warped_segments, contour_color, ext.contour_width, tolerance);
+                let contour_mesh = tessellate_path_stroke(
+                    &warped_segments,
+                    contour_color,
+                    ext.contour_width,
+                    tolerance,
+                );
                 if !contour_mesh.indices.is_empty() {
                     painter.add(Shape::mesh(contour_mesh));
                 }
             }
         }
-        
+
         // Draw stroke outline first (behind fill) using lyon tessellation
         // Lyon handles curves natively with configurable tolerance
         if let Some((stroke_color, stroke_width)) = outline {
-            let stroke_mesh = tessellate_path_stroke(&warped_segments, stroke_color, stroke_width, tolerance);
+            let stroke_mesh =
+                tessellate_path_stroke(&warped_segments, stroke_color, stroke_width, tolerance);
             if !stroke_mesh.indices.is_empty() {
                 painter.add(Shape::mesh(stroke_mesh));
             }
         }
-        
+
         // Triangulate and fill - lyon tessellates curves smoothly
         let fill_mesh = triangulate_path_fill(&warped_segments, &triangulation_fill, tolerance);
         if !fill_mesh.indices.is_empty() {
             painter.add(Shape::mesh(fill_mesh));
         }
-        
+
         // Render bevel highlight effect on front face
         if let Some(ext) = extrusion {
             if ext.bevel != Bevel3D::None && ext.bevel_size > 0.5 {
                 render_bevel_effect(painter, &warped_segments, ext, fill, tolerance);
             }
         }
-        
+
         glyph_x += glyph_outline.advance;
     }
 }
@@ -879,7 +982,7 @@ fn lighten_color(color: Color32, factor: f32) -> Color32 {
     let r = color.r() as f32;
     let g = color.g() as f32;
     let b = color.b() as f32;
-    
+
     // Blend toward white
     let t = (factor - 1.0).clamp(0.0, 1.0);
     Color32::from_rgba_unmultiplied(
@@ -892,8 +995,9 @@ fn lighten_color(color: Color32, factor: f32) -> Color32 {
 
 /// Offset all points in path segments by (dx, dy)
 fn offset_path_segments(segments: &[PathSegment], dx: f32, dy: f32) -> Vec<PathSegment> {
-    segments.iter().map(|seg| {
-        match seg {
+    segments
+        .iter()
+        .map(|seg| match seg {
             PathSegment::MoveTo(p) => PathSegment::MoveTo(PathPoint::new(p.x + dx, p.y + dy)),
             PathSegment::LineTo(p) => PathSegment::LineTo(PathPoint::new(p.x + dx, p.y + dy)),
             PathSegment::QuadTo(c, e) => PathSegment::QuadTo(
@@ -906,8 +1010,8 @@ fn offset_path_segments(segments: &[PathSegment], dx: f32, dy: f32) -> Vec<PathS
                 PathPoint::new(e.x + dx, e.y + dy),
             ),
             PathSegment::Close => PathSegment::Close,
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 /// Render the edge strips connecting the extrusion layers
@@ -921,34 +1025,34 @@ fn render_extrusion_edges(
 ) {
     // Get the offset back position
     let (dx, dy) = (direction.0 * ext.depth, direction.1 * ext.depth);
-    
+
     // Edge color - use provided extrusion base color
     let edge_color = darken_color(base_color, 0.8);
-    
+
     // Convert segments to points for edge strips
     let front_points = flatten_to_points(front_segments, tolerance);
-    
+
     for contour in front_points {
         if contour.len() < 2 {
             continue;
         }
-        
+
         // Create quad strips connecting front to back
         let mut mesh = Mesh::default();
-        
+
         for i in 0..contour.len() {
             let front_pt = contour[i];
             let back_pt = Pos2::new(front_pt.x + dx, front_pt.y + dy);
-            
+
             // Calculate lighting based on edge orientation
             let next_i = (i + 1) % contour.len();
             let edge_dir = contour[next_i] - front_pt;
             // Simple lighting: edges facing the light (up-left) are brighter
             let light_factor = 0.7 + 0.3 * (-edge_dir.x + edge_dir.y).signum() * 0.5 + 0.5;
             let lit_color = adjust_brightness(edge_color, light_factor.clamp(0.5, 1.2));
-            
+
             let idx = mesh.vertices.len() as u32;
-            
+
             mesh.vertices.push(egui::epaint::Vertex {
                 pos: front_pt,
                 uv: egui::epaint::WHITE_UV,
@@ -959,19 +1063,19 @@ fn render_extrusion_edges(
                 uv: egui::epaint::WHITE_UV,
                 color: darken_color(lit_color, 0.7),
             });
-            
+
             if i < contour.len() - 1 {
                 // Two triangles for the quad
                 mesh.indices.push(idx);
                 mesh.indices.push(idx + 1);
                 mesh.indices.push(idx + 2);
-                
+
                 mesh.indices.push(idx + 1);
                 mesh.indices.push(idx + 3);
                 mesh.indices.push(idx + 2);
             }
         }
-        
+
         if !mesh.indices.is_empty() {
             painter.add(Shape::mesh(mesh));
         }
@@ -983,7 +1087,7 @@ fn flatten_to_points(segments: &[PathSegment], tolerance: f32) -> Vec<Vec<Pos2>>
     let mut contours: Vec<Vec<Pos2>> = Vec::new();
     let mut current: Vec<Pos2> = Vec::new();
     let mut pos = Pos2::ZERO;
-    
+
     for seg in segments {
         match seg {
             PathSegment::MoveTo(p) => {
@@ -1017,22 +1121,28 @@ fn flatten_to_points(segments: &[PathSegment], tolerance: f32) -> Vec<Vec<Pos2>>
             }
         }
     }
-    
+
     if !current.is_empty() {
         contours.push(current);
     }
-    
+
     contours
 }
 
-fn flatten_quadratic_to_points(points: &mut Vec<Pos2>, p0: Pos2, p1: Pos2, p2: Pos2, tolerance: f32) {
+fn flatten_quadratic_to_points(
+    points: &mut Vec<Pos2>,
+    p0: Pos2,
+    p1: Pos2,
+    p2: Pos2,
+    tolerance: f32,
+) {
     // Simple subdivision
     let mid = Pos2::new(
         0.25 * p0.x + 0.5 * p1.x + 0.25 * p2.x,
         0.25 * p0.y + 0.5 * p1.y + 0.25 * p2.y,
     );
     let line_mid = p0 + (p2 - p0) * 0.5;
-    
+
     if (mid - line_mid).length() <= tolerance {
         points.push(p2);
     } else {
@@ -1044,11 +1154,18 @@ fn flatten_quadratic_to_points(points: &mut Vec<Pos2>, p0: Pos2, p1: Pos2, p2: P
     }
 }
 
-fn flatten_cubic_to_points(points: &mut Vec<Pos2>, p0: Pos2, p1: Pos2, p2: Pos2, p3: Pos2, tolerance: f32) {
+fn flatten_cubic_to_points(
+    points: &mut Vec<Pos2>,
+    p0: Pos2,
+    p1: Pos2,
+    p2: Pos2,
+    p3: Pos2,
+    tolerance: f32,
+) {
     // Simple subdivision based on control point distance
     let d1 = point_line_dist(p1, p0, p3);
     let d2 = point_line_dist(p2, p0, p3);
-    
+
     if d1 <= tolerance && d2 <= tolerance {
         points.push(p3);
     } else {
@@ -1058,7 +1175,7 @@ fn flatten_cubic_to_points(points: &mut Vec<Pos2>, p0: Pos2, p1: Pos2, p2: Pos2,
         let p012 = p01 + (p12 - p01) * 0.5;
         let p123 = p12 + (p23 - p12) * 0.5;
         let p0123 = p012 + (p123 - p012) * 0.5;
-        
+
         flatten_cubic_to_points(points, p0, p01, p012, p0123, tolerance);
         flatten_cubic_to_points(points, p0123, p123, p23, p3, tolerance);
     }
@@ -1087,7 +1204,7 @@ fn render_bevel_effect(
     if bevel_size < 0.5 {
         return;
     }
-    
+
     // Get the fill color for highlight calculation
     let fill_color = match fill {
         WarpFill::Solid(c) => *c,
@@ -1096,52 +1213,52 @@ fn render_bevel_effect(
             crate::canvas::core_color_to_egui(&c, 1.0)
         }
     };
-    
+
     // Light direction (normalized)
-    let light_dir = (-0.6_f32, -0.4_f32);  // Upper-left
-    
+    let light_dir = (-0.6_f32, -0.4_f32); // Upper-left
+
     // Get flattened contours
     let contours = flatten_to_points(segments, tolerance);
-    
+
     for contour in contours {
         if contour.len() < 3 {
             continue;
         }
-        
+
         let mut mesh = Mesh::default();
-        
+
         for i in 0..contour.len() {
             let prev_i = if i == 0 { contour.len() - 1 } else { i - 1 };
             let next_i = (i + 1) % contour.len();
-            
+
             let p = contour[i];
             let prev = contour[prev_i];
             let next = contour[next_i];
-            
+
             // Calculate edge normals (pointing inward)
             let edge1 = p - prev;
             let edge2 = next - p;
-            
+
             // Average normal (bisector)
             let n1 = Vec2::new(-edge1.y, edge1.x);
             let n2 = Vec2::new(-edge2.y, edge2.x);
             let avg_normal = (n1.normalized() + n2.normalized()).normalized();
-            
+
             // Inset point
             let inset = p + avg_normal * bevel_size;
-            
+
             // Calculate lighting based on edge normal vs light direction
             let n_dot_l = avg_normal.x * light_dir.0 + avg_normal.y * light_dir.1;
-            
+
             // Bevel color: highlight (bright) or shadow (dark) based on facing
             let bevel_color = if n_dot_l > 0.0 {
                 // Facing light - highlight
                 lighten_color(fill_color, 1.0 + n_dot_l * 0.6)
             } else {
-                // Facing away - shadow  
+                // Facing away - shadow
                 darken_color(fill_color, 1.0 + n_dot_l.abs() * 0.3)
             };
-            
+
             // Apply bevel type modulation
             let modulated_color = match ext.bevel {
                 Bevel3D::Angle | Bevel3D::HardEdge => bevel_color,
@@ -1149,9 +1266,15 @@ fn render_bevel_effect(
                     // Softer gradient
                     let softness = 0.7;
                     Color32::from_rgba_unmultiplied(
-                        ((fill_color.r() as f32 * (1.0 - softness) + bevel_color.r() as f32 * softness).min(255.0)) as u8,
-                        ((fill_color.g() as f32 * (1.0 - softness) + bevel_color.g() as f32 * softness).min(255.0)) as u8,
-                        ((fill_color.b() as f32 * (1.0 - softness) + bevel_color.b() as f32 * softness).min(255.0)) as u8,
+                        ((fill_color.r() as f32 * (1.0 - softness)
+                            + bevel_color.r() as f32 * softness)
+                            .min(255.0)) as u8,
+                        ((fill_color.g() as f32 * (1.0 - softness)
+                            + bevel_color.g() as f32 * softness)
+                            .min(255.0)) as u8,
+                        ((fill_color.b() as f32 * (1.0 - softness)
+                            + bevel_color.b() as f32 * softness)
+                            .min(255.0)) as u8,
                         fill_color.a(),
                     )
                 }
@@ -1165,7 +1288,10 @@ fn render_bevel_effect(
                 }
                 Bevel3D::CoolSlant => {
                     // Metallic-ish effect
-                    lighten_color(darken_color(bevel_color, 0.8), if n_dot_l > 0.0 { 1.4 } else { 1.0 })
+                    lighten_color(
+                        darken_color(bevel_color, 0.8),
+                        if n_dot_l > 0.0 { 1.4 } else { 1.0 },
+                    )
                 }
                 Bevel3D::Cross => {
                     // Sharp contrast
@@ -1181,55 +1307,58 @@ fn render_bevel_effect(
                     // Subtle effect
                     let blend = 0.5;
                     Color32::from_rgba_unmultiplied(
-                        ((fill_color.r() as f32 * (1.0 - blend) + bevel_color.r() as f32 * blend).min(255.0)) as u8,
-                        ((fill_color.g() as f32 * (1.0 - blend) + bevel_color.g() as f32 * blend).min(255.0)) as u8,
-                        ((fill_color.b() as f32 * (1.0 - blend) + bevel_color.b() as f32 * blend).min(255.0)) as u8,
+                        ((fill_color.r() as f32 * (1.0 - blend) + bevel_color.r() as f32 * blend)
+                            .min(255.0)) as u8,
+                        ((fill_color.g() as f32 * (1.0 - blend) + bevel_color.g() as f32 * blend)
+                            .min(255.0)) as u8,
+                        ((fill_color.b() as f32 * (1.0 - blend) + bevel_color.b() as f32 * blend)
+                            .min(255.0)) as u8,
                         fill_color.a(),
                     )
                 }
                 _ => bevel_color,
             };
-            
+
             let idx = mesh.vertices.len() as u32;
-            
+
             // Outer vertex (original edge)
             mesh.vertices.push(egui::epaint::Vertex {
                 pos: p,
                 uv: egui::epaint::WHITE_UV,
                 color: modulated_color,
             });
-            
+
             // Inner vertex (inset)
             mesh.vertices.push(egui::epaint::Vertex {
                 pos: inset,
                 uv: egui::epaint::WHITE_UV,
-                color: fill_color,  // Transition to fill color
+                color: fill_color, // Transition to fill color
             });
-            
+
             // Connect to next edge point
             if i < contour.len() - 1 {
                 mesh.indices.push(idx);
                 mesh.indices.push(idx + 1);
                 mesh.indices.push(idx + 2);
-                
+
                 mesh.indices.push(idx + 1);
                 mesh.indices.push(idx + 3);
                 mesh.indices.push(idx + 2);
             }
         }
-        
+
         // Close the loop
         if contour.len() >= 2 {
             let last_idx = (mesh.vertices.len() - 2) as u32;
             mesh.indices.push(last_idx);
             mesh.indices.push(last_idx + 1);
             mesh.indices.push(0);
-            
+
             mesh.indices.push(last_idx + 1);
             mesh.indices.push(1);
             mesh.indices.push(0);
         }
-        
+
         if !mesh.indices.is_empty() {
             painter.add(Shape::mesh(mesh));
         }

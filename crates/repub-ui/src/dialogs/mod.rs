@@ -2,9 +2,9 @@
 
 pub mod about;
 pub mod alerts;
-pub mod export;
 pub mod controls;
 pub mod document_properties;
+pub mod export;
 pub mod find_replace;
 pub mod font;
 pub mod format_shape;
@@ -27,8 +27,8 @@ pub mod wordart;
 
 pub use about::AboutDialog;
 pub use alerts::{ErrorAlert, SaveChangesPrompt, SaveChoice};
-pub use export::ExportDialog;
 pub use document_properties::DocumentPropertiesDialog;
+pub use export::ExportDialog;
 pub use find_replace::FindReplaceDialog;
 pub use font::FontDialog;
 pub use format_shape::FormatShapeDialog;

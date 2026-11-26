@@ -166,8 +166,12 @@ pub fn hit_primitive(primitive: &Primitive, point: Point, options: &HitOptions) 
 /// The page-space bounding rectangle of a primitive, if it has geometry.
 pub fn primitive_bounds(primitive: &Primitive) -> Option<Rect> {
     match primitive {
-        Primitive::FillPath { path, transform, .. }
-        | Primitive::StrokePath { path, transform, .. } => {
+        Primitive::FillPath {
+            path, transform, ..
+        }
+        | Primitive::StrokePath {
+            path, transform, ..
+        } => {
             let contours = flatten_in_page(path, *transform);
             bounds_of_contours(&contours)
         }
@@ -186,7 +190,9 @@ pub fn primitive_bounds(primitive: &Primitive) -> Option<Rect> {
             }
             bounds_of_points(&pts)
         }
-        Primitive::Image { dest, transform, .. } => {
+        Primitive::Image {
+            dest, transform, ..
+        } => {
             let pts: Vec<Point> = rect_corners(*dest)
                 .map(|p| transform.transform_point(p))
                 .to_vec();
@@ -230,7 +236,13 @@ fn flatten_in_page(path: &Path, transform: Transform2D) -> Vec<Vec<Point>> {
 /// Whether `point` is inside the set of `contours` under `rule`.
 fn point_in_contours(contours: &[Vec<Point>], point: Point, rule: FillRule) -> bool {
     match rule {
-        FillRule::NonZero => contours.iter().map(|c| winding_number(point, c)).sum::<i32>() != 0,
+        FillRule::NonZero => {
+            contours
+                .iter()
+                .map(|c| winding_number(point, c))
+                .sum::<i32>()
+                != 0
+        }
         FillRule::EvenOdd => {
             let crossings: usize = contours
                 .iter()
@@ -365,9 +377,9 @@ fn bounds_of_points(points: &[Point]) -> Option<Rect> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use repub_color::Color;
     use repub_geometry::{Path, Size};
     use repub_scene::{FillRule, Paint, Primitive, Scene};
-    use repub_color::Color;
 
     fn fill_rect(r: Rect) -> Primitive {
         Primitive::FillPath {

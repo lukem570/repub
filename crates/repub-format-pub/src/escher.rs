@@ -616,13 +616,13 @@ pub const SHAPE_TYPE_STAR6: u32 = 188;
 /// Shape type: 7-pointed star
 pub const SHAPE_TYPE_STAR7: u32 = 189;
 /// Shape type: 8-pointed star (MS-ODRAW: msosptSeal8)
-pub const SHAPE_TYPE_STAR8: u32 = 58;  // Note: Same as DECAGON in some versions
+pub const SHAPE_TYPE_STAR8: u32 = 58; // Note: Same as DECAGON in some versions
 /// Shape type: 10-pointed star
 pub const SHAPE_TYPE_STAR10: u32 = 190;
 /// Shape type: 12-pointed star
 pub const SHAPE_TYPE_STAR12: u32 = 191;
 /// Shape type: 16-pointed star (MS-ODRAW: msosptSeal16)
-pub const SHAPE_TYPE_STAR16: u32 = 59;  // Note: Same as DODECAGON in some versions
+pub const SHAPE_TYPE_STAR16: u32 = 59; // Note: Same as DODECAGON in some versions
 /// Shape type: 24-pointed star (MS-ODRAW: msosptSeal24)
 pub const SHAPE_TYPE_STAR24: u32 = 60;
 /// Shape type: 32-pointed star (MS-ODRAW: msosptSeal32)
@@ -907,16 +907,16 @@ pub struct FoptProperty {
 
 impl FoptProperty {
     /// Parse properties from an FOPT record.
-    /// 
+    ///
     /// The `num_props` parameter specifies how many properties to read. If None,
     /// properties are read until the end of the data (which may read too many
     /// and miss complex data at the end).
     pub fn parse_all(data: &[u8]) -> Vec<Self> {
         Self::parse_with_count(data, None)
     }
-    
+
     /// Parse properties from an FOPT record with a known property count.
-    /// 
+    ///
     /// The count comes from the FOPT header's instance field (bits 4-15).
     pub fn parse_with_count(data: &[u8], num_props: Option<usize>) -> Vec<Self> {
         let mut properties = Vec::new();
@@ -925,7 +925,7 @@ impl FoptProperty {
         // First pass: read property headers
         let mut prop_headers = Vec::new();
         let count = num_props.unwrap_or(data.len() / 6);
-        
+
         for _ in 0..count {
             if offset + 6 > data.len() {
                 break;
@@ -1194,7 +1194,7 @@ impl EscherShape {
     /// WordArt shapes have shape types in the range 24-31 (except 24 which is TextSimple)
     /// and 136-175.
     pub fn is_wordart(&self) -> bool {
-        matches!(self.shape_type, 
+        matches!(self.shape_type,
             SHAPE_TYPE_TEXT_OCTAGON..=SHAPE_TYPE_TEXT_ON_RING |
             SHAPE_TYPE_TEXT_PLAIN_TEXT..=SHAPE_TYPE_TEXT_CAN_DOWN
         ) || self.wordart_text.is_some()
@@ -1445,9 +1445,7 @@ impl EscherParser {
 
             match header.record_type {
                 // Containers - recurse into them
-                ESCHER_DGG_CONTAINER
-                | ESCHER_DG_CONTAINER
-                | ESCHER_SOLVER_CONTAINER => {
+                ESCHER_DGG_CONTAINER | ESCHER_DG_CONTAINER | ESCHER_SOLVER_CONTAINER => {
                     self.parse_records(data, record_start, record_end)?;
                 }
 
@@ -1529,10 +1527,10 @@ impl EscherParser {
 
         let blip_type_win = data[0];
         let blip_type_mac = data[1];
-        
+
         let mut checksum = [0u8; 16];
         checksum.copy_from_slice(&data[2..18]);
-        
+
         // Skip tag (2 bytes at offset 18)
         let size = read_le_u32(&data[20..]);
         let ref_count = read_le_u32(&data[24..]);
@@ -1578,25 +1576,28 @@ impl EscherParser {
         let record_data = data.get(EscherRecordHeader::SIZE..)?;
 
         let image_type = ImageType::from_record_type(header.record_type);
-        
+
         // Blip records have a header with checksum before the actual data
         // The header size varies by format:
         // - EMF/WMF: 34 bytes (with filter, 50 bytes)
         // - PICT: 34 bytes (with filter, 50 bytes)
         // - JPEG/PNG/DIB/TIFF: 17 bytes (with filter, 33 bytes)
-        
+
         let header_size = match header.record_type {
             ESCHER_BLIP_EMF | ESCHER_BLIP_WMF | ESCHER_BLIP_PICT => {
                 // Check if there's a secondary UID (filtered)
-                if header.instance == 0x3D4 || header.instance == 0x216 || header.instance == 0x542 {
+                if header.instance == 0x3D4 || header.instance == 0x216 || header.instance == 0x542
+                {
                     50
                 } else {
                     34
                 }
             }
-            ESCHER_BLIP_JPEG | ESCHER_BLIP_JPEG_ALT | ESCHER_BLIP_PNG | ESCHER_BLIP_DIB | ESCHER_BLIP_TIFF => {
+            ESCHER_BLIP_JPEG | ESCHER_BLIP_JPEG_ALT | ESCHER_BLIP_PNG | ESCHER_BLIP_DIB
+            | ESCHER_BLIP_TIFF => {
                 // Check if there's a secondary UID (filtered)
-                if header.instance == 0x46A || header.instance == 0x6E0 || header.instance == 0x7A8 {
+                if header.instance == 0x46A || header.instance == 0x6E0 || header.instance == 0x7A8
+                {
                     33
                 } else {
                     17
@@ -1617,7 +1618,7 @@ impl EscherParser {
 
         // Extract image data
         let image_data = record_data.get(header_size..)?.to_vec();
-        
+
         if image_data.is_empty() {
             return None;
         }
@@ -1726,18 +1727,26 @@ impl EscherParser {
                 ESCHER_CLIENT_ANCHOR | ESCHER_CHILD_ANCHOR => {
                     log::trace!(
                         "Parsing anchor record: type=0x{:04X}, len={}, data={:02X?}",
-                        header.record_type, record_data.len(), &record_data[..record_data.len().min(32)]
+                        header.record_type,
+                        record_data.len(),
+                        &record_data[..record_data.len().min(32)]
                     );
                     if let Some(anchor) = self.parse_anchor(record_data) {
                         log::debug!(
                             "Anchor parsed: ({}, {}, {}, {}) EMU -> bounds: {:?}",
-                            anchor.left, anchor.top, anchor.right, anchor.bottom,
+                            anchor.left,
+                            anchor.top,
+                            anchor.right,
+                            anchor.bottom,
                             anchor.to_rect_points()
                         );
                         shape.anchor = Some(anchor.clone());
                         shape.bounds = anchor.to_rect_points();
                     } else {
-                        log::trace!("Anchor parsing returned None for {} bytes", record_data.len());
+                        log::trace!(
+                            "Anchor parsing returned None for {} bytes",
+                            record_data.len()
+                        );
                     }
                 }
                 ESCHER_CLIENT_DATA => {
@@ -1768,7 +1777,7 @@ impl EscherParser {
     }
 
     /// Parse anchor record.
-    /// 
+    ///
     /// Publisher 2016+ uses a different format for FClientAnchor - instead of
     /// simple LTRB coordinates, it contains Publisher-style tagged blocks.
     fn parse_anchor(&self, data: &[u8]) -> Option<EscherAnchor> {
@@ -1778,41 +1787,47 @@ impl EscherParser {
             let top = read_le_i32(&data[4..]);
             let right = read_le_i32(&data[8..]);
             let bottom = read_le_i32(&data[12..]);
-            
+
             // Check if values are reasonable (not all zero or garbage)
             if left != 0 || top != 0 || right != 0 || bottom != 0 {
-                return Some(EscherAnchor { left, top, right, bottom });
+                return Some(EscherAnchor {
+                    left,
+                    top,
+                    right,
+                    bottom,
+                });
             }
         }
-        
+
         // Publisher 2016+ format: First 4 bytes are length, then tagged blocks
         // Format: length (u32), then blocks with: id (u8), type (u8), data (varies)
         if data.len() >= 8 {
             let length = read_le_u32(data) as usize;
-            
+
             // Check if this looks like Publisher tagged format
             // The length should roughly match the data length minus 4
             if length > 0 && length <= data.len() && data.len() >= 6 {
                 // Check if bytes 4-5 look like a block header (id, type)
                 let block_type = data.get(5).copied().unwrap_or(0);
-                if block_type == 0x20 || block_type == 0x28 { // u32 or i64 types
+                if block_type == 0x20 || block_type == 0x28 {
+                    // u32 or i64 types
                     return self.parse_publisher_anchor_blocks(&data[4..]);
                 }
             }
         }
-        
+
         // Also try parsing directly as Publisher blocks (for 4-byte anchors with just unit type)
         if data.len() >= 4 && data.len() < 16 {
             // This is likely just a unit indicator (e.g., 0x04 = EMU)
             // No position data available
             return None;
         }
-        
+
         None
     }
-    
+
     /// Parse Publisher 2016+ FClientAnchor tagged blocks format.
-    /// 
+    ///
     /// Format: id (u8), type (u8), data (1/2/4/8 bytes based on type)
     /// Block IDs: 0x01=left, 0x02=top, 0x03=right, 0x04=bottom
     fn parse_publisher_anchor_blocks(&self, data: &[u8]) -> Option<EscherAnchor> {
@@ -1820,27 +1835,39 @@ impl EscherParser {
         let mut top: Option<i32> = None;
         let mut right: Option<i32> = None;
         let mut bottom: Option<i32> = None;
-        
+
         let mut pos = 0;
         while pos + 2 <= data.len() {
             let block_id = data[pos];
             let block_type = data[pos + 1];
             pos += 2;
-            
+
             let (data_len, value): (usize, i32) = match block_type {
                 0x08 => (1, data.get(pos).map(|&b| b as i8 as i32).unwrap_or(0)),
-                0x10 => (2, data.get(pos..pos+2)
-                    .map(|b| i16::from_le_bytes([b[0], b[1]]) as i32)
-                    .unwrap_or(0)),
-                0x20 => (4, data.get(pos..pos+4)
-                    .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-                    .unwrap_or(0)),
-                0x28 => (8, data.get(pos..pos+8)
-                    .map(|b| i64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]) as i32)
-                    .unwrap_or(0)),
+                0x10 => (
+                    2,
+                    data.get(pos..pos + 2)
+                        .map(|b| i16::from_le_bytes([b[0], b[1]]) as i32)
+                        .unwrap_or(0),
+                ),
+                0x20 => (
+                    4,
+                    data.get(pos..pos + 4)
+                        .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                        .unwrap_or(0),
+                ),
+                0x28 => (
+                    8,
+                    data.get(pos..pos + 8)
+                        .map(|b| {
+                            i64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                                as i32
+                        })
+                        .unwrap_or(0),
+                ),
                 _ => break, // Unknown type, stop parsing
             };
-            
+
             match block_id {
                 0x01 => left = Some(value),
                 0x02 => top = Some(value),
@@ -1848,17 +1875,25 @@ impl EscherParser {
                 0x04 => bottom = Some(value),
                 _ => {} // Other blocks ignored
             }
-            
+
             pos += data_len;
         }
-        
+
         // Only return an anchor if we have all four coordinates
         if let (Some(l), Some(t), Some(r), Some(b)) = (left, top, right, bottom) {
             log::trace!(
                 "Parsed Publisher anchor blocks: ({}, {}, {}, {}) EMU",
-                l, t, r, b
+                l,
+                t,
+                r,
+                b
             );
-            Some(EscherAnchor { left: l, top: t, right: r, bottom: b })
+            Some(EscherAnchor {
+                left: l,
+                top: t,
+                right: r,
+                bottom: b,
+            })
         } else {
             None
         }
@@ -1882,7 +1917,7 @@ impl EscherParser {
                     let fixed_point = prop.value as i32;
                     shape.rotation = fixed_point as f64 / 65536.0;
                 }
-                
+
                 // Position properties (EMU coordinates)
                 FOPT_POS_LEFT => {
                     let x = emus_to_points(prop.value as i64);
@@ -1900,7 +1935,7 @@ impl EscherParser {
                     let bottom = emus_to_points(prop.value as i64);
                     shape.bounds.size.height = bottom - shape.bounds.origin.y;
                 }
-                
+
                 // Geometry properties (may override position)
                 FOPT_GEO_LEFT => {
                     let x = emus_to_points(prop.value as i64);
@@ -1926,7 +1961,7 @@ impl EscherParser {
                         shape.bounds.size.height = h;
                     }
                 }
-                
+
                 // Fill properties
                 FOPT_FILL_TYPE => {
                     shape.fill_type = match prop.value {
@@ -1992,7 +2027,7 @@ impl EscherParser {
                         });
                     }
                 }
-                
+
                 // Line properties
                 FOPT_LINE_COLOR => {
                     shape.line_color = Some(bgr_to_color(prop.value));
@@ -2013,7 +2048,7 @@ impl EscherParser {
                         shape.line_width = 0.0;
                     }
                 }
-                
+
                 // Text column properties
                 FOPT_NUM_COLUMNS => {
                     shape.num_columns = prop.value;
@@ -2022,7 +2057,7 @@ impl EscherParser {
                     // Column spacing in EMUs
                     shape.column_spacing = emus_to_points(prop.value as i64);
                 }
-                
+
                 // Shadow properties
                 FOPT_SHADOW_TYPE => {
                     shape.shadow_type = Some(prop.value);
@@ -2053,13 +2088,13 @@ impl EscherParser {
                         shape.shadow_color = None;
                     }
                 }
-                
+
                 // Text wrap mode (from TXID group, 0x0085)
                 FOPT_TEXT_WORD_WRAP => {
                     // Values: 0=none, 1=square, 2=by points, 3=none, 4=tight, 5=through
                     shape.text_wrap_mode = Some(prop.value);
                 }
-                
+
                 // WordArt (geometry text) properties
                 FOPT_GTEXT_SIZE => {
                     // Size in EMUs
@@ -2072,11 +2107,11 @@ impl EscherParser {
                 FOPT_GTEXT_FLAGS => {
                     shape.wordart_flags = prop.value;
                 }
-                
+
                 _ => {}
             }
         }
-        
+
         // Third pass: process complex properties for gradients
         if let Some(shade_data) = shape.complex_properties.get(&FOPT_FILL_SHADE_COMPLEX) {
             let stops = Self::parse_gradient_stops(shade_data);
@@ -2093,21 +2128,37 @@ impl EscherParser {
                 }
             }
         }
-        
+
         // If we have a gradient fill type but no gradient info, create default
-        if matches!(shape.fill_type, FillType::GradientLinear | FillType::GradientCenter | 
-                    FillType::GradientShape | FillType::GradientScale | FillType::GradientTitle) {
+        if matches!(
+            shape.fill_type,
+            FillType::GradientLinear
+                | FillType::GradientCenter
+                | FillType::GradientShape
+                | FillType::GradientScale
+                | FillType::GradientTitle
+        ) {
             if shape.gradient_fill.is_none() {
                 // Create default two-stop gradient from fill color to background color
                 let start_color = shape.fill_color.unwrap_or(Color::WHITE);
-                let end_color = shape.properties.get(&FOPT_FILL_BACK_COLOR)
+                let end_color = shape
+                    .properties
+                    .get(&FOPT_FILL_BACK_COLOR)
                     .map(|&c| bgr_to_color(c))
                     .unwrap_or(Color::BLACK);
-                    
+
                 shape.gradient_fill = Some(GradientFill {
                     stops: vec![
-                        GradientStop { position: 0.0, color: start_color, opacity: 1.0 },
-                        GradientStop { position: 1.0, color: end_color, opacity: 1.0 },
+                        GradientStop {
+                            position: 0.0,
+                            color: start_color,
+                            opacity: 1.0,
+                        },
+                        GradientStop {
+                            position: 1.0,
+                            color: end_color,
+                            opacity: 1.0,
+                        },
                     ],
                     angle: 0.0,
                     focus: 0,
@@ -2115,7 +2166,7 @@ impl EscherParser {
                 });
             }
         }
-        
+
         // Parse custom path vertices and segments for freeform shapes
         if let Some(vertex_data) = shape.complex_properties.get(&FOPT_P_VERTICES) {
             shape.custom_vertices = Some(Self::parse_path_vertices(vertex_data));
@@ -2123,7 +2174,7 @@ impl EscherParser {
         if let Some(segment_data) = shape.complex_properties.get(&FOPT_P_SEGMENTS) {
             shape.custom_segments = Some(Self::parse_path_segments(segment_data));
         }
-        
+
         // Parse WordArt text and font from complex properties
         if let Some(text_data) = shape.complex_properties.get(&FOPT_GTEXT_UNICODE) {
             shape.wordart_text = Self::parse_unicode_string(text_data);
@@ -2132,13 +2183,13 @@ impl EscherParser {
             shape.wordart_font = Self::parse_unicode_string(font_data);
         }
     }
-    
+
     /// Parse a Unicode (UTF-16LE) string from complex property data
     fn parse_unicode_string(data: &[u8]) -> Option<String> {
         if data.is_empty() {
             return None;
         }
-        
+
         // The data is UTF-16LE with possible null terminator
         let mut chars: Vec<u16> = Vec::with_capacity(data.len() / 2);
         let mut i = 0;
@@ -2150,7 +2201,7 @@ impl EscherParser {
             chars.push(c);
             i += 2;
         }
-        
+
         String::from_utf16(&chars).ok().filter(|s| !s.is_empty())
     }
 
@@ -2158,38 +2209,38 @@ impl EscherParser {
     /// Format: 2-byte count, then 8 bytes per entry (4-byte color, 4-byte position)
     pub fn parse_gradient_stops(data: &[u8]) -> Vec<GradientStop> {
         let mut stops = Vec::new();
-        
+
         if data.len() < 6 {
             return stops;
         }
-        
+
         let num_entries = read_le_u16(data) as usize;
         let mut offset = 6; // Skip header (count + 4 unknown bytes)
-        
+
         let max_entries = (data.len() - offset) / 8;
         let num_entries = num_entries.min(max_entries);
-        
+
         for _ in 0..num_entries {
             if offset + 8 > data.len() {
                 break;
             }
-            
+
             // Color is BGR format in first 4 bytes
             let color = bgr_to_color(read_le_u32(&data[offset..]));
             offset += 4;
-            
+
             // Position is fixed-point 16.16 (0x0000 = 0%, 0x10000 = 100%)
             let pos_raw = read_le_u32(&data[offset..]);
             let position = (pos_raw as f64 / 65536.0).clamp(0.0, 1.0);
             offset += 4;
-            
+
             stops.push(GradientStop {
                 position,
                 color,
                 opacity: 1.0,
             });
         }
-        
+
         // If we don't have any stops, create default black-white gradient
         if stops.is_empty() {
             stops.push(GradientStop {
@@ -2203,29 +2254,29 @@ impl EscherParser {
                 opacity: 1.0,
             });
         }
-        
+
         stops
     }
-    
+
     /// Parse freeform path vertices from P_VERTICES complex property.
     /// Format: 2-byte count, 2-byte size per vertex, then vertices (4 or 8 bytes each)
     pub fn parse_path_vertices(data: &[u8]) -> Vec<PathVertex> {
         if data.len() < 6 {
             return Vec::new();
         }
-        
+
         let num_vertices = read_le_u16(data) as usize;
         let _total_size = read_le_u16(&data[2..]) as usize; // Not used but indicates total byte count
         let vertex_size = read_le_u16(&data[4..]) as usize;
-        
+
         let mut vertices = Vec::with_capacity(num_vertices);
         let mut offset = 6;
-        
+
         for _ in 0..num_vertices {
             if offset + vertex_size > data.len() {
                 break;
             }
-            
+
             let (x, y) = if vertex_size >= 8 {
                 // 32-bit coordinates
                 let x = read_le_i32(&data[offset..]);
@@ -2239,36 +2290,36 @@ impl EscherParser {
             } else {
                 break;
             };
-            
+
             vertices.push(PathVertex { x, y });
             offset += vertex_size;
         }
-        
+
         vertices
     }
-    
+
     /// Parse freeform path segments from P_SEGMENTS complex property.
     /// Format: 2-byte count, 2-byte size per segment, then segment types (2 bytes each)
     pub fn parse_path_segments(data: &[u8]) -> Vec<PathSegment> {
         if data.len() < 6 {
             return Vec::new();
         }
-        
+
         let num_segments = read_le_u16(data) as usize;
         let _total_size = read_le_u16(&data[2..]) as usize;
         let segment_size = read_le_u16(&data[4..]) as usize;
-        
+
         let mut segments = Vec::with_capacity(num_segments);
         let mut offset = 6;
-        
+
         for _ in 0..num_segments {
             if offset + segment_size > data.len() {
                 break;
             }
-            
+
             // Segment type is in the low byte
             let segment_type = data[offset];
-            
+
             let segment = match segment_type {
                 0x00 | 0x40 => PathSegment::LineTo,
                 0x20 | 0x60 => PathSegment::CurveTo,
@@ -2277,11 +2328,11 @@ impl EscherParser {
                 0xFF => PathSegment::End,
                 _ => PathSegment::LineTo, // Default to line
             };
-            
+
             segments.push(segment);
             offset += segment_size;
         }
-        
+
         segments
     }
 
@@ -2368,14 +2419,8 @@ impl EscherParser {
 
             // Check for blip records
             match header.record_type {
-                ESCHER_BLIP_EMF
-                | ESCHER_BLIP_WMF
-                | ESCHER_BLIP_PICT
-                | ESCHER_BLIP_JPEG
-                | ESCHER_BLIP_JPEG_ALT
-                | ESCHER_BLIP_PNG
-                | ESCHER_BLIP_DIB
-                | ESCHER_BLIP_TIFF => {
+                ESCHER_BLIP_EMF | ESCHER_BLIP_WMF | ESCHER_BLIP_PICT | ESCHER_BLIP_JPEG
+                | ESCHER_BLIP_JPEG_ALT | ESCHER_BLIP_PNG | ESCHER_BLIP_DIB | ESCHER_BLIP_TIFF => {
                     let index = self.images.len() + 1;
                     if let Some(image) = self.parse_blip(&data[offset..record_end], index) {
                         self.images.push(image);
@@ -2423,19 +2468,19 @@ impl EscherParser {
     /// Get all images (from blip store and directly extracted).
     pub fn all_images(&self) -> Vec<&EscherImage> {
         let mut images: Vec<&EscherImage> = Vec::new();
-        
+
         // Add images from blip store entries
         for entry in &self.blip_store {
             if let Some(ref img) = entry.embedded_blip {
                 images.push(img);
             }
         }
-        
+
         // Add directly extracted images
         for img in &self.images {
             images.push(img);
         }
-        
+
         images
     }
 
@@ -2447,7 +2492,7 @@ impl EscherParser {
                 return Some(img);
             }
         }
-        
+
         // Fall back to directly extracted images
         self.images.iter().find(|img| img.index == index)
     }
@@ -2555,7 +2600,7 @@ pub fn parse_escher_with_delay(
     let mut parser = EscherParser::new();
     parser.parse(escher_data)?;
     parser.parse_delay_stream(delay_data)?;
-    
+
     // Collect all images
     let mut images = parser.take_images();
     for entry in parser.blip_store() {
@@ -2563,7 +2608,7 @@ pub fn parse_escher_with_delay(
             images.push(img.clone());
         }
     }
-    
+
     Ok((parser.take_shapes(), images))
 }
 
@@ -2668,7 +2713,14 @@ pub enum MappedPathCommand {
     /// Quadratic bezier (control point, end point)
     QuadTo { cx: f64, cy: f64, x: f64, y: f64 },
     /// Cubic bezier (two control points, end point)
-    CubicTo { c1x: f64, c1y: f64, c2x: f64, c2y: f64, x: f64, y: f64 },
+    CubicTo {
+        c1x: f64,
+        c1y: f64,
+        c2x: f64,
+        c2y: f64,
+        x: f64,
+        y: f64,
+    },
     /// Close the path
     Close,
 }
@@ -2676,9 +2728,11 @@ pub enum MappedPathCommand {
 impl MappedPath {
     /// Create an empty path.
     pub fn new() -> Self {
-        Self { commands: Vec::new() }
+        Self {
+            commands: Vec::new(),
+        }
     }
-    
+
     /// Create a right triangle path (right angle at bottom-left).
     pub fn right_triangle() -> Self {
         Self {
@@ -2690,7 +2744,7 @@ impl MappedPath {
             ],
         }
     }
-    
+
     /// Create a parallelogram path.
     pub fn parallelogram(skew: f64) -> Self {
         // Default skew is 0.25 (quarter of width offset)
@@ -2705,7 +2759,7 @@ impl MappedPath {
             ],
         }
     }
-    
+
     /// Create a trapezoid path.
     pub fn trapezoid(inset: f64) -> Self {
         // Default inset is 0.25 (quarter of width on each side at top)
@@ -2720,7 +2774,7 @@ impl MappedPath {
             ],
         }
     }
-    
+
     /// Create a plus/cross shape.
     pub fn plus(arm_width: f64) -> Self {
         // Default arm width is 1/3 of the shape
@@ -2745,7 +2799,7 @@ impl MappedPath {
             ],
         }
     }
-    
+
     /// Create a right arrow path.
     pub fn right_arrow(head_width: f64, head_length: f64) -> Self {
         // head_width: ratio of head to total height (default 0.5 means head is full height, shaft is 50%)
@@ -2755,21 +2809,39 @@ impl MappedPath {
         let shaft_top = (1.0 - hw) / 2.0;
         let shaft_bottom = shaft_top + hw;
         let shaft_end = 1.0 - hl;
-        
+
         Self {
             commands: vec![
-                MappedPathCommand::MoveTo { x: 0.0, y: shaft_top },
-                MappedPathCommand::LineTo { x: shaft_end, y: shaft_top },
-                MappedPathCommand::LineTo { x: shaft_end, y: 0.0 },
+                MappedPathCommand::MoveTo {
+                    x: 0.0,
+                    y: shaft_top,
+                },
+                MappedPathCommand::LineTo {
+                    x: shaft_end,
+                    y: shaft_top,
+                },
+                MappedPathCommand::LineTo {
+                    x: shaft_end,
+                    y: 0.0,
+                },
                 MappedPathCommand::LineTo { x: 1.0, y: 0.5 },
-                MappedPathCommand::LineTo { x: shaft_end, y: 1.0 },
-                MappedPathCommand::LineTo { x: shaft_end, y: shaft_bottom },
-                MappedPathCommand::LineTo { x: 0.0, y: shaft_bottom },
+                MappedPathCommand::LineTo {
+                    x: shaft_end,
+                    y: 1.0,
+                },
+                MappedPathCommand::LineTo {
+                    x: shaft_end,
+                    y: shaft_bottom,
+                },
+                MappedPathCommand::LineTo {
+                    x: 0.0,
+                    y: shaft_bottom,
+                },
                 MappedPathCommand::Close,
             ],
         }
     }
-    
+
     /// Create a home plate (pentagon) path.
     pub fn home_plate(point_ratio: f64) -> Self {
         // point_ratio: how far the point extends (default 0.2)
@@ -2785,7 +2857,7 @@ impl MappedPath {
             ],
         }
     }
-    
+
     /// Create a donut/ring shape (approximated as octagon with center hole).
     /// For proper rendering, this would need a compound path.
     pub fn donut(hole_ratio: f64) -> Self {
@@ -2793,18 +2865,18 @@ impl MappedPath {
         // A proper donut would need compound path support
         Self::regular_polygon(8)
     }
-    
+
     /// Create a regular polygon path.
     pub fn regular_polygon(sides: u32) -> Self {
         use std::f64::consts::{FRAC_PI_2, TAU};
         let n = sides.max(3) as f64;
         let mut commands = Vec::with_capacity(sides as usize + 2);
-        
+
         for i in 0..sides {
             let angle = -FRAC_PI_2 + (i as f64) * TAU / n;
             let x = 0.5 + 0.5 * angle.cos();
             let y = 0.5 + 0.5 * angle.sin();
-            
+
             if i == 0 {
                 commands.push(MappedPathCommand::MoveTo { x, y });
             } else {
@@ -2812,7 +2884,7 @@ impl MappedPath {
             }
         }
         commands.push(MappedPathCommand::Close);
-        
+
         Self { commands }
     }
 }
@@ -2832,15 +2904,19 @@ impl Default for MappedPath {
 /// example HEXAGON and REGULAR_HEXAGON), so a few `|` arms are unreachable by
 /// design.
 #[allow(unreachable_patterns)]
-pub fn map_escher_shape_type(shape_type: u32, adjust1: Option<u32>, adjust2: Option<u32>) -> MappedShapeType {
+pub fn map_escher_shape_type(
+    shape_type: u32,
+    adjust1: Option<u32>,
+    adjust2: Option<u32>,
+) -> MappedShapeType {
     // Extract adjustment values (typically in fixed-point format)
     // Adjust values are often in a 0-21600 range representing the shape's coordinate system
     let adj1 = adjust1.map(|v| v as f64 / 21600.0).unwrap_or(0.25);
     let adj2 = adjust2.map(|v| v as f64 / 21600.0).unwrap_or(0.25);
-    
+
     match shape_type {
         SHAPE_TYPE_NOT_PRIMITIVE => MappedShapeType::Unknown,
-        
+
         // Basic shapes
         SHAPE_TYPE_RECTANGLE | SHAPE_TYPE_TEXT_BOX | SHAPE_TYPE_TEXT_SIMPLE => {
             MappedShapeType::Rectangle { corner_radius: 0.0 }
@@ -2849,10 +2925,12 @@ pub fn map_escher_shape_type(shape_type: u32, adjust1: Option<u32>, adjust2: Opt
             // Convert adjustment value to corner radius
             // Default adj1 is about 0.167 (1/6) for typical rounded rect
             let radius_ratio = adjust1.map(|v| v as f64 / 21600.0).unwrap_or(0.167);
-            MappedShapeType::Rectangle { corner_radius: radius_ratio }
+            MappedShapeType::Rectangle {
+                corner_radius: radius_ratio,
+            }
         }
         SHAPE_TYPE_ELLIPSE => MappedShapeType::Ellipse,
-        
+
         // Regular polygons
         SHAPE_TYPE_ISOSCELES_TRIANGLE => MappedShapeType::Polygon { sides: 3 },
         SHAPE_TYPE_DIAMOND => {
@@ -2869,20 +2947,47 @@ pub fn map_escher_shape_type(shape_type: u32, adjust1: Option<u32>, adjust2: Opt
         // We use the polygon interpretation for these; use Seal for star bursts
         SHAPE_TYPE_DECAGON => MappedShapeType::Polygon { sides: 10 },
         SHAPE_TYPE_DODECAGON => MappedShapeType::Polygon { sides: 12 },
-        
+
         // Stars
-        SHAPE_TYPE_STAR => MappedShapeType::Star { points: 5, inner_ratio: 0.382 },
-        SHAPE_TYPE_STAR4 => MappedShapeType::Star { points: 4, inner_ratio: 0.382 },
-        SHAPE_TYPE_STAR6 => MappedShapeType::Star { points: 6, inner_ratio: 0.382 },
-        SHAPE_TYPE_STAR7 => MappedShapeType::Star { points: 7, inner_ratio: 0.382 },
+        SHAPE_TYPE_STAR => MappedShapeType::Star {
+            points: 5,
+            inner_ratio: 0.382,
+        },
+        SHAPE_TYPE_STAR4 => MappedShapeType::Star {
+            points: 4,
+            inner_ratio: 0.382,
+        },
+        SHAPE_TYPE_STAR6 => MappedShapeType::Star {
+            points: 6,
+            inner_ratio: 0.382,
+        },
+        SHAPE_TYPE_STAR7 => MappedShapeType::Star {
+            points: 7,
+            inner_ratio: 0.382,
+        },
         // SHAPE_TYPE_STAR8 (58) - same as DECAGON, handled above
-        SHAPE_TYPE_STAR10 => MappedShapeType::Star { points: 10, inner_ratio: 0.382 },
-        SHAPE_TYPE_STAR12 => MappedShapeType::Star { points: 12, inner_ratio: 0.382 },
+        SHAPE_TYPE_STAR10 => MappedShapeType::Star {
+            points: 10,
+            inner_ratio: 0.382,
+        },
+        SHAPE_TYPE_STAR12 => MappedShapeType::Star {
+            points: 12,
+            inner_ratio: 0.382,
+        },
         // SHAPE_TYPE_STAR16 (59) - same as DODECAGON, handled above
-        SHAPE_TYPE_STAR24 => MappedShapeType::Star { points: 24, inner_ratio: 0.382 },
-        SHAPE_TYPE_STAR32 => MappedShapeType::Star { points: 32, inner_ratio: 0.382 },
-        SHAPE_TYPE_SEAL => MappedShapeType::Star { points: 16, inner_ratio: 0.85 }, // Seal/burst
-        
+        SHAPE_TYPE_STAR24 => MappedShapeType::Star {
+            points: 24,
+            inner_ratio: 0.382,
+        },
+        SHAPE_TYPE_STAR32 => MappedShapeType::Star {
+            points: 32,
+            inner_ratio: 0.382,
+        },
+        SHAPE_TYPE_SEAL => MappedShapeType::Star {
+            points: 16,
+            inner_ratio: 0.85,
+        }, // Seal/burst
+
         // Custom path shapes
         SHAPE_TYPE_RIGHT_TRIANGLE => MappedShapeType::Path(MappedPath::right_triangle()),
         SHAPE_TYPE_PARALLELOGRAM => MappedShapeType::Path(MappedPath::parallelogram(adj1)),
@@ -2890,58 +2995,62 @@ pub fn map_escher_shape_type(shape_type: u32, adjust1: Option<u32>, adjust2: Opt
         SHAPE_TYPE_PLUS => MappedShapeType::Path(MappedPath::plus(adj1)),
         SHAPE_TYPE_HOME_PLATE => MappedShapeType::Path(MappedPath::home_plate(adj1)),
         SHAPE_TYPE_DONUT => MappedShapeType::Path(MappedPath::donut(adj1)),
-        
+
         // Arrows (block arrows - these are shapes, not lines)
         SHAPE_TYPE_ARROW | SHAPE_TYPE_THICK_ARROW => {
             MappedShapeType::Path(MappedPath::right_arrow(adj1, adj2))
         }
-        
+
         // Lines
         SHAPE_TYPE_LINE => MappedShapeType::Line {
             start_arrow: ArrowStyle::None,
             end_arrow: ArrowStyle::None,
         },
-        
+
         // Connectors - straight
         SHAPE_TYPE_STRAIGHT_CONNECTOR_1 => MappedShapeType::Connector {
             connector_type: ConnectorRouting::Straight,
             start_arrow: ArrowStyle::None,
             end_arrow: ArrowStyle::None,
         },
-        
+
         // Connectors - bent (elbow)
-        SHAPE_TYPE_BENT_CONNECTOR_2 | SHAPE_TYPE_BENT_CONNECTOR_3 |
-        SHAPE_TYPE_BENT_CONNECTOR_4 | SHAPE_TYPE_BENT_CONNECTOR_5 => MappedShapeType::Connector {
+        SHAPE_TYPE_BENT_CONNECTOR_2
+        | SHAPE_TYPE_BENT_CONNECTOR_3
+        | SHAPE_TYPE_BENT_CONNECTOR_4
+        | SHAPE_TYPE_BENT_CONNECTOR_5 => MappedShapeType::Connector {
             connector_type: ConnectorRouting::Elbow,
             start_arrow: ArrowStyle::None,
             end_arrow: ArrowStyle::None,
         },
-        
+
         // Connectors - curved
-        SHAPE_TYPE_CURVED_CONNECTOR_2 | SHAPE_TYPE_CURVED_CONNECTOR_3 |
-        SHAPE_TYPE_CURVED_CONNECTOR_4 | SHAPE_TYPE_CURVED_CONNECTOR_5 => MappedShapeType::Connector {
+        SHAPE_TYPE_CURVED_CONNECTOR_2
+        | SHAPE_TYPE_CURVED_CONNECTOR_3
+        | SHAPE_TYPE_CURVED_CONNECTOR_4
+        | SHAPE_TYPE_CURVED_CONNECTOR_5 => MappedShapeType::Connector {
             connector_type: ConnectorRouting::Curved,
             start_arrow: ArrowStyle::None,
             end_arrow: ArrowStyle::None,
         },
-        
+
         // Pictures
         SHAPE_TYPE_PICTURE_FRAME => MappedShapeType::PictureFrame,
-        
+
         // Freeform/custom path
         SHAPE_TYPE_FREEFORM => MappedShapeType::Unknown, // Would need path data from FOPT
-        
+
         // Arc - approximate as ellipse for now
         SHAPE_TYPE_ARC => MappedShapeType::Ellipse,
-        
+
         // Can/cylinder, cube, balloon, plaque - fall back to rectangle
         SHAPE_TYPE_CAN | SHAPE_TYPE_CUBE | SHAPE_TYPE_BALLOON | SHAPE_TYPE_PLAQUE => {
             MappedShapeType::Rectangle { corner_radius: 0.0 }
         }
-        
+
         // Host control - special handling needed
         SHAPE_TYPE_HOST_CONTROL => MappedShapeType::Unknown,
-        
+
         // Default for unknown types
         _ => MappedShapeType::Unknown,
     }
@@ -2952,11 +3061,11 @@ pub fn get_default_adjustments(shape_type: u32) -> (Option<u32>, Option<u32>) {
     match shape_type {
         SHAPE_TYPE_ROUND_RECT => (Some(5400), None), // ~25% corner radius
         SHAPE_TYPE_PARALLELOGRAM => (Some(5400), None), // ~25% skew
-        SHAPE_TYPE_TRAPEZOID => (Some(5400), None), // ~25% inset
-        SHAPE_TYPE_PLUS => (Some(7200), None), // ~33% arm width
+        SHAPE_TYPE_TRAPEZOID => (Some(5400), None),  // ~25% inset
+        SHAPE_TYPE_PLUS => (Some(7200), None),       // ~33% arm width
         SHAPE_TYPE_ARROW | SHAPE_TYPE_THICK_ARROW => (Some(10800), Some(8640)), // 50% head width, 40% head length
-        SHAPE_TYPE_HOME_PLATE => (Some(4320), None), // ~20% point
-        SHAPE_TYPE_DONUT => (Some(5400), None), // ~25% hole
+        SHAPE_TYPE_HOME_PLATE => (Some(4320), None),                            // ~20% point
+        SHAPE_TYPE_DONUT => (Some(5400), None),                                 // ~25% hole
         _ => (None, None),
     }
 }
@@ -2972,7 +3081,7 @@ mod tests {
         // DggContainer header: version=0xF, instance=0, type=0xF000, length=100
         let data = [0x0F, 0x00, 0x00, 0xF0, 0x64, 0x00, 0x00, 0x00];
         let header = EscherRecordHeader::parse(&data).unwrap();
-        
+
         assert_eq!(header.version, 0x0F);
         assert_eq!(header.instance, 0);
         assert_eq!(header.record_type, 0xF000);
@@ -2985,7 +3094,7 @@ mod tests {
         // FSP atom header: version=0x2, instance=1 (rectangle), type=0xF00A, length=8
         let data = [0x12, 0x00, 0x0A, 0xF0, 0x08, 0x00, 0x00, 0x00];
         let header = EscherRecordHeader::parse(&data).unwrap();
-        
+
         assert_eq!(header.version, 0x02);
         assert_eq!(header.instance, 1); // Rectangle
         assert_eq!(header.record_type, 0xF00A);
@@ -3018,8 +3127,14 @@ mod tests {
 
     #[test]
     fn test_image_type() {
-        assert_eq!(ImageType::from_record_type(ESCHER_BLIP_PNG).mime_type(), "image/png");
-        assert_eq!(ImageType::from_record_type(ESCHER_BLIP_JPEG).extension(), "jpg");
+        assert_eq!(
+            ImageType::from_record_type(ESCHER_BLIP_PNG).mime_type(),
+            "image/png"
+        );
+        assert_eq!(
+            ImageType::from_record_type(ESCHER_BLIP_JPEG).extension(),
+            "jpg"
+        );
         assert_eq!(ImageType::from_record_type(0xFFFF), ImageType::Unknown);
     }
 
@@ -3036,7 +3151,7 @@ mod tests {
         // Single property: ID=0x0181 (fill color), value=0x00FF00 (green in BGR)
         let data = [0x81, 0x01, 0x00, 0xFF, 0x00, 0x00];
         let props = FoptProperty::parse_all(&data);
-        
+
         assert_eq!(props.len(), 1);
         assert_eq!(props[0].id, 0x0181);
         assert_eq!(props[0].value, 0x0000FF00);
@@ -3049,10 +3164,10 @@ mod tests {
         let anchor = EscherAnchor {
             left: 0,
             top: 0,
-            right: 914_400,  // 1 inch = 72 points
+            right: 914_400, // 1 inch = 72 points
             bottom: 914_400,
         };
-        
+
         let rect = anchor.to_rect_points();
         assert!((rect.x() - 0.0).abs() < 0.01);
         assert!((rect.y() - 0.0).abs() < 0.01);
@@ -3073,10 +3188,10 @@ mod tests {
         let mut shape = EscherShape::new();
         shape.shape_type = SHAPE_TYPE_RECTANGLE;
         assert_eq!(shape.shape_type_name(), "Rectangle");
-        
+
         shape.shape_type = SHAPE_TYPE_ELLIPSE;
         assert_eq!(shape.shape_type_name(), "Ellipse");
-        
+
         shape.shape_type = SHAPE_TYPE_TEXT_BOX;
         assert_eq!(shape.shape_type_name(), "TextBox");
     }
@@ -3086,20 +3201,20 @@ mod tests {
         let mut shape = EscherShape::new();
         shape.flags = FSP_FLAG_GROUP | FSP_FLAG_FLIP_H;
         shape.is_group = true; // This is typically set by the parser based on the flag
-        
+
         assert!(shape.is_group);
         assert!(shape.is_flip_h());
         assert!(!shape.is_flip_v());
         assert!(!shape.is_deleted());
-        
+
         // Test flag detection
         assert!((shape.flags & FSP_FLAG_GROUP) != 0);
         assert!((shape.flags & FSP_FLAG_FLIP_H) != 0);
         assert!((shape.flags & FSP_FLAG_FLIP_V) == 0);
     }
-    
+
     // Shape Mapping Tests
-    
+
     #[test]
     fn test_map_rectangle() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_RECTANGLE, None, None);
@@ -3110,7 +3225,7 @@ mod tests {
             _ => panic!("Expected Rectangle, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_round_rect() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_ROUND_RECT, Some(5400), None);
@@ -3122,13 +3237,13 @@ mod tests {
             _ => panic!("Expected Rectangle with corner_radius, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_ellipse() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_ELLIPSE, None, None);
         assert!(matches!(mapped, MappedShapeType::Ellipse));
     }
-    
+
     #[test]
     fn test_map_diamond() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_DIAMOND, None, None);
@@ -3139,7 +3254,7 @@ mod tests {
             _ => panic!("Expected Polygon with 4 sides, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_triangle() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_ISOSCELES_TRIANGLE, None, None);
@@ -3150,7 +3265,7 @@ mod tests {
             _ => panic!("Expected Polygon with 3 sides, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_right_triangle() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_RIGHT_TRIANGLE, None, None);
@@ -3163,7 +3278,7 @@ mod tests {
             _ => panic!("Expected Path, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_parallelogram() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_PARALLELOGRAM, None, None);
@@ -3174,7 +3289,7 @@ mod tests {
             _ => panic!("Expected Path, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_hexagon() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_HEXAGON, None, None);
@@ -3185,7 +3300,7 @@ mod tests {
             _ => panic!("Expected Polygon with 6 sides, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_octagon() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_OCTAGON, None, None);
@@ -3196,37 +3311,43 @@ mod tests {
             _ => panic!("Expected Polygon with 8 sides, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_star() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_STAR, None, None);
         match mapped {
-            MappedShapeType::Star { points, inner_ratio } => {
+            MappedShapeType::Star {
+                points,
+                inner_ratio,
+            } => {
                 assert_eq!(points, 5);
                 assert!(inner_ratio > 0.0 && inner_ratio < 1.0);
             }
             _ => panic!("Expected Star, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_line() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_LINE, None, None);
         match mapped {
-            MappedShapeType::Line { start_arrow, end_arrow } => {
+            MappedShapeType::Line {
+                start_arrow,
+                end_arrow,
+            } => {
                 assert_eq!(start_arrow, ArrowStyle::None);
                 assert_eq!(end_arrow, ArrowStyle::None);
             }
             _ => panic!("Expected Line, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_picture_frame() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_PICTURE_FRAME, None, None);
         assert!(matches!(mapped, MappedShapeType::PictureFrame));
     }
-    
+
     #[test]
     fn test_map_text_box() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_TEXT_BOX, None, None);
@@ -3235,7 +3356,7 @@ mod tests {
             _ => panic!("Expected Rectangle for text box, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_plus() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_PLUS, None, None);
@@ -3247,7 +3368,7 @@ mod tests {
             _ => panic!("Expected Path for plus, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_arrow() {
         let mapped = map_escher_shape_type(SHAPE_TYPE_ARROW, None, None);
@@ -3259,13 +3380,13 @@ mod tests {
             _ => panic!("Expected Path for arrow, got {:?}", mapped),
         }
     }
-    
+
     #[test]
     fn test_map_unknown() {
         let mapped = map_escher_shape_type(0xFFFF, None, None);
         assert!(matches!(mapped, MappedShapeType::Unknown));
     }
-    
+
     #[test]
     fn test_arrow_style_from_escher() {
         assert_eq!(ArrowStyle::from_escher(0), ArrowStyle::None);
@@ -3275,12 +3396,12 @@ mod tests {
         assert_eq!(ArrowStyle::from_escher(4), ArrowStyle::Oval);
         assert_eq!(ArrowStyle::from_escher(5), ArrowStyle::OpenArrow);
     }
-    
+
     #[test]
     fn test_mapped_path_right_triangle() {
         let path = MappedPath::right_triangle();
         assert_eq!(path.commands.len(), 4);
-        
+
         // First command should be MoveTo
         match path.commands[0] {
             MappedPathCommand::MoveTo { x, y } => {
@@ -3290,52 +3411,52 @@ mod tests {
             _ => panic!("First command should be MoveTo"),
         }
     }
-    
+
     #[test]
     fn test_mapped_path_parallelogram() {
         let path = MappedPath::parallelogram(0.25);
         assert_eq!(path.commands.len(), 5);
     }
-    
+
     #[test]
     fn test_mapped_path_trapezoid() {
         let path = MappedPath::trapezoid(0.25);
         assert_eq!(path.commands.len(), 5);
     }
-    
+
     #[test]
     fn test_mapped_path_plus() {
         let path = MappedPath::plus(1.0 / 3.0);
         // Plus has 12 vertices + close
         assert_eq!(path.commands.len(), 13);
     }
-    
+
     #[test]
     fn test_mapped_path_right_arrow() {
         let path = MappedPath::right_arrow(0.5, 0.4);
         // Arrow has 7 vertices + close
         assert_eq!(path.commands.len(), 8);
     }
-    
+
     #[test]
     fn test_mapped_path_regular_polygon() {
         // Test triangle
         let tri = MappedPath::regular_polygon(3);
         assert_eq!(tri.commands.len(), 4); // 3 vertices + close
-        
+
         // Test hexagon
         let hex = MappedPath::regular_polygon(6);
         assert_eq!(hex.commands.len(), 7); // 6 vertices + close
     }
-    
+
     #[test]
     fn test_get_default_adjustments() {
         let (adj1, adj2) = get_default_adjustments(SHAPE_TYPE_ROUND_RECT);
         assert!(adj1.is_some());
-        
+
         let (adj1, adj2) = get_default_adjustments(SHAPE_TYPE_PARALLELOGRAM);
         assert!(adj1.is_some());
-        
+
         let (adj1, adj2) = get_default_adjustments(SHAPE_TYPE_RECTANGLE);
         assert!(adj1.is_none());
     }
@@ -3347,14 +3468,14 @@ mod tests {
         // Test FOPT property with rotation: ID=0x0004 (FOPT_ROTATION)
         // 90 degrees = 90 * 65536 = 5898240 = 0x005A0000
         let data = [
-            0x04, 0x00,                   // Property ID (0x0004 = rotation)
-            0x00, 0x00, 0x5A, 0x00,       // Value: 5898240 in little-endian
+            0x04, 0x00, // Property ID (0x0004 = rotation)
+            0x00, 0x00, 0x5A, 0x00, // Value: 5898240 in little-endian
         ];
         let props = FoptProperty::parse_all(&data);
-        
+
         assert_eq!(props.len(), 1);
         assert_eq!(props[0].id, FOPT_ROTATION);
-        
+
         // Convert fixed-point to degrees
         let rotation_deg = props[0].value as i32 as f64 / 65536.0;
         assert!((rotation_deg - 90.0).abs() < 0.001);
@@ -3365,14 +3486,14 @@ mod tests {
         // Test negative rotation: -45 degrees = -45 * 65536 = -2949120
         // As u32 this is 0xFFD30000 (two's complement)
         let data = [
-            0x04, 0x00,                   // Property ID (0x0004 = rotation)
-            0x00, 0x00, 0xD3, 0xFF,       // -2949120 in little-endian (0xFFD30000)
+            0x04, 0x00, // Property ID (0x0004 = rotation)
+            0x00, 0x00, 0xD3, 0xFF, // -2949120 in little-endian (0xFFD30000)
         ];
         let props = FoptProperty::parse_all(&data);
-        
+
         assert_eq!(props.len(), 1);
         assert_eq!(props[0].id, FOPT_ROTATION);
-        
+
         // Convert fixed-point to degrees (treating as signed)
         let rotation_deg = props[0].value as i32 as f64 / 65536.0;
         assert!((rotation_deg - (-45.0)).abs() < 0.001);
@@ -3383,7 +3504,7 @@ mod tests {
         // Verify the flip flag constant values match the MS-ODRAW spec
         assert_eq!(FSP_FLAG_FLIP_H, 0x0040);
         assert_eq!(FSP_FLAG_FLIP_V, 0x0080);
-        
+
         // Test combined flags
         let flags_both = FSP_FLAG_FLIP_H | FSP_FLAG_FLIP_V;
         assert_eq!(flags_both, 0x00C0);
@@ -3392,21 +3513,21 @@ mod tests {
     #[test]
     fn test_escher_shape_flip_methods() {
         let mut shape = EscherShape::new();
-        
+
         // No flips initially
         assert!(!shape.is_flip_h());
         assert!(!shape.is_flip_v());
-        
+
         // Set horizontal flip
         shape.flags = FSP_FLAG_FLIP_H;
         assert!(shape.is_flip_h());
         assert!(!shape.is_flip_v());
-        
+
         // Set vertical flip
         shape.flags = FSP_FLAG_FLIP_V;
         assert!(!shape.is_flip_h());
         assert!(shape.is_flip_v());
-        
+
         // Set both flips
         shape.flags = FSP_FLAG_FLIP_H | FSP_FLAG_FLIP_V;
         assert!(shape.is_flip_h());
@@ -3422,27 +3543,27 @@ mod tests {
     #[test]
     fn test_rotation_fixed_point_format() {
         // Test various rotation angles in fixed-point 16.16 format
-        
+
         // 0 degrees
         let zero_deg = 0u32 as i32 as f64 / 65536.0;
         assert!((zero_deg - 0.0).abs() < 0.001);
-        
+
         // 45 degrees = 45 * 65536 = 2949120
         let forty_five = 2949120u32 as i32 as f64 / 65536.0;
         assert!((forty_five - 45.0).abs() < 0.001);
-        
+
         // 90 degrees = 90 * 65536 = 5898240
         let ninety = 5898240u32 as i32 as f64 / 65536.0;
         assert!((ninety - 90.0).abs() < 0.001);
-        
+
         // 180 degrees = 180 * 65536 = 11796480
         let one_eighty = 11796480u32 as i32 as f64 / 65536.0;
         assert!((one_eighty - 180.0).abs() < 0.001);
-        
+
         // 270 degrees = 270 * 65536 = 17694720
         let two_seventy = 17694720u32 as i32 as f64 / 65536.0;
         assert!((two_seventy - 270.0).abs() < 0.001);
-        
+
         // -90 degrees (counter-clockwise)
         let neg_ninety_fixed = (-90i32 * 65536) as u32;
         let neg_ninety = neg_ninety_fixed as i32 as f64 / 65536.0;

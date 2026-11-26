@@ -168,7 +168,10 @@ impl Icon {
     /// SVG bytes ready for the loader. Monochrome icons get `fill="#FFFFFF"` injected.
     fn bytes(self) -> Arc<[u8]> {
         static CACHE: OnceLock<Mutex<HashMap<Icon, Arc<[u8]>>>> = OnceLock::new();
-        let mut cache = CACHE.get_or_init(Default::default).lock().unwrap_or_else(|e| e.into_inner());
+        let mut cache = CACHE
+            .get_or_init(Default::default)
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         cache
             .entry(self)
             .or_insert_with(|| {
@@ -176,7 +179,10 @@ impl Icon {
                     Arc::from(self.svg())
                 } else {
                     let text = String::from_utf8_lossy(self.svg());
-                    Arc::from(text.replacen("<svg ", "<svg fill=\"#FFFFFF\" ", 1).into_bytes())
+                    Arc::from(
+                        text.replacen("<svg ", "<svg fill=\"#FFFFFF\" ", 1)
+                            .into_bytes(),
+                    )
                 }
             })
             .clone()
@@ -189,21 +195,37 @@ impl Icon {
             bytes: egui::load::Bytes::Shared(self.bytes()),
         };
         let image = Image::new(source).fit_to_exact_size(Vec2::splat(size));
-        if self.is_multicolor() { image } else { image.tint(color) }
+        if self.is_multicolor() {
+            image
+        } else {
+            image.tint(color)
+        }
     }
 
     /// Paint this icon into `rect`, tinted `color` (ignored for multi-color icons).
     pub fn paint(self, ui: &egui::Ui, rect: egui::Rect, color: Color32) {
-        self.image(rect.width().min(rect.height()), color).paint_at(ui, rect);
+        self.image(rect.width().min(rect.height()), color)
+            .paint_at(ui, rect);
     }
 
     /// Paint this icon for a command that may be disabled: monochrome icons use
     /// `color` or `disabled`, multi-color icons are faded when disabled.
-    pub fn paint_state(self, ui: &egui::Ui, rect: egui::Rect, enabled: bool, color: Color32, disabled: Color32) {
+    pub fn paint_state(
+        self,
+        ui: &egui::Ui,
+        rect: egui::Rect,
+        enabled: bool,
+        color: Color32,
+        disabled: Color32,
+    ) {
         let size = rect.width().min(rect.height());
         let image = if self.is_multicolor() {
             let image = self.image(size, color);
-            if enabled { image } else { image.tint(Color32::from_white_alpha(90)) }
+            if enabled {
+                image
+            } else {
+                image.tint(Color32::from_white_alpha(90))
+            }
         } else {
             self.image(size, if enabled { color } else { disabled })
         };

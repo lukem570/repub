@@ -35,7 +35,10 @@ impl Point {
 
     /// Linear interpolation toward `other` by factor `t` (unclamped).
     pub fn lerp(self, other: Point, t: f64) -> Point {
-        Point::new(self.x + (other.x - self.x) * t, self.y + (other.y - self.y) * t)
+        Point::new(
+            self.x + (other.x - self.x) * t,
+            self.y + (other.y - self.y) * t,
+        )
     }
 }
 

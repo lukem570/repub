@@ -154,7 +154,10 @@ mod tests {
         scene.background = Some(ScenePaint::Solid(Color::WHITE));
         let pixmap = CpuRasterizer::from_scene(&scene, &RenderOptions::default()).unwrap();
         let png = export_png(&pixmap).unwrap();
-        assert_eq!(&png[0..8], &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &png[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
     }
 
     #[test]

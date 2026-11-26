@@ -32,8 +32,8 @@ pub mod text_format;
 pub mod tools;
 
 pub use commands::{
-    AddPageCommand, AddShapeCommand, Command, CommandHistory, DeletePageCommand, DeleteShapesCommand,
-    MoveShapesCommand, ResizeShapeCommand, SnapshotCommand,
+    AddPageCommand, AddShapeCommand, Command, CommandHistory, DeletePageCommand,
+    DeleteShapesCommand, MoveShapesCommand, ResizeShapeCommand, SnapshotCommand,
 };
 pub use edit_points::{anchor_at, anchor_points, move_anchor, EditPointsState};
 pub use error::{EditError, EditResult};
@@ -41,8 +41,10 @@ pub use hit_test::{member_at, shape_at, Hit, HIT_TOLERANCE_PX};
 pub use hyperlinks::{destination, open_address, Destination};
 pub use snapping::{SnapAxis, SnapConfig, SnapEngine, SnapResult, SnapTarget, SNAP_DISTANCE};
 pub use spelling::{Misspelled, SpellSession};
-pub use state::{AppState, CopiedFormat, DisplayUnit, Guide, GuideOrientation, MasterEdit, PageDragState};
-pub use text_chain::{ChainFrame, break_link, chain, head, layout_chains, link, previous};
+pub use state::{
+    AppState, CopiedFormat, DisplayUnit, Guide, GuideOrientation, MasterEdit, PageDragState,
+};
+pub use text_chain::{break_link, chain, head, layout_chains, link, previous, ChainFrame};
 pub use text_edit::{TextEditState, TextPos};
 pub use text_format::{CharChange, ListKind, Toggle};
 pub use tools::{CursorKind, DrawState, HandleType, ResizeHandle, SelectState, Tool};

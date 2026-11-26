@@ -612,7 +612,11 @@ impl TableLayouter {
     ) {
         for cell_layout in &mut layout.cells {
             if let Some(cell) = data.cell(cell_layout.row as u32, cell_layout.col as u32) {
-                let col_width = layout.col_widths.get(cell_layout.col).copied().unwrap_or(100.0);
+                let col_width = layout
+                    .col_widths
+                    .get(cell_layout.col)
+                    .copied()
+                    .unwrap_or(100.0);
                 let measurement = self.measure_cell_content(cell, col_width, font_provider);
                 let content_height = measurement.height_at_width - (cell.padding * 2.0);
 
@@ -959,7 +963,11 @@ mod tests {
         let mut data = table_data(bounds, 1, 2);
 
         data.set_cell_text(0, 0, "X");
-        data.set_cell_text(0, 1, "This is an extremely long piece of text that would normally make a very wide column");
+        data.set_cell_text(
+            0,
+            1,
+            "This is an extremely long piece of text that would normally make a very wide column",
+        );
 
         let font_provider = MockFontProvider::new();
         let mut layouter = TableLayouter::new();

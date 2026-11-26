@@ -209,7 +209,9 @@ impl Page {
         }
         fn relink(shape: &mut Shape, ids: &HashMap<ObjectId, ObjectId>) {
             match &mut shape.kind {
-                ShapeKind::TextFrame(tf) => tf.linked_frame = tf.linked_frame.and_then(|old| ids.get(&old).copied()),
+                ShapeKind::TextFrame(tf) => {
+                    tf.linked_frame = tf.linked_frame.and_then(|old| ids.get(&old).copied())
+                }
                 ShapeKind::Group(group) => group.children.iter_mut().for_each(|c| relink(c, ids)),
                 _ => {}
             }
@@ -335,9 +337,18 @@ impl Page {
         }
         let (top_layer, top_index) = *found.last()?;
         // Position in the top layer once the members are taken out
-        let insert_at = self.layers[top_layer].shapes()[..top_index].iter().filter(|s| !ids.contains(&s.id())).count();
-        let members: Vec<ObjectId> = found.iter().map(|&(li, si)| self.layers[li].shapes()[si].id()).collect();
-        let children: Vec<Shape> = members.iter().filter_map(|&id| self.remove_shape(id)).collect();
+        let insert_at = self.layers[top_layer].shapes()[..top_index]
+            .iter()
+            .filter(|s| !ids.contains(&s.id()))
+            .count();
+        let members: Vec<ObjectId> = found
+            .iter()
+            .map(|&(li, si)| self.layers[li].shapes()[si].id())
+            .collect();
+        let children: Vec<Shape> = members
+            .iter()
+            .filter_map(|&id| self.remove_shape(id))
+            .collect();
         let group = Shape::group_from(children);
         let id = group.id();
         let layer = &mut self.layers[top_layer];
@@ -350,12 +361,18 @@ impl Page {
     /// (empty if `id` isn't a group on this page).
     pub fn ungroup(&mut self, id: ObjectId) -> Vec<ObjectId> {
         for layer in &mut self.layers {
-            let Some(index) = layer.shapes().iter().position(|s| s.id() == id) else { continue };
+            let Some(index) = layer.shapes().iter().position(|s| s.id() == id) else {
+                continue;
+            };
             if !matches!(layer.shapes()[index].kind, ShapeKind::Group(_)) {
                 return Vec::new();
             }
-            let Some(group_shape) = layer.remove_shape(id) else { return Vec::new() };
-            let ShapeKind::Group(group) = group_shape.kind else { return Vec::new() };
+            let Some(group_shape) = layer.remove_shape(id) else {
+                return Vec::new();
+            };
+            let ShapeKind::Group(group) = group_shape.kind else {
+                return Vec::new();
+            };
             let mut ids = Vec::new();
             for (k, child) in group.children.into_iter().enumerate() {
                 let child_id = layer.add_shape(child);
@@ -631,7 +648,11 @@ impl Document {
     /// (when it uses one), then the page's own.
     pub fn page_layers<'a>(&'a self, page: &'a Page) -> impl Iterator<Item = &'a Layer> + 'a {
         let master = page.master_page.and_then(|id| self.master_page(id));
-        master.map(|m| m.layers.as_slice()).unwrap_or(&[]).iter().chain(page.layers())
+        master
+            .map(|m| m.layers.as_slice())
+            .unwrap_or(&[])
+            .iter()
+            .chain(page.layers())
     }
 
     /// Get a master page by ID.
@@ -692,8 +713,8 @@ impl Document {
 #[cfg(test)]
 mod group_tests {
     use super::*;
-    use repub_geometry::{Point, Rect};
     use crate::shape::{Shape, ShapeKind};
+    use repub_geometry::{Point, Rect};
 
     fn ids(page: &Page) -> Vec<ObjectId> {
         page.layers()[0].shapes().iter().map(|s| s.id()).collect()
@@ -712,7 +733,10 @@ mod group_tests {
         assert_eq!(ids(&page), vec![b, g, d]);
         match page.get_shape(g).map(|s| &s.kind) {
             Some(ShapeKind::Group(group)) => {
-                assert_eq!(group.children.iter().map(|s| s.id()).collect::<Vec<_>>(), vec![a, c]);
+                assert_eq!(
+                    group.children.iter().map(|s| s.id()).collect::<Vec<_>>(),
+                    vec![a, c]
+                );
                 assert_eq!(group.bounds, Rect::new(0.0, 0.0, 10.0, 60.0));
             }
             _ => panic!("group"),
@@ -742,8 +766,14 @@ mod group_tests {
         group.set_bounds(Rect::new(100.0, 100.0, 80.0, 80.0)); // twice the size
         match &group.kind {
             ShapeKind::Group(group) => {
-                assert_eq!(group.children[0].bounds(), Rect::new(100.0, 100.0, 20.0, 20.0));
-                assert_eq!(group.children[1].bounds(), Rect::new(160.0, 160.0, 20.0, 20.0));
+                assert_eq!(
+                    group.children[0].bounds(),
+                    Rect::new(100.0, 100.0, 20.0, 20.0)
+                );
+                assert_eq!(
+                    group.children[1].bounds(),
+                    Rect::new(160.0, 160.0, 20.0, 20.0)
+                );
             }
             _ => unreachable!(),
         }
@@ -753,8 +783,8 @@ mod group_tests {
 #[cfg(test)]
 mod duplicate_tests {
     use super::*;
-    use repub_geometry::Rect;
     use crate::shape::{Shape, ShapeKind};
+    use repub_geometry::Rect;
 
     fn linked_id(shape: &Shape) -> Option<ObjectId> {
         match &shape.kind {
@@ -781,9 +811,18 @@ mod duplicate_tests {
         assert_eq!(doc.pages().len(), 2);
         let (orig, copy) = (&doc.pages()[0], &doc.pages()[1]);
         assert_ne!(orig.id, copy.id);
-        let ids = |p: &Page| p.layers().iter().flat_map(|l| l.shapes()).map(|s| s.id()).collect::<Vec<_>>();
+        let ids = |p: &Page| {
+            p.layers()
+                .iter()
+                .flat_map(|l| l.shapes())
+                .map(|s| s.id())
+                .collect::<Vec<_>>()
+        };
         assert_eq!(ids(copy).len(), 3);
-        assert!(ids(copy).iter().all(|id| !ids(orig).contains(id)), "copies get new ids");
+        assert!(
+            ids(copy).iter().all(|id| !ids(orig).contains(id)),
+            "copies get new ids"
+        );
         // The copied link points at the copied frame, not the original
         let shapes: Vec<&Shape> = copy.layers().iter().flat_map(|l| l.shapes()).collect();
         assert_eq!(linked_id(shapes[0]), Some(shapes[1].id()));
@@ -795,8 +834,8 @@ mod duplicate_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_geometry::Rect;
     use crate::shape::Shape;
+    use repub_geometry::Rect;
 
     #[test]
     fn test_new_document_has_one_page() {

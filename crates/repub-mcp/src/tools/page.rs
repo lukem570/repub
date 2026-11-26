@@ -3,10 +3,10 @@
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use super::Tool;
 use crate::error::{McpError, McpResult};
 use crate::protocol::{ToolDefinition, ToolResult};
 use crate::session::Session;
-use super::Tool;
 
 /// Add a new page.
 pub struct AddPage;
@@ -35,8 +35,8 @@ impl Tool for AddPage {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: AddPageArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: AddPageArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document_mut()?;
         let page_count = doc.pages().len();
@@ -102,8 +102,8 @@ impl Tool for DeletePage {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: DeletePageArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: DeletePageArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document_mut()?;
         let page_count = doc.pages().len();
@@ -114,7 +114,7 @@ impl Tool for DeletePage {
 
         if page_count == 1 {
             return Err(McpError::InvalidArgument(
-                "Cannot delete the last page of a document".to_string()
+                "Cannot delete the last page of a document".to_string(),
             ));
         }
 
@@ -146,18 +146,23 @@ impl Tool for ListPages {
     fn execute(&self, session: &mut Session, _args: Value) -> McpResult<ToolResult> {
         let doc = session.document()?;
 
-        let pages: Vec<Value> = doc.pages().iter().enumerate().map(|(i, page)| {
-            let obj_count: usize = page.layers().iter().map(|l| l.shapes().len()).sum();
-            let layer_count = page.layers().len();
+        let pages: Vec<Value> = doc
+            .pages()
+            .iter()
+            .enumerate()
+            .map(|(i, page)| {
+                let obj_count: usize = page.layers().iter().map(|l| l.shapes().len()).sum();
+                let layer_count = page.layers().len();
 
-            json!({
-                "index": i,
-                "width": page.size.width,
-                "height": page.size.height,
-                "layers": layer_count,
-                "objects": obj_count
+                json!({
+                    "index": i,
+                    "width": page.size.width,
+                    "height": page.size.height,
+                    "layers": layer_count,
+                    "objects": obj_count
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(ToolResult::json(json!({
             "total": pages.len(),
@@ -169,7 +174,7 @@ impl Tool for ListPages {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{Document, PageSize, PageOrientation};
+    use repub_model::{Document, PageOrientation, PageSize};
 
     fn setup_session() -> Session {
         let mut session = Session::new();
@@ -182,7 +187,7 @@ mod tests {
     fn test_add_page() {
         let tool = AddPage;
         let mut session = setup_session();
-        
+
         let result = tool.execute(&mut session, json!({})).unwrap();
         assert!(!result.is_error);
         assert_eq!(session.document().unwrap().pages().len(), 2);
@@ -193,7 +198,7 @@ mod tests {
         let tool = AddPage;
         let mut session = setup_session();
         session.document_mut().unwrap().add_page(); // Now 2 pages
-        
+
         let result = tool.execute(&mut session, json!({"position": 1})).unwrap();
         assert!(!result.is_error);
         assert_eq!(session.document().unwrap().pages().len(), 3);
@@ -203,7 +208,7 @@ mod tests {
     fn test_list_pages() {
         let tool = ListPages;
         let mut session = setup_session();
-        
+
         let result = tool.execute(&mut session, json!({})).unwrap();
         assert!(!result.is_error);
     }

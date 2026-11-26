@@ -1,6 +1,8 @@
 //! Serde DTOs for auto-shape vector geometry.
 
-use repub_model::geometry::{AutoShape, Path, PathCommand, PresetGeometry, ShapeGeometry, SubpathStyle};
+use repub_model::geometry::{
+    AutoShape, Path, PathCommand, PresetGeometry, ShapeGeometry, SubpathStyle,
+};
 use serde::{Deserialize, Serialize};
 
 use super::geometry::PointDto;
@@ -11,7 +13,10 @@ use super::geometry::PointDto;
 pub enum PathCommandDto {
     MoveTo(PointDto),
     LineTo(PointDto),
-    QuadTo { control: PointDto, end: PointDto },
+    QuadTo {
+        control: PointDto,
+        end: PointDto,
+    },
     CubicTo {
         control1: PointDto,
         control2: PointDto,

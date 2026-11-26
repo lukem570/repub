@@ -20,7 +20,9 @@ use std::cell::Cell;
 
 use repub_geometry::Rect;
 use repub_model::shape::{Shape, ShapeKind, TextFrameData, VerticalAlignment};
-use repub_model::styles::{CharacterStyle, LineSpacing, StrikethroughStyle, TextAlignment, UnderlineStyle};
+use repub_model::styles::{
+    CharacterStyle, LineSpacing, StrikethroughStyle, TextAlignment, UnderlineStyle,
+};
 use repub_model::text::{Field, InlineElement, Paragraph};
 use repub_model::ObjectId;
 
@@ -53,7 +55,11 @@ pub fn set_file_name(name: &str) {
 fn formatted_now(format: &str, fallback: &str) -> String {
     use chrono::format::{Item, StrftimeItems};
     let valid = !format.is_empty() && !StrftimeItems::new(format).any(|i| matches!(i, Item::Error));
-    chrono::Local::now().format(if valid { format } else { fallback }).to_string().trim().to_string()
+    chrono::Local::now()
+        .format(if valid { format } else { fallback })
+        .to_string()
+        .trim()
+        .to_string()
 }
 
 fn current_page_context() -> (u32, u32) {
@@ -170,7 +176,11 @@ fn base_item(atlas: &Atlas, c: char, offset: usize, style: &CharacterStyle) -> I
         underline: style.underline,
         underline_color: style.underline_color.as_ref().map(color_of),
         strikethrough: style.strikethrough,
-        background: style.background_color.as_ref().filter(|c| c.a > 0.0).map(color_of),
+        background: style
+            .background_color
+            .as_ref()
+            .filter(|c| c.a > 0.0)
+            .map(color_of),
         advance: style.letter_spacing as f32,
         is_space: c.is_whitespace(),
         hard_break: false,
@@ -189,7 +199,21 @@ struct Marker {
 fn list_number(format: repub_model::styles::NumberFormat, n: u32) -> String {
     use repub_model::styles::NumberFormat;
     fn roman(mut n: u32) -> String {
-        let table = [(1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"), (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")];
+        let table = [
+            (1000, "m"),
+            (900, "cm"),
+            (500, "d"),
+            (400, "cd"),
+            (100, "c"),
+            (90, "xc"),
+            (50, "l"),
+            (40, "xl"),
+            (10, "x"),
+            (9, "ix"),
+            (5, "v"),
+            (4, "iv"),
+            (1, "i"),
+        ];
         let mut out = String::new();
         for (value, digits) in table {
             while n >= value {
@@ -220,7 +244,10 @@ fn list_number(format: repub_model::styles::NumberFormat, n: u32) -> String {
 /// list indent and the marker sits at the paragraph's left edge. `counter`
 /// carries numbering through consecutive numbered paragraphs.
 /// Returns (left indent, first-line indent, marker).
-fn list_layout(ps: &repub_model::styles::ParagraphStyle, counter: &mut Option<(repub_model::styles::NumberFormat, u32)>) -> (f32, f32, Option<Marker>) {
+fn list_layout(
+    ps: &repub_model::styles::ParagraphStyle,
+    counter: &mut Option<(repub_model::styles::NumberFormat, u32)>,
+) -> (f32, f32, Option<Marker>) {
     use repub_model::styles::ListStyle;
     let (left, first) = (ps.left_indent as f32, ps.first_line_indent as f32);
     let (text, list_indent) = match &ps.list_style {
@@ -232,7 +259,11 @@ fn list_layout(ps: &repub_model::styles::ParagraphStyle, counter: &mut Option<(r
             *counter = None;
             (character.to_string(), *indent as f32)
         }
-        ListStyle::Numbered { format, start, indent } => {
+        ListStyle::Numbered {
+            format,
+            start,
+            indent,
+        } => {
             let n = match *counter {
                 Some((f, n)) if f == *format => n + 1,
                 _ => *start,
@@ -242,7 +273,14 @@ fn list_layout(ps: &repub_model::styles::ParagraphStyle, counter: &mut Option<(r
         }
     };
     if first < 0.0 {
-        (left, 0.0, Some(Marker { text, x: left + first }))
+        (
+            left,
+            0.0,
+            Some(Marker {
+                text,
+                x: left + first,
+            }),
+        )
     } else {
         let hang = if list_indent > 0.0 { list_indent } else { 18.0 };
         (left + hang, 0.0, Some(Marker { text, x: left }))
@@ -254,27 +292,34 @@ fn paragraph_items(atlas: &Atlas, para: &Paragraph) -> Vec<Item> {
     let mut items: Vec<Item> = Vec::new();
     let default = &para.style.default_char_style;
     let mut offset = 0;
-    let push_text = |text: &str, style: &CharacterStyle, items: &mut Vec<Item>, offset: &mut usize| {
-        for c in text.chars() {
-            let upper = c.to_uppercase().next().unwrap_or(c);
-            let small = style.small_caps && !style.all_caps && c.is_lowercase();
-            let shown = if style.all_caps || small { upper } else { c };
-            let mut item = base_item(atlas, shown, *offset, style);
-            if small {
-                item.size *= 0.8;
+    let push_text =
+        |text: &str, style: &CharacterStyle, items: &mut Vec<Item>, offset: &mut usize| {
+            for c in text.chars() {
+                let upper = c.to_uppercase().next().unwrap_or(c);
+                let small = style.small_caps && !style.all_caps && c.is_lowercase();
+                let shown = if style.all_caps || small { upper } else { c };
+                let mut item = base_item(atlas, shown, *offset, style);
+                if small {
+                    item.size *= 0.8;
+                }
+                items.push(item);
+                *offset += 1;
             }
-            items.push(item);
-            *offset += 1;
-        }
-    };
+        };
 
     for element in &para.elements {
         match element {
             InlineElement::Text(run) => push_text(&run.text, &run.style, &mut items, &mut offset),
-            InlineElement::Link(link) => push_text(&link.text, &link.style, &mut items, &mut offset),
-            InlineElement::Field(field) => push_text(&field_text(field), default, &mut items, &mut offset),
+            InlineElement::Link(link) => {
+                push_text(&link.text, &link.style, &mut items, &mut offset)
+            }
+            InlineElement::Field(field) => {
+                push_text(&field_text(field), default, &mut items, &mut offset)
+            }
             InlineElement::Tab => {
-                let style = items.last().map_or_else(|| base_item(atlas, ' ', 0, default), |i| *i);
+                let style = items
+                    .last()
+                    .map_or_else(|| base_item(atlas, ' ', 0, default), |i| *i);
                 let mut item = base_item(atlas, ' ', offset, default);
                 item.size = style.size;
                 item.face = style.face;
@@ -311,7 +356,11 @@ fn paragraph_items(atlas: &Atlas, para: &Paragraph) -> Vec<Item> {
         }
         let tab = items[i].advance.is_nan();
         let glyph_advance = face.glyph(items[i].c).map_or(0.5, |g| g.advance);
-        let mut advance = if tab { glyph_advance * TAB_SPACES } else { glyph_advance };
+        let mut advance = if tab {
+            glyph_advance * TAB_SPACES
+        } else {
+            glyph_advance
+        };
         if let Some(next) = items.get(i + 1) {
             if !tab && next.face == items[i].face && next.size == items[i].size {
                 advance += face.kern(items[i].c, next.c);
@@ -399,9 +448,19 @@ fn exclusions_for(frame: ObjectId) -> Vec<Exclusion> {
 
 /// The free stretch of `[left, right]` for a line occupying `[top, bottom]`.
 /// `Err(y)` when the line can't go here and should move down to `y`.
-fn free_segment(left: f32, right: f32, top: f32, bottom: f32, exclusions: &[Exclusion], min_width: f32) -> Result<(f32, f32), f32> {
+fn free_segment(
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
+    exclusions: &[Exclusion],
+    min_width: f32,
+) -> Result<(f32, f32), f32> {
     use repub_model::styles::TextWrapSide;
-    let hits: Vec<&Exclusion> = exclusions.iter().filter(|e| e.y0 < bottom && e.y1 > top && e.x0 < right && e.x1 > left).collect();
+    let hits: Vec<&Exclusion> = exclusions
+        .iter()
+        .filter(|e| e.y0 < bottom && e.y1 > top && e.x0 < right && e.x1 > left)
+        .collect();
     if hits.is_empty() {
         return Ok((left, right));
     }
@@ -433,15 +492,24 @@ fn free_segment(left: f32, right: f32, top: f32, bottom: f32, exclusions: &[Excl
         free.last().copied()
     } else {
         // Both sides / largest side: the widest gap (one stretch per line)
-        free.iter().copied().fold(None, |best: Option<(f32, f32)>, f| match best {
-            Some(b) if b.1 - b.0 >= f.1 - f.0 => Some(b),
-            _ => Some(f),
-        })
+        free.iter()
+            .copied()
+            .fold(None, |best: Option<(f32, f32)>, f| match best {
+                Some(b) if b.1 - b.0 >= f.1 - f.0 => Some(b),
+                _ => Some(f),
+            })
     };
     pick.ok_or(below)
 }
 
-fn measure(atlas: &Atlas, items: &[Item], start: usize, end: usize, last: bool, default_size: f32) -> Line {
+fn measure(
+    atlas: &Atlas,
+    items: &[Item],
+    start: usize,
+    end: usize,
+    last: bool,
+    default_size: f32,
+) -> Line {
     let (mut ascent, mut descent, mut gap) = (0.0f32, 0.0f32, 0.0f32);
     for item in &items[start..end] {
         let face: &Face = atlas.face(item.face);
@@ -461,7 +529,15 @@ fn measure(atlas: &Atlas, items: &[Item], start: usize, end: usize, last: bool, 
         trimmed -= 1;
     }
     let width = items[start..trimmed].iter().map(|i| i.advance).sum();
-    Line { start, end, width, ascent, descent, gap, last }
+    Line {
+        start,
+        end,
+        width,
+        ascent,
+        descent,
+        gap,
+        last,
+    }
 }
 
 fn line_height(line: &Line, spacing: &LineSpacing) -> f32 {
@@ -528,18 +604,29 @@ fn fit_scale(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) -> f
     }
     let exclusions = exclusions_for(id);
     if let Some(scale) = CACHE.with(|c| {
-        c.borrow().get(&id).filter(|(cached, b, ex, _)| cached == tf && *b == bounds && *ex == exclusions).map(|(_, _, _, s)| *s)
+        c.borrow()
+            .get(&id)
+            .filter(|(cached, b, ex, _)| cached == tf && *b == bounds && *ex == exclusions)
+            .map(|(_, _, _, s)| *s)
     }) {
         return scale;
     }
     // Largest scale that fits: binary search to within 1%
     let (mut lo, mut hi) = (low, high);
-    if !fits(&layout_scaled(atlas, &scaled_frame(tf, lo), bounds, id), tf, bounds) {
+    if !fits(
+        &layout_scaled(atlas, &scaled_frame(tf, lo), bounds, id),
+        tf,
+        bounds,
+    ) {
         hi = lo;
     }
     while hi / lo > 1.01 {
         let mid = (lo * hi).sqrt();
-        if fits(&layout_scaled(atlas, &scaled_frame(tf, mid), bounds, id), tf, bounds) {
+        if fits(
+            &layout_scaled(atlas, &scaled_frame(tf, mid), bounds, id),
+            tf,
+            bounds,
+        ) {
             lo = mid;
         } else {
             hi = mid;
@@ -590,7 +677,11 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
 
     // Columns of equal width; text fills one, then moves to the top of the next
     let columns = tf.columns.count.max(1) as usize;
-    let gap = if columns > 1 { tf.columns.gap.max(0.0) as f32 } else { 0.0 };
+    let gap = if columns > 1 {
+        tf.columns.gap.max(0.0) as f32
+    } else {
+        0.0
+    };
     let width = ((area_width - gap * (columns - 1) as f32) / columns as f32).max(1.0);
     let mut column = 0usize;
     let mut tallest = 0.0f32;
@@ -636,7 +727,14 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                 guard += 1;
                 let col_left = left + column as f32 * (width + gap);
                 let min_width = (default_size * 2.0).min(width);
-                let (seg_left, seg_right) = match free_segment(col_left, col_left + width, top + y, top + y + estimate, &exclusions, min_width) {
+                let (seg_left, seg_right) = match free_segment(
+                    col_left,
+                    col_left + width,
+                    top + y,
+                    top + y + estimate,
+                    &exclusions,
+                    min_width,
+                ) {
                     Ok(seg) => seg,
                     Err(next) if guard < 64 => {
                         y = (next - top).max(y + 1.0);
@@ -647,9 +745,23 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                 let text_width = (seg_right - seg_left - indent_left - right_indent).max(1.0);
                 let line = if more_text {
                     let end = break_one(&items, start, text_width - first_ind);
-                    measure(atlas, &items, start, end, end == items.len() || items[end - 1].hard_break, default_size)
+                    measure(
+                        atlas,
+                        &items,
+                        start,
+                        end,
+                        end == items.len() || items[end - 1].hard_break,
+                        default_size,
+                    )
                 } else {
-                    measure(atlas, &items, start, start, true, items.last().map_or(default_size, |i| i.size))
+                    measure(
+                        atlas,
+                        &items,
+                        start,
+                        start,
+                        true,
+                        items.last().map_or(default_size, |i| i.size),
+                    )
                 };
                 let lh = line_height(&line, &ps.line_spacing);
                 // Full column: carry on at the top of the next one (the last one overflows)
@@ -662,7 +774,14 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                 // Taller than estimated: check the obstacles against the real height
                 if lh > estimate + 0.5 && !exclusions.is_empty() && guard < 64 {
                     estimate = lh;
-                    match free_segment(col_left, col_left + width, top + y, top + y + lh, &exclusions, min_width) {
+                    match free_segment(
+                        col_left,
+                        col_left + width,
+                        top + y,
+                        top + y + lh,
+                        &exclusions,
+                        min_width,
+                    ) {
                         Ok((a, b)) if (b - a) + 0.5 < seg_right - seg_left => continue,
                         Err(next) => {
                             y = (next - top).max(y + 1.0);
@@ -681,7 +800,10 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
             let indent = indent_left + first_ind;
             let avail = text_width - first_ind;
             let slack = (avail - line.width).max(0.0);
-            let spaces = items[line.start..line.end].iter().filter(|i| i.is_space && !i.hard_break).count();
+            let spaces = items[line.start..line.end]
+                .iter()
+                .filter(|i| i.is_space && !i.hard_break)
+                .count();
             let (mut x, space_extra) = match ps.alignment {
                 TextAlignment::Center => (slack / 2.0, 0.0),
                 TextAlignment::Right => (slack, 0.0),
@@ -699,7 +821,11 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
 
             // List marker before the first line, in the style of the paragraph's text
             if let (0, Some(marker)) = (index, &marker) {
-                let style = items.iter().find(|i| !i.invisible).copied().unwrap_or_else(|| base_item(atlas, ' ', 0, &ps.default_char_style));
+                let style = items
+                    .iter()
+                    .find(|i| !i.invisible)
+                    .copied()
+                    .unwrap_or_else(|| base_item(atlas, ' ', 0, &ps.default_char_style));
                 let face = atlas.face(style.face);
                 let mut mx = seg_left + marker.x;
                 for c in marker.text.chars() {
@@ -707,7 +833,12 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                         if g.has_quad() {
                             let s = style.size;
                             out.quads.push(Quad {
-                                rect: [mx + g.plane[0] * s, baseline + g.plane[1] * s, mx + g.plane[2] * s, baseline + g.plane[3] * s],
+                                rect: [
+                                    mx + g.plane[0] * s,
+                                    baseline + g.plane[1] * s,
+                                    mx + g.plane[2] * s,
+                                    baseline + g.plane[3] * s,
+                                ],
                                 uv: g.uv,
                                 color: style.color,
                                 baseline,
@@ -723,17 +854,43 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
             let mut xs = vec![x];
             for item in &items[line.start..line.end] {
                 let face = atlas.face(item.face);
-                let solid_uv = [atlas.solid_uv[0], atlas.solid_uv[1], atlas.solid_uv[0], atlas.solid_uv[1]];
+                let solid_uv = [
+                    atlas.solid_uv[0],
+                    atlas.solid_uv[1],
+                    atlas.solid_uv[0],
+                    atlas.solid_uv[1],
+                ];
                 if let (Some(color), false) = (item.background, item.invisible) {
-                    let advance = item.advance + if item.is_space && !item.hard_break { space_extra } else { 0.0 };
-                    out.quads.push(Quad { rect: [x, baseline - item.size * 0.85, x + advance, baseline + item.size * 0.25], uv: solid_uv, color, baseline, skew: 0.0 });
+                    let advance = item.advance
+                        + if item.is_space && !item.hard_break {
+                            space_extra
+                        } else {
+                            0.0
+                        };
+                    out.quads.push(Quad {
+                        rect: [
+                            x,
+                            baseline - item.size * 0.85,
+                            x + advance,
+                            baseline + item.size * 0.25,
+                        ],
+                        uv: solid_uv,
+                        color,
+                        baseline,
+                        skew: 0.0,
+                    });
                 }
                 if !item.invisible {
                     if let Some(g) = face.glyph(item.c).filter(|g| g.has_quad()) {
                         let s = item.size;
                         let base = baseline - item.rise;
                         out.quads.push(Quad {
-                            rect: [x + g.plane[0] * s, base + g.plane[1] * s, x + g.plane[2] * s, base + g.plane[3] * s],
+                            rect: [
+                                x + g.plane[0] * s,
+                                base + g.plane[1] * s,
+                                x + g.plane[2] * s,
+                                base + g.plane[3] * s,
+                            ],
                             uv: g.uv,
                             color: item.color,
                             baseline: base,
@@ -741,11 +898,22 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                         });
                     }
                 }
-                let advance = item.advance + if item.is_space && !item.hard_break { space_extra } else { 0.0 };
+                let advance = item.advance
+                    + if item.is_space && !item.hard_break {
+                        space_extra
+                    } else {
+                        0.0
+                    };
                 if !item.invisible {
                     let thickness = (item.size * 0.06).max(0.5);
                     let mut bar = |from: f32, to: f32, y: f32, color: [f32; 4]| {
-                        out.quads.push(Quad { rect: [from, y, to, y + thickness], uv: solid_uv, color, baseline, skew: 0.0 });
+                        out.quads.push(Quad {
+                            rect: [from, y, to, y + thickness],
+                            uv: solid_uv,
+                            color,
+                            baseline,
+                            skew: 0.0,
+                        });
                     };
                     let color = item.underline_color.unwrap_or(item.color);
                     let uy = baseline + item.size * 0.12;
@@ -757,7 +925,11 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                             bar(x, x + advance, uy + thickness * 2.0, color);
                         }
                         UnderlineStyle::Dotted | UnderlineStyle::Dashed => {
-                            let (dash, gap) = if item.underline == UnderlineStyle::Dotted { (thickness, thickness) } else { (thickness * 4.0, thickness * 2.0) };
+                            let (dash, gap) = if item.underline == UnderlineStyle::Dotted {
+                                (thickness, thickness)
+                            } else {
+                                (thickness * 4.0, thickness * 2.0)
+                            };
                             let mut sx = x;
                             while sx < x + advance {
                                 bar(sx, (sx + dash).min(x + advance), uy, color);
@@ -768,7 +940,12 @@ fn layout_scaled(atlas: &Atlas, tf: &TextFrameData, bounds: Rect, id: ObjectId) 
                             let step = (thickness * 2.5).max(1.0);
                             let (mut sx, mut up) = (x, false);
                             while sx < x + advance {
-                                bar(sx, (sx + step).min(x + advance), if up { uy - thickness } else { uy + thickness }, color);
+                                bar(
+                                    sx,
+                                    (sx + step).min(x + advance),
+                                    if up { uy - thickness } else { uy + thickness },
+                                    color,
+                                );
                                 sx += step;
                                 up = !up;
                             }
@@ -840,7 +1017,13 @@ mod frame_tests {
     /// A text-frame shape with `words` copies of "word" as its content.
     fn frame(w: f64, h: f64, words: usize) -> Shape {
         let text = vec!["word"; words].join(" ");
-        text_frame(w, h, StyledText { paragraphs: vec![Paragraph::plain(&text)] })
+        text_frame(
+            w,
+            h,
+            StyledText {
+                paragraphs: vec![Paragraph::plain(&text)],
+            },
+        )
     }
 
     /// A text-frame shape at `(0, 0, w, h)` holding `content`.
@@ -867,7 +1050,9 @@ mod frame_tests {
             atlas.load(&style);
             atlas.resolve(&style).0
         };
-        let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .?".chars().collect();
+        let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .?"
+            .chars()
+            .collect();
         super::super::atlas::write().bake_many(face, &chars);
     }
 
@@ -875,7 +1060,13 @@ mod frame_tests {
     fn single_run_lays_glyphs_at_increasing_x() {
         bake_default_glyphs();
         let atlas = super::super::atlas::get_or_build();
-        let shape = text_frame(300.0, 100.0, StyledText { paragraphs: vec![Paragraph::plain("abcd")] });
+        let shape = text_frame(
+            300.0,
+            100.0,
+            StyledText {
+                paragraphs: vec![Paragraph::plain("abcd")],
+            },
+        );
         let layout = layout_text_frame(&atlas, &shape);
         // One line, with a caret x per character boundary (start..=end), strictly increasing
         assert_eq!(layout.lines.len(), 1);
@@ -907,8 +1098,17 @@ mod frame_tests {
         let atlas = super::super::atlas::get_or_build();
         let quads_for = |style: CharacterStyle| {
             let mut p = Paragraph::new();
-            p.elements.push(InlineElement::Text(TextRun { text: "abcd".into(), style }));
-            let shape = text_frame(300.0, 100.0, StyledText { paragraphs: vec![p] });
+            p.elements.push(InlineElement::Text(TextRun {
+                text: "abcd".into(),
+                style,
+            }));
+            let shape = text_frame(
+                300.0,
+                100.0,
+                StyledText {
+                    paragraphs: vec![p],
+                },
+            );
             let layout = layout_text_frame(&atlas, &shape);
             (layout.quads.len(), layout.lines[0].xs.clone())
         };
@@ -928,7 +1128,10 @@ mod frame_tests {
         small.small_caps = true;
         let mut full = CharacterStyle::default();
         full.all_caps = true;
-        assert!(quads_for(small).1.last() < quads_for(full).1.last(), "small capitals are narrower than full capitals");
+        assert!(
+            quads_for(small).1.last() < quads_for(full).1.last(),
+            "small capitals are narrower than full capitals"
+        );
     }
 
     #[test]
@@ -941,8 +1144,15 @@ mod frame_tests {
         sup.baseline_shift = BaselineShift::Superscript;
         let mut p = Paragraph::new();
         p.elements.push(InlineElement::Text(TextRun::new("H")));
-        p.elements.push(InlineElement::Text(TextRun::styled("H", sup)));
-        let shape = text_frame(300.0, 100.0, StyledText { paragraphs: vec![p] });
+        p.elements
+            .push(InlineElement::Text(TextRun::styled("H", sup)));
+        let shape = text_frame(
+            300.0,
+            100.0,
+            StyledText {
+                paragraphs: vec![p],
+            },
+        );
         let quads = layout_text_frame(&atlas, &shape).quads;
         let (normal, raised) = (quads[0].rect, quads[1].rect);
         assert!(raised[3] - raised[1] < normal[3] - normal[1], "smaller");
@@ -954,8 +1164,15 @@ mod frame_tests {
         use repub_model::styles::{ListStyle, NumberFormat};
         bake_default_glyphs();
         let atlas = super::super::atlas::get_or_build();
-        let numbered = ListStyle::Numbered { format: NumberFormat::Arabic, start: 1, indent: 18.0 };
-        let mut paras: Vec<Paragraph> = ["one", "two", "three"].iter().map(|t| Paragraph::plain(t)).collect();
+        let numbered = ListStyle::Numbered {
+            format: NumberFormat::Arabic,
+            start: 1,
+            indent: 18.0,
+        };
+        let mut paras: Vec<Paragraph> = ["one", "two", "three"]
+            .iter()
+            .map(|t| Paragraph::plain(t))
+            .collect();
         for p in &mut paras {
             p.style.list_style = numbered.clone();
         }
@@ -966,8 +1183,18 @@ mod frame_tests {
             _ => unreachable!(),
         };
         // Text moves in by the list indent; markers sit at the left edge before it
-        assert!(layout.lines.iter().all(|l| (l.xs[0] - left - 18.0).abs() < 0.5), "text indented");
-        let markers = layout.quads.iter().filter(|q| q.rect[0] < left + 15.0).count();
+        assert!(
+            layout
+                .lines
+                .iter()
+                .all(|l| (l.xs[0] - left - 18.0).abs() < 0.5),
+            "text indented"
+        );
+        let markers = layout
+            .quads
+            .iter()
+            .filter(|q| q.rect[0] < left + 15.0)
+            .count();
         assert!(markers >= 3, "a marker per paragraph, got {markers}");
         assert_eq!(list_number(NumberFormat::Arabic, 3), "3.");
         assert_eq!(list_number(NumberFormat::LowerRoman, 4), "iv.");
@@ -983,12 +1210,18 @@ mod frame_tests {
         let starts: Vec<f32> = layout.lines.iter().map(|l| l.xs[0]).collect();
         let right = starts.iter().filter(|&&x| x > 150.0).count();
         assert!(right > 0, "some lines in the second column");
-        assert!(starts.iter().all(|&x| x < 150.0 || x >= 150.0 + 4.0), "second column starts after the gap");
+        assert!(
+            starts.iter().all(|&x| x < 150.0 || x >= 150.0 + 4.0),
+            "second column starts after the gap"
+        );
         // The first line of column two is back at the top
         let first_right = layout.lines.iter().find(|l| l.xs[0] > 150.0).unwrap();
         assert!((first_right.top - layout.lines[0].top).abs() < 1.0);
         // Lines are narrower than the frame
-        assert!(layout.lines.iter().all(|l| l.xs.last().unwrap() - l.xs[0] <= 140.0 + 1.0));
+        assert!(layout
+            .lines
+            .iter()
+            .all(|l| l.xs.last().unwrap() - l.xs[0] <= 140.0 + 1.0));
     }
 
     #[test]
@@ -996,9 +1229,16 @@ mod frame_tests {
         let atlas = super::super::atlas::get_or_build();
         let mut shape = frame(200.0, 60.0, 120);
         let (bounds, id) = (shape.common.bounds, shape.common.id);
-        assert!(!fits(&layout_text_frame(&atlas, &shape), data(&mut shape), bounds), "overflows as written");
+        assert!(
+            !fits(&layout_text_frame(&atlas, &shape), data(&mut shape), bounds),
+            "overflows as written"
+        );
         data(&mut shape).text_fit = TextFitMode::ShrinkOnOverflow;
-        assert!(fits(&layout_text_frame(&atlas, &shape), data(&mut shape), bounds));
+        assert!(fits(
+            &layout_text_frame(&atlas, &shape),
+            data(&mut shape),
+            bounds
+        ));
         // Short text is left alone
         let mut short = frame(200.0, 60.0, 2);
         data(&mut short).text_fit = TextFitMode::ShrinkOnOverflow;
@@ -1014,6 +1254,10 @@ mod frame_tests {
         let (bounds, id) = (shape.common.bounds, shape.common.id);
         let scale = fit_scale(&atlas, data(&mut shape), bounds, id);
         assert!(scale > 2.0, "grew to {scale}");
-        assert!(fits(&layout_text_frame(&atlas, &shape), data(&mut shape), bounds));
+        assert!(fits(
+            &layout_text_frame(&atlas, &shape),
+            data(&mut shape),
+            bounds
+        ));
     }
 }

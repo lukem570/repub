@@ -43,16 +43,32 @@ impl SaveChangesPrompt {
             .show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.add_space(4.0);
-                ui.label(egui::RichText::new(format!("Do you want to save changes to \"{name}\"?")).font(fonts::body()).strong());
+                ui.label(
+                    egui::RichText::new(format!("Do you want to save changes to \"{name}\"?"))
+                        .font(fonts::body())
+                        .strong(),
+                );
                 ui.add_space(4.0);
-                ui.label(egui::RichText::new("Your changes will be lost if you don't save them.").font(fonts::body()).color(colors::text_secondary()));
+                ui.label(
+                    egui::RichText::new("Your changes will be lost if you don't save them.")
+                        .font(fonts::body())
+                        .color(colors::text_secondary()),
+                );
                 ui.add_space(14.0);
                 ui.horizontal(|ui| {
                     if ui.button("Don't Save").clicked() {
                         choice = Some(SaveChoice::DontSave);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new(egui::RichText::new("Save").color(egui::Color32::WHITE)).fill(colors::accent())).clicked() {
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("Save").color(egui::Color32::WHITE),
+                                )
+                                .fill(colors::accent()),
+                            )
+                            .clicked()
+                        {
                             choice = Some(SaveChoice::Save);
                         }
                         if ui.button("Cancel").clicked() {
@@ -97,7 +113,9 @@ impl ErrorAlert {
     }
 
     pub fn show(&mut self, ctx: &egui::Context) {
-        let Some((title, detail)) = self.message.clone() else { return };
+        let Some((title, detail)) = self.message.clone() else {
+            return;
+        };
         let mut close = false;
         egui::Window::new(title.as_str())
             .id(egui::Id::new("error_alert"))
@@ -109,11 +127,20 @@ impl ErrorAlert {
                 ui.label(egui::RichText::new(detail).font(fonts::body()));
                 ui.add_space(12.0);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.add(egui::Button::new(egui::RichText::new("OK").color(egui::Color32::WHITE)).fill(colors::accent())).clicked() {
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new("OK").color(egui::Color32::WHITE),
+                            )
+                            .fill(colors::accent()),
+                        )
+                        .clicked()
+                    {
                         close = true;
                     }
                 });
-                if ui.input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::Escape)) {
+                if ui.input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::Escape))
+                {
                     close = true;
                 }
             });

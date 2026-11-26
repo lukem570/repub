@@ -67,11 +67,7 @@ impl InsertTableDialog {
                 ui.horizontal(|ui| {
                     ui.add_space(24.0);
                     ui.label("Columns:");
-                    ui.add(
-                        DragValue::new(&mut self.cols)
-                            .speed(0.1)
-                            .range(1..=50),
-                    );
+                    ui.add(DragValue::new(&mut self.cols).speed(0.1).range(1..=50));
                 });
 
                 ui.add_space(4.0);
@@ -80,11 +76,7 @@ impl InsertTableDialog {
                 ui.horizontal(|ui| {
                     ui.add_space(24.0);
                     ui.label("Rows:    ");
-                    ui.add(
-                        DragValue::new(&mut self.rows)
-                            .speed(0.1)
-                            .range(1..=100),
-                    );
+                    ui.add(DragValue::new(&mut self.rows).speed(0.1).range(1..=100));
                 });
 
                 ui.add_space(8.0);

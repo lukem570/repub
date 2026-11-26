@@ -229,7 +229,12 @@ pub struct Margins {
 impl Margins {
     /// Uniform margins on all sides.
     pub fn uniform(value: f64) -> Self {
-        Self { top: value, bottom: value, left: value, right: value }
+        Self {
+            top: value,
+            bottom: value,
+            left: value,
+            right: value,
+        }
     }
 
     /// Zero margins.
@@ -294,7 +299,11 @@ impl TextFrameData {
 
     /// Margins actually used for layout: per-side `margins` when set, else `inset`.
     pub fn effective_margins(&self) -> Margins {
-        if self.margins.top == 0.0 && self.margins.bottom == 0.0 && self.margins.left == 0.0 && self.margins.right == 0.0 {
+        if self.margins.top == 0.0
+            && self.margins.bottom == 0.0
+            && self.margins.left == 0.0
+            && self.margins.right == 0.0
+        {
             Margins::uniform(self.inset)
         } else {
             self.margins
@@ -751,7 +760,9 @@ impl TableData {
     /// An empty cell formatted like `like` (fill, padding, alignment and text
     /// style), for a new row or column.
     fn blank_like(like: Option<&TableCell>) -> TableCell {
-        let Some(like) = like else { return TableCell::new() };
+        let Some(like) = like else {
+            return TableCell::new();
+        };
         let mut cell = like.clone();
         cell.col_span = 1;
         cell.row_span = 1;
@@ -765,7 +776,9 @@ impl TableData {
             para.style.default_char_style = style;
         }
         para.elements.clear();
-        cell.content = StyledText { paragraphs: vec![para] };
+        cell.content = StyledText {
+            paragraphs: vec![para],
+        };
         cell
     }
 
@@ -776,7 +789,9 @@ impl TableData {
         let at = at.min(self.rows);
         let cols = self.cols as usize;
         let like_row = if at > 0 { at - 1 } else { 0 };
-        let new_cells: Vec<TableCell> = (0..cols).map(|c| Self::blank_like(self.cell(like_row, c as u32))).collect();
+        let new_cells: Vec<TableCell> = (0..cols)
+            .map(|c| Self::blank_like(self.cell(like_row, c as u32)))
+            .collect();
         // Spans crossing the insertion point grow
         for r in 0..at as usize {
             for c in 0..cols {
@@ -790,7 +805,11 @@ impl TableData {
         let index = at as usize * cols;
         self.cells.splice(index..index, new_cells);
         // Give the new row the same grid-unit height as its neighbour
-        let unit = self.row_heights.get(like_row as usize).copied().unwrap_or(20.0);
+        let unit = self
+            .row_heights
+            .get(like_row as usize)
+            .copied()
+            .unwrap_or(20.0);
         self.row_heights.insert(at as usize, unit);
         self.rows += 1;
     }
@@ -813,7 +832,11 @@ impl TableData {
             let blank = Self::blank_like(self.cell(r as u32, like_col));
             self.cells.insert(r * old_cols + at as usize, blank);
         }
-        let unit = self.col_widths.get(like_col as usize).copied().unwrap_or(60.0);
+        let unit = self
+            .col_widths
+            .get(like_col as usize)
+            .copied()
+            .unwrap_or(60.0);
         self.col_widths.insert(at as usize, unit);
         self.cols += 1;
     }
@@ -1275,10 +1298,18 @@ impl Preset3DStyle {
             Preset3DStyle::ParallelBottom => Rotation3D::new(10.0, 0.0, 0.0),
             Preset3DStyle::PerspectiveRight => Rotation3D::with_perspective(0.0, 25.0, 0.0, 0.5),
             Preset3DStyle::PerspectiveLeft => Rotation3D::with_perspective(0.0, -25.0, 0.0, 0.5),
-            Preset3DStyle::PerspectiveContrastingLeft => Rotation3D::with_perspective(10.0, -20.0, 0.0, 0.6),
-            Preset3DStyle::PerspectiveContrastingRight => Rotation3D::with_perspective(10.0, 20.0, 0.0, 0.6),
-            Preset3DStyle::PerspectiveHeroicRight => Rotation3D::with_perspective(0.0, 45.0, 0.0, 0.8),
-            Preset3DStyle::PerspectiveHeroicLeft => Rotation3D::with_perspective(0.0, -45.0, 0.0, 0.8),
+            Preset3DStyle::PerspectiveContrastingLeft => {
+                Rotation3D::with_perspective(10.0, -20.0, 0.0, 0.6)
+            }
+            Preset3DStyle::PerspectiveContrastingRight => {
+                Rotation3D::with_perspective(10.0, 20.0, 0.0, 0.6)
+            }
+            Preset3DStyle::PerspectiveHeroicRight => {
+                Rotation3D::with_perspective(0.0, 45.0, 0.0, 0.8)
+            }
+            Preset3DStyle::PerspectiveHeroicLeft => {
+                Rotation3D::with_perspective(0.0, -45.0, 0.0, 0.8)
+            }
             Preset3DStyle::OffAxis1Right => Rotation3D::new(15.0, 25.0, 0.0),
             Preset3DStyle::OffAxis1Left => Rotation3D::new(15.0, -25.0, 0.0),
             Preset3DStyle::OffAxis1Top => Rotation3D::new(-25.0, 15.0, 0.0),
@@ -1296,8 +1327,10 @@ impl Preset3DStyle {
         match self {
             Preset3DStyle::None => 0.0,
             Preset3DStyle::PerspectiveHeroicRight | Preset3DStyle::PerspectiveHeroicLeft => 72.0,
-            Preset3DStyle::IsometricLeftDown | Preset3DStyle::IsometricRightDown
-            | Preset3DStyle::IsometricLeftUp | Preset3DStyle::IsometricRightUp => 48.0,
+            Preset3DStyle::IsometricLeftDown
+            | Preset3DStyle::IsometricRightDown
+            | Preset3DStyle::IsometricLeftUp
+            | Preset3DStyle::IsometricRightUp => 48.0,
             _ => 36.0,
         }
     }
@@ -1305,9 +1338,13 @@ impl Preset3DStyle {
     fn default_bevel(&self) -> Option<BevelType> {
         match self {
             Preset3DStyle::None => None,
-            Preset3DStyle::PerspectiveHeroicRight | Preset3DStyle::PerspectiveHeroicLeft => Some(BevelType::Circle),
-            Preset3DStyle::IsometricLeftDown | Preset3DStyle::IsometricRightDown
-            | Preset3DStyle::IsometricLeftUp | Preset3DStyle::IsometricRightUp => Some(BevelType::Angle),
+            Preset3DStyle::PerspectiveHeroicRight | Preset3DStyle::PerspectiveHeroicLeft => {
+                Some(BevelType::Circle)
+            }
+            Preset3DStyle::IsometricLeftDown
+            | Preset3DStyle::IsometricRightDown
+            | Preset3DStyle::IsometricLeftUp
+            | Preset3DStyle::IsometricRightUp => Some(BevelType::Angle),
             _ => None,
         }
     }
@@ -1660,7 +1697,9 @@ impl Shape {
     pub fn rectangle(bounds: Rect) -> Self {
         Self::new(
             bounds,
-            ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Rectangle { corner_radius: 0.0 })),
+            ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Rectangle {
+                corner_radius: 0.0,
+            })),
         )
     }
 
@@ -1674,12 +1713,20 @@ impl Shape {
 
     /// Create an ellipse auto shape.
     pub fn ellipse(bounds: Rect) -> Self {
-        Self::new(bounds, ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Ellipse)))
+        Self::new(
+            bounds,
+            ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Ellipse)),
+        )
     }
 
     /// Create a circle auto shape centred at `center` with the given radius.
     pub fn circle(center: Point, radius: f64) -> Self {
-        let bounds = Rect::new(center.x - radius, center.y - radius, radius * 2.0, radius * 2.0);
+        let bounds = Rect::new(
+            center.x - radius,
+            center.y - radius,
+            radius * 2.0,
+            radius * 2.0,
+        );
         Self::ellipse(bounds)
     }
 
@@ -1700,13 +1747,19 @@ impl Shape {
     pub fn star(bounds: Rect, points: u32, inner_ratio: f64) -> Self {
         Self::new(
             bounds,
-            ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Star { points, inner_ratio })),
+            ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Star {
+                points,
+                inner_ratio,
+            })),
         )
     }
 
     /// Create an auto shape from a custom path.
     pub fn from_path(bounds: Rect, path: Path) -> Self {
-        Self::new(bounds, ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Path(path))))
+        Self::new(
+            bounds,
+            ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Path(path))),
+        )
     }
 
     /// Create an empty text frame.
@@ -1835,7 +1888,12 @@ impl Shape {
     /// Move by the given offset (the geometry moves with it).
     pub fn translate(&mut self, dx: f64, dy: f64) {
         let b = self.bounds();
-        self.set_bounds(Rect::new(b.origin.x + dx, b.origin.y + dy, b.size.width, b.size.height));
+        self.set_bounds(Rect::new(
+            b.origin.x + dx,
+            b.origin.y + dy,
+            b.size.width,
+            b.size.height,
+        ));
     }
 
     /// Move and resize the shape to `new`. Geometry kept in page coordinates
@@ -1844,9 +1902,22 @@ impl Shape {
     pub fn set_bounds(&mut self, new: Rect) {
         let old = self.bounds();
         // A zero extent (e.g. a horizontal line's height) keeps its offset
-        let sx = if old.size.width.abs() > 1e-9 { new.size.width / old.size.width } else { 1.0 };
-        let sy = if old.size.height.abs() > 1e-9 { new.size.height / old.size.height } else { 1.0 };
-        let map = |p: Point| Point::new(new.origin.x + (p.x - old.origin.x) * sx, new.origin.y + (p.y - old.origin.y) * sy);
+        let sx = if old.size.width.abs() > 1e-9 {
+            new.size.width / old.size.width
+        } else {
+            1.0
+        };
+        let sy = if old.size.height.abs() > 1e-9 {
+            new.size.height / old.size.height
+        } else {
+            1.0
+        };
+        let map = |p: Point| {
+            Point::new(
+                new.origin.x + (p.x - old.origin.x) * sx,
+                new.origin.y + (p.y - old.origin.y) * sy,
+            )
+        };
         let map_path = |path: &mut Path| {
             for cmd in &mut path.commands {
                 match cmd {
@@ -1855,7 +1926,11 @@ impl Shape {
                         *control = map(*control);
                         *end = map(*end);
                     }
-                    PathCommand::CubicTo { control1, control2, end } => {
+                    PathCommand::CubicTo {
+                        control1,
+                        control2,
+                        end,
+                    } => {
                         *control1 = map(*control1);
                         *control2 = map(*control2);
                         *end = map(*end);
@@ -1886,7 +1961,10 @@ impl Shape {
                 for child in &mut group.children {
                     let b = child.bounds();
                     let tl = map(b.origin);
-                    let br = map(Point::new(b.origin.x + b.size.width, b.origin.y + b.size.height));
+                    let br = map(Point::new(
+                        b.origin.x + b.size.width,
+                        b.origin.y + b.size.height,
+                    ));
                     child.set_bounds(Rect::new(tl.x, tl.y, br.x - tl.x, br.y - tl.y));
                 }
             }
@@ -1932,7 +2010,10 @@ impl Shape {
         let (dx, dy) = (centre.x - bounds.center().x, centre.y - bounds.center().y);
         match &mut self.kind {
             ShapeKind::Line(line) => {
-                for p in std::iter::once(&mut line.start).chain(std::iter::once(&mut line.end)).chain(line.control_points.iter_mut()) {
+                for p in std::iter::once(&mut line.start)
+                    .chain(std::iter::once(&mut line.end))
+                    .chain(line.control_points.iter_mut())
+                {
                     mirror(p);
                 }
                 self.common.bounds.origin.x += dx;
@@ -1987,7 +2068,9 @@ impl Shape {
 
     /// Remove the member `id` from inside this group (at any depth).
     pub fn remove_member(&mut self, id: ObjectId) -> Option<Shape> {
-        let ShapeKind::Group(group) = &mut self.kind else { return None };
+        let ShapeKind::Group(group) = &mut self.kind else {
+            return None;
+        };
         if let Some(index) = group.children.iter().position(|c| c.id() == id) {
             let removed = group.children.remove(index);
             group.recalculate_bounds();
@@ -2030,10 +2113,16 @@ mod flip_tests {
         let t = shape.common.full_transform();
         // The centre must stay fixed under a centred rotation.
         let c = t.apply(Point::new(50.0, 50.0));
-        assert!((c.x - 50.0).abs() < 1e-6 && (c.y - 50.0).abs() < 1e-6, "centre fixed, got {c:?}");
+        assert!(
+            (c.x - 50.0).abs() < 1e-6 && (c.y - 50.0).abs() < 1e-6,
+            "centre fixed, got {c:?}"
+        );
         // The top-left corner (0,0) rotates 90° CW about (50,50) to (100,0).
         let tl = t.apply(Point::new(0.0, 0.0));
-        assert!((tl.x - 100.0).abs() < 1e-6 && (tl.y - 0.0).abs() < 1e-6, "TL -> (100,0), got {tl:?}");
+        assert!(
+            (tl.x - 100.0).abs() < 1e-6 && (tl.y - 0.0).abs() < 1e-6,
+            "TL -> (100,0), got {tl:?}"
+        );
     }
 
     #[test]
@@ -2043,14 +2132,24 @@ mod flip_tests {
         shape.flip(true);
         assert!(shape.common.flip_h && !shape.common.flip_v);
         assert_eq!(shape.common.rotation, 330.0, "rotation mirrored");
-        assert_eq!(shape.bounds(), Rect::new(10.0, 10.0, 40.0, 20.0), "stays put");
+        assert_eq!(
+            shape.bounds(),
+            Rect::new(10.0, 10.0, 40.0, 20.0),
+            "stays put"
+        );
         shape.flip(true);
-        assert!(!shape.common.flip_h && shape.common.rotation == 30.0, "twice is the original");
+        assert!(
+            !shape.common.flip_h && shape.common.rotation == 30.0,
+            "twice is the original"
+        );
 
         let mut line = Shape::line(Point::new(0.0, 0.0), Point::new(100.0, 50.0));
         line.flip(false);
         match &line.kind {
-            ShapeKind::Line(l) => assert_eq!((l.start, l.end), (Point::new(0.0, 50.0), Point::new(100.0, 0.0))),
+            ShapeKind::Line(l) => assert_eq!(
+                (l.start, l.end),
+                (Point::new(0.0, 50.0), Point::new(100.0, 0.0))
+            ),
             _ => unreachable!(),
         }
         assert!(!line.common.flip_v, "lines mirror their points, not a flag");
@@ -2063,10 +2162,16 @@ mod flip_tests {
         let mut group = Shape::group_from(vec![a, b]);
         assert!(group.can_flip());
         group.flip(true);
-        let ShapeKind::Group(g) = &group.kind else { unreachable!() };
+        let ShapeKind::Group(g) = &group.kind else {
+            unreachable!()
+        };
         assert_eq!(g.children[0].bounds().origin.x, 90.0, "shape moved across");
         assert!(g.children[0].common.flip_h);
-        assert_eq!(g.children[1].bounds().origin.x, 0.0, "text box moved across");
+        assert_eq!(
+            g.children[1].bounds().origin.x,
+            0.0,
+            "text box moved across"
+        );
         assert!(!g.children[1].common.flip_h, "but its text isn't mirrored");
         assert_eq!(group.bounds(), Rect::new(0.0, 0.0, 100.0, 10.0));
     }
@@ -2087,7 +2192,9 @@ mod flip_tests {
         let b = Shape::rectangle(Rect::new(30.0, 30.0, 10.0, 10.0));
         let mut group = Shape::group_from(vec![a, b]);
         group.set_bounds(Rect::new(100.0, 100.0, 80.0, 80.0)); // twice the size
-        let ShapeKind::Group(g) = &group.kind else { unreachable!() };
+        let ShapeKind::Group(g) = &group.kind else {
+            unreachable!()
+        };
         assert_eq!(g.children[0].bounds(), Rect::new(100.0, 100.0, 20.0, 20.0));
         assert_eq!(g.children[1].bounds(), Rect::new(160.0, 160.0, 20.0, 20.0));
     }
@@ -2095,7 +2202,9 @@ mod flip_tests {
     #[test]
     fn table_rows_and_columns_go_in_and_out() {
         let mut shape = Shape::table(Rect::new(0.0, 0.0, 100.0, 40.0), 2, 2);
-        let ShapeKind::Table(t) = &mut shape.kind else { unreachable!() };
+        let ShapeKind::Table(t) = &mut shape.kind else {
+            unreachable!()
+        };
         for (r, c, s) in [(0, 0, "a"), (0, 1, "b"), (1, 0, "c"), (1, 1, "d")] {
             t.set_cell_text(r, c, s);
         }

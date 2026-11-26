@@ -97,7 +97,10 @@ type FaceKey = (String, bool, bool);
 /// Whether a style asks for a bold face.
 pub fn is_bold(style: &repub_model::styles::CharacterStyle) -> bool {
     use repub_model::styles::FontWeight;
-    matches!(style.font.weight, FontWeight::SemiBold | FontWeight::Bold | FontWeight::ExtraBold | FontWeight::Black)
+    matches!(
+        style.font.weight,
+        FontWeight::SemiBold | FontWeight::Bold | FontWeight::ExtraBold | FontWeight::Black
+    )
 }
 
 /// Whether a style asks for italic.
@@ -107,7 +110,11 @@ pub fn is_italic(style: &repub_model::styles::CharacterStyle) -> bool {
 }
 
 fn key_of(style: &repub_model::styles::CharacterStyle) -> FaceKey {
-    (style.font.family.trim().to_lowercase(), is_bold(style), is_italic(style))
+    (
+        style.font.family.trim().to_lowercase(),
+        is_bold(style),
+        is_italic(style),
+    )
 }
 
 /// The atlas: RGBA8 MTSDF texels plus the faces drawn from it. Faces are
@@ -139,7 +146,11 @@ impl Atlas {
     /// ([`Self::load`]) use Selawik.
     pub fn resolve(&self, style: &repub_model::styles::CharacterStyle) -> (usize, bool) {
         let key = key_of(style);
-        let id = self.keys.get(&key).copied().unwrap_or(if key.1 { BOLD } else { REGULAR });
+        let id = self
+            .keys
+            .get(&key)
+            .copied()
+            .unwrap_or(if key.1 { BOLD } else { REGULAR });
         (id, key.2 && !self.face(id).italic)
     }
 
@@ -171,7 +182,10 @@ impl Atlas {
         // The same file may serve several keys (no bold face: bold uses the regular one)
         let id = match installed {
             Some(file) => {
-                let existing = self.faces.iter().position(|f| f.index == file.index && f.path.as_ref() == Some(&file.path));
+                let existing = self
+                    .faces
+                    .iter()
+                    .position(|f| f.index == file.index && f.path.as_ref() == Some(&file.path));
                 match existing {
                     Some(id) => id,
                     None => match std::fs::read(&file.path) {
@@ -180,7 +194,11 @@ impl Atlas {
                             file.index,
                             file.italic,
                             // Changed font files get a fresh glyph cache
-                            &format!("{}:{:?}", file.path.display(), super::fonts::file_stamp(&file.path)),
+                            &format!(
+                                "{}:{:?}",
+                                file.path.display(),
+                                super::fonts::file_stamp(&file.path)
+                            ),
                         ) {
                             Some(mut face) => {
                                 face.path = Some(file.path.clone());
@@ -206,7 +224,9 @@ impl Atlas {
     /// Bake the characters of `chars` that face `id` doesn't have yet,
     /// rendering them on all cores.
     pub fn bake_many(&mut self, id: usize, chars: &[char]) {
-        let Some(face) = self.faces.get(id) else { return };
+        let Some(face) = self.faces.get(id) else {
+            return;
+        };
         let mut todo: Vec<char> = chars.iter().copied().filter(|&c| !face.has(c)).collect();
         todo.sort_unstable();
         todo.dedup();
@@ -259,7 +279,12 @@ impl Atlas {
             face.missing.clear();
         }
         self.pixels[self.shared_from * ATLAS_SIZE * CHANNELS..].fill(0);
-        self.packer = Packer { x: 0, y: self.shared_from, row_height: 0, full: false };
+        self.packer = Packer {
+            x: 0,
+            y: self.shared_from,
+            row_height: 0,
+            full: false,
+        };
         self.generation += 1;
     }
 }
@@ -277,7 +302,10 @@ pub fn build_in_background() {
             .spawn(|| {
                 let start = std::time::Instant::now();
                 drop(get_or_build());
-                log::info!("SDF text atlas built in {:.0} ms", start.elapsed().as_secs_f64() * 1000.0);
+                log::info!(
+                    "SDF text atlas built in {:.0} ms",
+                    start.elapsed().as_secs_f64() * 1000.0
+                );
             });
         if let Err(e) = spawned {
             log::error!("Could not start SDF atlas thread: {e}");
@@ -287,19 +315,27 @@ pub fn build_in_background() {
 
 /// The atlas, once the background build has finished.
 pub fn get() -> Option<std::sync::RwLockReadGuard<'static, Atlas>> {
-    ATLAS.get().map(|a| a.read().unwrap_or_else(|e| e.into_inner()))
+    ATLAS
+        .get()
+        .map(|a| a.read().unwrap_or_else(|e| e.into_inner()))
 }
 
 /// The atlas, building it on this thread if needed (blocks well under a second).
 /// Text editing uses this so caret positions are available without the GPU;
 /// a concurrent background build is waited for rather than repeated.
 pub fn get_or_build() -> std::sync::RwLockReadGuard<'static, Atlas> {
-    ATLAS.get_or_init(|| std::sync::RwLock::new(build())).read().unwrap_or_else(|e| e.into_inner())
+    ATLAS
+        .get_or_init(|| std::sync::RwLock::new(build()))
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
 }
 
 /// The atlas for adding faces and glyphs.
 pub fn write() -> std::sync::RwLockWriteGuard<'static, Atlas> {
-    ATLAS.get_or_init(|| std::sync::RwLock::new(build())).write().unwrap_or_else(|e| e.into_inner())
+    ATLAS
+        .get_or_init(|| std::sync::RwLock::new(build()))
+        .write()
+        .unwrap_or_else(|e| e.into_inner())
 }
 
 /// Simple shelf packer.
@@ -333,26 +369,69 @@ impl Packer {
 
 fn build() -> Atlas {
     let mut pixels = vec![0u8; ATLAS_SIZE * ATLAS_SIZE * CHANNELS];
-    let mut packer = Packer { x: 0, y: 0, row_height: 0, full: false };
+    let mut packer = Packer {
+        x: 0,
+        y: 0,
+        row_height: 0,
+        full: false,
+    };
 
     // Solid block for underlines and fills
-    let (sx, sy) = packer.place(4, 4).expect("atlas has room for the solid block");
+    let (sx, sy) = packer
+        .place(4, 4)
+        .expect("atlas has room for the solid block");
     for y in sy..sy + 4 {
         pixels[(y * ATLAS_SIZE + sx) * CHANNELS..(y * ATLAS_SIZE + sx + 4) * CHANNELS].fill(255);
     }
-    let solid_uv = [(sx as f32 + 2.0) / ATLAS_SIZE as f32, (sy as f32 + 2.0) / ATLAS_SIZE as f32];
+    let solid_uv = [
+        (sx as f32 + 2.0) / ATLAS_SIZE as f32,
+        (sy as f32 + 2.0) / ATLAS_SIZE as f32,
+    ];
 
     // Glyphs are baked as text needs them (bundled faces too), below the solid block
-    let regular = face_from(std::sync::Arc::new(include_bytes!("../../assets/fonts/selawk.ttf").to_vec()), 0, false, "bundled:selawk.ttf").expect("bundled font parses");
-    let bold = face_from(std::sync::Arc::new(include_bytes!("../../assets/fonts/selawkb.ttf").to_vec()), 0, false, "bundled:selawkb.ttf").expect("bundled font parses");
+    let regular = face_from(
+        std::sync::Arc::new(include_bytes!("../../assets/fonts/selawk.ttf").to_vec()),
+        0,
+        false,
+        "bundled:selawk.ttf",
+    )
+    .expect("bundled font parses");
+    let bold = face_from(
+        std::sync::Arc::new(include_bytes!("../../assets/fonts/selawkb.ttf").to_vec()),
+        0,
+        false,
+        "bundled:selawkb.ttf",
+    )
+    .expect("bundled font parses");
     let shared_from = packer.y + packer.row_height + 1;
-    let packer = Packer { x: 0, y: shared_from, row_height: 0, full: false };
-    Atlas { faces: vec![regular, bold], keys: HashMap::new(), pixels, solid_uv, packer, shared_from, generation: 1 }
+    let packer = Packer {
+        x: 0,
+        y: shared_from,
+        row_height: 0,
+        full: false,
+    };
+    Atlas {
+        faces: vec![regular, bold],
+        keys: HashMap::new(),
+        pixels,
+        solid_uv,
+        packer,
+        shared_from,
+        generation: 1,
+    }
 }
 
 /// A face from font data, with no glyphs baked yet.
-fn face_from(data: std::sync::Arc<Vec<u8>>, index: u32, italic: bool, source: &str) -> Option<Face> {
-    let settings = fontdue::FontSettings { collection_index: index, ..Default::default() };
+fn face_from(
+    data: std::sync::Arc<Vec<u8>>,
+    index: u32,
+    italic: bool,
+    source: &str,
+) -> Option<Face> {
+    let settings = fontdue::FontSettings {
+        collection_index: index,
+        ..Default::default()
+    };
     let font = fontdue::Font::from_bytes(data.as_slice(), settings).ok()?;
     let metrics = font.horizontal_line_metrics(EM_PX)?;
     Some(Face {
@@ -388,9 +467,18 @@ fn render_glyph(face: &ttf_parser::Face, c: char) -> Option<Rendered> {
     let id = face.glyph_index(c)?;
     let units_per_em = face.units_per_em() as f64;
     let advance = face.glyph_hor_advance(id).unwrap_or(0) as f32 / units_per_em as f32;
-    let blank = Rendered { texels: Vec::new(), w: 0, h: 0, plane: [0.0; 4], advance };
+    let blank = Rendered {
+        texels: Vec::new(),
+        w: 0,
+        h: 0,
+        plane: [0.0; 4],
+        advance,
+    };
 
-    let (Some(bbox), Some(mut shape)) = (face.glyph_bounding_box(id), fdsm_ttf_parser::load_shape_from_face(face, id)) else {
+    let (Some(bbox), Some(mut shape)) = (
+        face.glyph_bounding_box(id),
+        fdsm_ttf_parser::load_shape_from_face(face, id),
+    ) else {
         return Some(blank);
     };
     if bbox.width() <= 0 || bbox.height() <= 0 {
@@ -404,7 +492,10 @@ fn render_glyph(face: &ttf_parser::Face, c: char) -> Option<Rendered> {
     let w = ((bbox.width() as f64) * scale + 2.0 * pad).ceil() as u32;
     let h = ((bbox.height() as f64) * scale + 2.0 * pad).ceil() as u32;
     let to_texels = nalgebra::convert::<_, nalgebra::Affine2<f64>>(nalgebra::Similarity2::new(
-        nalgebra::Vector2::new(pad - bbox.x_min as f64 * scale, pad - bbox.y_min as f64 * scale),
+        nalgebra::Vector2::new(
+            pad - bbox.x_min as f64 * scale,
+            pad - bbox.y_min as f64 * scale,
+        ),
         0.0,
         scale,
     ));
@@ -418,7 +509,13 @@ fn render_glyph(face: &ttf_parser::Face, c: char) -> Option<Rendered> {
     let prepared = colored.prepare();
     let mut field = image::Rgba32FImage::new(w, h);
     fdsm::generate::generate_mtsdf(&prepared, range, &mut field);
-    fdsm::correct_error::correct_error_mtsdf(&mut field, &colored, &prepared, range, &Default::default());
+    fdsm::correct_error::correct_error_mtsdf(
+        &mut field,
+        &colored,
+        &prepared,
+        range,
+        &Default::default(),
+    );
     fdsm::render::correct_sign_mtsdf(&mut field, &prepared, FillRule::Nonzero);
 
     // Field row 0 is the bottom of the glyph; atlas rows run top-down
@@ -427,7 +524,10 @@ fn render_glyph(face: &ttf_parser::Face, c: char) -> Option<Rendered> {
         let row = (h - 1 - y) as usize;
         for x in 0..w {
             let at = (row * w as usize + x as usize) * CHANNELS;
-            for (out, v) in texels[at..at + CHANNELS].iter_mut().zip(field.get_pixel(x, y).0) {
+            for (out, v) in texels[at..at + CHANNELS]
+                .iter_mut()
+                .zip(field.get_pixel(x, y).0)
+            {
                 *out = (v.clamp(0.0, 1.0) * 255.0).round() as u8;
             }
         }
@@ -438,14 +538,29 @@ fn render_glyph(face: &ttf_parser::Face, c: char) -> Option<Rendered> {
     let em = EM_PX as f64;
     let x0 = bbox.x_min as f64 / units_per_em - pad / em;
     let y0 = -(bbox.y_min as f64 / units_per_em + (h as f64 - pad) / em);
-    let plane = [x0 as f32, y0 as f32, (x0 + w as f64 / em) as f32, (y0 + h as f64 / em) as f32];
-    Some(Rendered { texels, w: w as usize, h: h as usize, plane, advance })
+    let plane = [
+        x0 as f32,
+        y0 as f32,
+        (x0 + w as f64 / em) as f32,
+        (y0 + h as f64 / em) as f32,
+    ];
+    Some(Rendered {
+        texels,
+        w: w as usize,
+        h: h as usize,
+        plane,
+        advance,
+    })
 }
 
 /// Copy a rendered glyph into the atlas; `None` when it doesn't fit.
 fn place_glyph(r: &Rendered, pixels: &mut [u8], packer: &mut Packer) -> Option<Glyph> {
     if r.w == 0 {
-        return Some(Glyph { uv: [0.0; 4], plane: r.plane, advance: r.advance });
+        return Some(Glyph {
+            uv: [0.0; 4],
+            plane: r.plane,
+            advance: r.advance,
+        });
     }
     let (ax, ay) = packer.place(r.w, r.h)?;
     for row in 0..r.h {
@@ -454,8 +569,17 @@ fn place_glyph(r: &Rendered, pixels: &mut [u8], packer: &mut Packer) -> Option<G
         pixels[at..at + r.w * CHANNELS].copy_from_slice(src);
     }
     let atlas = ATLAS_SIZE as f32;
-    let uv = [ax as f32 / atlas, ay as f32 / atlas, (ax + r.w) as f32 / atlas, (ay + r.h) as f32 / atlas];
-    Some(Glyph { uv, plane: r.plane, advance: r.advance })
+    let uv = [
+        ax as f32 / atlas,
+        ay as f32 / atlas,
+        (ax + r.w) as f32 / atlas,
+        (ay + r.h) as f32 / atlas,
+    ];
+    Some(Glyph {
+        uv,
+        plane: r.plane,
+        advance: r.advance,
+    })
 }
 
 /// Rendered glyphs of one face kept on disk between sessions, so a font used
@@ -474,9 +598,16 @@ impl GlyphCache {
     fn open(source: &str) -> Self {
         // FNV-1a: stable across runs and Rust versions
         let id = format!("{source}|{EM_PX}|{SPREAD}|{CACHE_VERSION}");
-        let hash = id.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3));
-        let path = super::fonts::cache_dir().map(|d| d.join("glyphs").join(format!("{hash:016x}.bin")));
-        let glyphs = path.as_ref().and_then(|p| std::fs::read(p).ok()).map(|b| Self::parse(&b)).unwrap_or_default();
+        let hash = id.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3)
+        });
+        let path =
+            super::fonts::cache_dir().map(|d| d.join("glyphs").join(format!("{hash:016x}.bin")));
+        let glyphs = path
+            .as_ref()
+            .and_then(|p| std::fs::read(p).ok())
+            .map(|b| Self::parse(&b))
+            .unwrap_or_default();
         GlyphCache { path, glyphs }
     }
 
@@ -487,16 +618,29 @@ impl GlyphCache {
         let u32_at = |b: &[u8], o: usize| u32::from_le_bytes([b[o], b[o + 1], b[o + 2], b[o + 3]]);
         while b.len() >= 28 {
             let c = char::from_u32(u32_at(b, 0));
-            let (w, h) = (u16::from_le_bytes([b[4], b[5]]), u16::from_le_bytes([b[6], b[7]]));
+            let (w, h) = (
+                u16::from_le_bytes([b[4], b[5]]),
+                u16::from_le_bytes([b[6], b[7]]),
+            );
             let f = |i: usize| f32::from_bits(u32_at(b, 8 + 4 * i));
             let (plane, advance) = ([f(0), f(1), f(2), f(3)], f(4));
             let missing = w == 0xFFFF;
-            let len = if missing { 0 } else { usize::from(w) * usize::from(h) * CHANNELS };
+            let len = if missing {
+                0
+            } else {
+                usize::from(w) * usize::from(h) * CHANNELS
+            };
             if b.len() < 28 + len {
                 break;
             }
             if let Some(c) = c {
-                let r = (!missing).then(|| Rendered { texels: b[28..28 + len].to_vec(), w: usize::from(w), h: usize::from(h), plane, advance });
+                let r = (!missing).then(|| Rendered {
+                    texels: b[28..28 + len].to_vec(),
+                    w: usize::from(w),
+                    h: usize::from(h),
+                    plane,
+                    advance,
+                });
                 out.insert(c, r);
             }
             b = &b[28 + len..];
@@ -506,7 +650,13 @@ impl GlyphCache {
 
     fn get(&self, c: char) -> Option<Option<Rendered>> {
         self.glyphs.get(&c).map(|r| {
-            r.as_ref().map(|r| Rendered { texels: r.texels.clone(), w: r.w, h: r.h, plane: r.plane, advance: r.advance })
+            r.as_ref().map(|r| Rendered {
+                texels: r.texels.clone(),
+                w: r.w,
+                h: r.h,
+                plane: r.plane,
+                advance: r.advance,
+            })
         })
     }
 
@@ -527,13 +677,26 @@ impl GlyphCache {
             if let Some(r) = r {
                 bytes.extend_from_slice(&r.texels);
             }
-            self.glyphs.insert(*c, r.as_ref().map(|r| Rendered { texels: r.texels.clone(), w: r.w, h: r.h, plane: r.plane, advance: r.advance }));
+            self.glyphs.insert(
+                *c,
+                r.as_ref().map(|r| Rendered {
+                    texels: r.texels.clone(),
+                    w: r.w,
+                    h: r.h,
+                    plane: r.plane,
+                    advance: r.advance,
+                }),
+            );
         }
         use std::io::Write;
         if let Some(dir) = path.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+        {
             let _ = f.write_all(&bytes);
         }
     }
@@ -541,7 +704,9 @@ impl GlyphCache {
 
 /// Render `chars` of a font on all cores.
 fn render_many(data: &[u8], index: u32, chars: &[char]) -> Vec<(char, Option<Rendered>)> {
-    let threads = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(1, 16);
+    let threads = std::thread::available_parallelism()
+        .map_or(4, |n| n.get())
+        .clamp(1, 16);
     let chunk = chars.len().div_ceil(threads).max(1);
     std::thread::scope(|scope| {
         let workers: Vec<_> = chars
@@ -549,11 +714,16 @@ fn render_many(data: &[u8], index: u32, chars: &[char]) -> Vec<(char, Option<Ren
             .map(|part| {
                 scope.spawn(move || {
                     let face = ttf_parser::Face::parse(data, index).ok();
-                    part.iter().map(|&c| (c, face.as_ref().and_then(|f| render_glyph(f, c)))).collect::<Vec<_>>()
+                    part.iter()
+                        .map(|&c| (c, face.as_ref().and_then(|f| render_glyph(f, c))))
+                        .collect::<Vec<_>>()
                 })
             })
             .collect();
-        workers.into_iter().flat_map(|w| w.join().unwrap_or_default()).collect()
+        workers
+            .into_iter()
+            .flat_map(|w| w.join().unwrap_or_default())
+            .collect()
     })
 }
 
@@ -568,10 +738,22 @@ mod tests {
         let pad = (SPREAD + 1.0) / EM_PX;
         // 'H' stands on the baseline and reaches cap height; 'p' descends below it
         let h = atlas.face(REGULAR).glyph('H').copied().unwrap();
-        assert!((h.plane[3] - pad).abs() < 1.5 / EM_PX, "H bottom at baseline + pad: {:?}", h.plane);
-        assert!(h.plane[1] + pad < -0.5, "H top well above the baseline: {:?}", h.plane);
+        assert!(
+            (h.plane[3] - pad).abs() < 1.5 / EM_PX,
+            "H bottom at baseline + pad: {:?}",
+            h.plane
+        );
+        assert!(
+            h.plane[1] + pad < -0.5,
+            "H top well above the baseline: {:?}",
+            h.plane
+        );
         let p = atlas.face(REGULAR).glyph('p').copied().unwrap();
-        assert!(p.plane[3] - pad > 0.1, "p descends below the baseline: {:?}", p.plane);
+        assert!(
+            p.plane[3] - pad > 0.1,
+            "p descends below the baseline: {:?}",
+            p.plane
+        );
         // Plane size matches the atlas cell
         let cell_w = (h.uv[2] - h.uv[0]) * ATLAS_SIZE as f32 / EM_PX;
         assert!((h.plane[2] - h.plane[0] - cell_w).abs() < 1e-4);
@@ -580,8 +762,22 @@ mod tests {
     #[test]
     fn installed_faces_load_when_text_uses_them() {
         let registry = super::super::fonts::registry();
-        let latin = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Verdana", "DejaVu Sans", "Liberation Sans"];
-        let Some(family) = latin.iter().find(|f| registry.has(f)).map(|f| f.to_string()) else { return };
+        let latin = [
+            "Arial",
+            "Helvetica",
+            "Times New Roman",
+            "Georgia",
+            "Verdana",
+            "DejaVu Sans",
+            "Liberation Sans",
+        ];
+        let Some(family) = latin
+            .iter()
+            .find(|f| registry.has(f))
+            .map(|f| f.to_string())
+        else {
+            return;
+        };
         let mut atlas = build();
         let mut style = repub_model::styles::CharacterStyle::default();
         style.font.family = family.clone();
@@ -590,7 +786,10 @@ mod tests {
         let (id, _) = atlas.resolve(&style);
         assert!(id > BOLD, "{family} gets its own face");
         atlas.bake_many(id, &['A', 'B', 'C']);
-        assert!(atlas.face(id).glyph('A').is_some_and(|g| g.has_quad()), "baked from the installed face");
+        assert!(
+            atlas.face(id).glyph('A').is_some_and(|g| g.has_quad()),
+            "baked from the installed face"
+        );
         let before = atlas.generation;
         atlas.bake(id, 'é');
         assert!(atlas.has_glyph(id, 'é'));
@@ -604,8 +803,22 @@ mod tests {
     #[test]
     fn a_full_atlas_makes_room() {
         let registry = super::super::fonts::registry();
-        let latin = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Verdana", "DejaVu Sans", "Liberation Sans"];
-        let Some(family) = latin.iter().find(|f| registry.has(f)).map(|f| f.to_string()) else { return };
+        let latin = [
+            "Arial",
+            "Helvetica",
+            "Times New Roman",
+            "Georgia",
+            "Verdana",
+            "DejaVu Sans",
+            "Liberation Sans",
+        ];
+        let Some(family) = latin
+            .iter()
+            .find(|f| registry.has(f))
+            .map(|f| f.to_string())
+        else {
+            return;
+        };
         let mut atlas = build();
         let mut style = repub_model::styles::CharacterStyle::default();
         style.font.family = family;
@@ -615,29 +828,54 @@ mod tests {
         // Fill the atlas, then ask for one more glyph
         atlas.packer.y = ATLAS_SIZE - 1;
         atlas.bake(id, 'Ä');
-        assert!(atlas.has_glyph(id, 'Ä') && atlas.face(id).glyph('Ä').is_some_and(|g| g.has_quad()));
-        assert!(!atlas.has_glyph(id, 'B'), "older glyphs evicted, baked again when needed");
+        assert!(
+            atlas.has_glyph(id, 'Ä') && atlas.face(id).glyph('Ä').is_some_and(|g| g.has_quad())
+        );
+        assert!(
+            !atlas.has_glyph(id, 'B'),
+            "older glyphs evicted, baked again when needed"
+        );
     }
 
     #[test]
     fn glyph_outline_sits_at_half() {
         let mut atlas = build();
         atlas.bake_many(REGULAR, &['I', ' ']);
-        let g = atlas.face(REGULAR).glyph('I').copied().expect("I is in the atlas");
+        let g = atlas
+            .face(REGULAR)
+            .glyph('I')
+            .copied()
+            .expect("I is in the atlas");
         assert!(g.has_quad());
-        assert!(atlas.face(REGULAR).glyph(' ').is_some_and(|g| !g.has_quad()));
+        assert!(atlas
+            .face(REGULAR)
+            .glyph(' ')
+            .is_some_and(|g| !g.has_quad()));
         // The middle of the 'I' stem is inside, the cell corner is outside, in
         // both the multi-channel median and the true distance (alpha)
         let texel = |u: f32, v: f32| {
-            let at = ((v * ATLAS_SIZE as f32) as usize * ATLAS_SIZE + (u * ATLAS_SIZE as f32) as usize) * CHANNELS;
-            let [r, g, b, a] = [atlas.pixels[at], atlas.pixels[at + 1], atlas.pixels[at + 2], atlas.pixels[at + 3]];
+            let at = ((v * ATLAS_SIZE as f32) as usize * ATLAS_SIZE
+                + (u * ATLAS_SIZE as f32) as usize)
+                * CHANNELS;
+            let [r, g, b, a] = [
+                atlas.pixels[at],
+                atlas.pixels[at + 1],
+                atlas.pixels[at + 2],
+                atlas.pixels[at + 3],
+            ];
             (r.max(g).min(r.min(g).max(b)), a)
         };
         let (cu, cv) = ((g.uv[0] + g.uv[2]) / 2.0, (g.uv[1] + g.uv[3]) / 2.0);
         let (median, alpha) = texel(cu, cv);
-        assert!(median > 128 && alpha > 128, "stem centre should be inside: {median} {alpha}");
+        assert!(
+            median > 128 && alpha > 128,
+            "stem centre should be inside: {median} {alpha}"
+        );
         let (median, alpha) = texel(g.uv[0], g.uv[1]);
-        assert!(median < 64 && alpha < 64, "corner should be well outside: {median} {alpha}");
+        assert!(
+            median < 64 && alpha < 64,
+            "corner should be well outside: {median} {alpha}"
+        );
     }
 }
 
@@ -648,11 +886,20 @@ mod timing {
     fn font_timings() {
         let t = std::time::Instant::now();
         let r = super::super::fonts::registry();
-        eprintln!("scan: {:?}, {} families", t.elapsed(), r.family_names().len());
+        eprintln!(
+            "scan: {:?}, {} families",
+            t.elapsed(),
+            r.family_names().len()
+        );
         let t = std::time::Instant::now();
         let mut atlas = super::build();
         eprintln!("bundled build: {:?}", t.elapsed());
-        atlas.bake_many(super::REGULAR, &("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".chars().collect::<Vec<_>>()));
+        atlas.bake_many(
+            super::REGULAR,
+            &("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+                .chars()
+                .collect::<Vec<_>>()),
+        );
         eprintln!("bake 62 Selawik glyphs: {:?}", t.elapsed());
         for family in ["Arial", "Georgia", "Times New Roman"] {
             let mut style = repub_model::styles::CharacterStyle::default();
@@ -660,7 +907,12 @@ mod timing {
             let t = std::time::Instant::now();
             atlas.load(&style);
             let id = atlas.resolve(&style).0;
-            atlas.bake_many(id, &("The quick brown fox jumps over the lazy dog 0123456789".chars().collect::<Vec<_>>()));
+            atlas.bake_many(
+                id,
+                &("The quick brown fox jumps over the lazy dog 0123456789"
+                    .chars()
+                    .collect::<Vec<_>>()),
+            );
             eprintln!("load {family} + bake a sentence: {:?}", t.elapsed());
         }
     }

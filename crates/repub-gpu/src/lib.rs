@@ -103,11 +103,19 @@ mod tests {
 
         // Center is red.
         let (cr, cg, cb, ca) = px(&pixels, 40, 20, 20);
-        assert!(cr > 200 && cg < 60 && cb < 60 && ca > 200, "center {:?}", (cr, cg, cb, ca));
+        assert!(
+            cr > 200 && cg < 60 && cb < 60 && ca > 200,
+            "center {:?}",
+            (cr, cg, cb, ca)
+        );
 
         // A corner is the blue background.
         let (br, bg, bb, ba) = px(&pixels, 40, 2, 2);
-        assert!(bb > 200 && br < 60 && bg < 60 && ba > 200, "corner {:?}", (br, bg, bb, ba));
+        assert!(
+            bb > 200 && br < 60 && bg < 60 && ba > 200,
+            "corner {:?}",
+            (br, bg, bb, ba)
+        );
     }
 
     #[test]

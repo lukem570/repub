@@ -116,7 +116,10 @@ pub fn run(args: NewArgs, opts: &GlobalOptions) -> Result<()> {
     let orientation: PageOrientation = args.orientation.into();
 
     output::verbose(
-        format!("Creating document with size {:?}, orientation {:?}", page_size, orientation),
+        format!(
+            "Creating document with size {:?}, orientation {:?}",
+            page_size, orientation
+        ),
         opts,
     );
 

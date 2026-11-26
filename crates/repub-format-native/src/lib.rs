@@ -123,14 +123,13 @@ fn is_version_compatible(version: &str) -> bool {
 /// Returns `Some(true)` for the compressed `.repubz`, `Some(false)` for the
 /// uncompressed `.repub` (or `.json`), and `None` for anything else.
 pub fn detect_format(path: &Path) -> Option<bool> {
-    path.extension().and_then(|e| {
-        match e.to_string_lossy().to_lowercase().as_str() {
+    path.extension()
+        .and_then(|e| match e.to_string_lossy().to_lowercase().as_str() {
             "repub" => Some(false),
             "repubz" => Some(true),
             "json" => Some(false),
             _ => None,
-        }
-    })
+        })
 }
 
 /// Serialize a document to native-format bytes.
@@ -166,9 +165,9 @@ pub fn load_bytes(bytes: &[u8], compressed: bool) -> NativeResult<Document> {
     let file: NativeFile = if compressed {
         let cursor = std::io::Cursor::new(bytes);
         let mut archive = zip::ZipArchive::new(cursor)?;
-        let mut entry = archive
-            .by_name(ZIP_ENTRY)
-            .map_err(|_| NativeError::InvalidStructure(format!("missing {ZIP_ENTRY} in archive")))?;
+        let mut entry = archive.by_name(ZIP_ENTRY).map_err(|_| {
+            NativeError::InvalidStructure(format!("missing {ZIP_ENTRY} in archive"))
+        })?;
         let mut json = Vec::new();
         entry.read_to_end(&mut json)?;
         serde_json::from_slice(&json)?

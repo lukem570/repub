@@ -1,6 +1,5 @@
 //! Pattern fill types.
 
-
 use crate::color::Color;
 
 /// A bitmap pattern fill.
@@ -550,9 +549,15 @@ mod bits_tests {
 
     #[test]
     fn stripes_run_the_right_way() {
-        assert_eq!(PatternType::LightHorizontal.bits(), [0xFF, 0, 0, 0, 0xFF, 0, 0, 0]);
+        assert_eq!(
+            PatternType::LightHorizontal.bits(),
+            [0xFF, 0, 0, 0, 0xFF, 0, 0, 0]
+        );
         assert_eq!(PatternType::LightVertical.bits(), [0x88; 8]);
-        assert_eq!(PatternType::LightDownwardDiagonal.bits()[0..2], [0x88, 0x44]);
+        assert_eq!(
+            PatternType::LightDownwardDiagonal.bits()[0..2],
+            [0x88, 0x44]
+        );
         assert_eq!(PatternType::LightUpwardDiagonal.bits()[0..2], [0x11, 0x22]);
         for p in PatternType::all() {
             assert!(coverage(*p) > 0, "{p:?} draws something");

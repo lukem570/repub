@@ -102,7 +102,11 @@ pub mod colors {
     }
 
     fn pick(light: Color32, dark: Color32) -> Color32 {
-        if is_dark() { dark } else { light }
+        if is_dark() {
+            dark
+        } else {
+            light
+        }
     }
 
     macro_rules! palette {
@@ -229,7 +233,7 @@ pub mod metrics {
     pub const SPACE_4: f32 = 16.0;
     pub const SPACE_6: f32 = 24.0;
     pub const SPACE_8: f32 = 32.0;
-    
+
     pub const BUTTON_HEIGHT: f32 = 24.0;
     pub const ICON_SIZE: f32 = 16.0;
     pub const ICON_SIZE_LARGE: f32 = 32.0;
@@ -240,13 +244,13 @@ pub mod metrics {
     pub const STATUS_BAR_HEIGHT: f32 = 24.0;
     pub const PANEL_WIDTH: f32 = 200.0;
     pub const PAGE_NAV_WIDTH: f32 = 120.0;
-    
+
     pub const ROUNDING: f32 = 2.0;
     /// Custom title row on macOS (matches the native title bar height).
     pub const TITLE_BAR_HEIGHT: f32 = 30.0;
     /// Space reserved for the native traffic-light buttons.
     pub const TRAFFIC_LIGHTS_WIDTH: f32 = 78.0;
-    
+
     pub const SELECTION_OUTLINE_WIDTH: f32 = 2.0;
     pub const HANDLE_SIZE: f32 = 8.0;
     pub const HANDLE_BORDER: f32 = 1.0;
@@ -258,7 +262,7 @@ pub mod metrics {
 /// Fonts.
 pub mod fonts {
     use super::*;
-    
+
     /// Font family name for Selawik Semibold (registered in `apply_theme`).
     pub const SEMIBOLD: &str = "selawik-semibold";
     /// Font family name for Selawik Bold (registered in `apply_theme`).
@@ -268,23 +272,23 @@ pub mod fonts {
     pub fn body() -> FontId {
         FontId::new(12.5, FontFamily::Proportional)
     }
-    
+
     pub fn caption() -> FontId {
         FontId::new(11.5, FontFamily::Proportional)
     }
-    
+
     pub fn small() -> FontId {
         FontId::new(11.0, FontFamily::Proportional)
     }
-    
+
     pub fn heading() -> FontId {
         FontId::new(15.0, FontFamily::Proportional)
     }
-    
+
     pub fn ribbon_tab() -> FontId {
         FontId::new(12.5, FontFamily::Proportional)
     }
-    
+
     pub fn body_sm() -> FontId {
         FontId::new(11.5, FontFamily::Proportional)
     }
@@ -308,14 +312,25 @@ fn install_fonts(ctx: &egui::Context) {
     let mut defs = FontDefinitions::default();
     let faces = [
         ("selawik", &include_bytes!("../assets/fonts/selawk.ttf")[..]),
-        (fonts::SEMIBOLD, &include_bytes!("../assets/fonts/selawksb.ttf")[..]),
-        (fonts::BOLD, &include_bytes!("../assets/fonts/selawkb.ttf")[..]),
+        (
+            fonts::SEMIBOLD,
+            &include_bytes!("../assets/fonts/selawksb.ttf")[..],
+        ),
+        (
+            fonts::BOLD,
+            &include_bytes!("../assets/fonts/selawkb.ttf")[..],
+        ),
     ];
     for (name, bytes) in faces {
-        defs.font_data.insert(name.to_owned(), FontData::from_static(bytes));
+        defs.font_data
+            .insert(name.to_owned(), FontData::from_static(bytes));
     }
 
-    let fallbacks = defs.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
+    let fallbacks = defs
+        .families
+        .get(&FontFamily::Proportional)
+        .cloned()
+        .unwrap_or_default();
     if let Some(f) = defs.families.get_mut(&FontFamily::Proportional) {
         f.insert(0, "selawik".to_owned());
     }
@@ -363,7 +378,11 @@ fn build_style(dark: bool) -> Style {
     let mut style = Style::default();
     let r = Rounding::same(metrics::ROUNDING);
 
-    let mut visuals = if dark { Visuals::dark() } else { Visuals::light() };
+    let mut visuals = if dark {
+        Visuals::dark()
+    } else {
+        Visuals::light()
+    };
 
     // Windows and dialogs: body, hairline border, small soft shadow
     visuals.window_fill = colors::bg_window();
@@ -401,7 +420,14 @@ fn build_style(dark: bool) -> Style {
 
     visuals.widgets.hovered.bg_fill = colors::hover();
     visuals.widgets.hovered.weak_bg_fill = colors::hover();
-    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, if dark { Color32::from_gray(0x6A) } else { Color32::from_gray(0xA6) });
+    visuals.widgets.hovered.bg_stroke = Stroke::new(
+        1.0,
+        if dark {
+            Color32::from_gray(0x6A)
+        } else {
+            Color32::from_gray(0xA6)
+        },
+    );
     visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, colors::text_primary());
     visuals.widgets.hovered.rounding = r;
     visuals.widgets.hovered.expansion = 0.0;
@@ -447,11 +473,23 @@ fn build_style(dark: bool) -> Style {
     // Text styles
     use egui::TextStyle;
     style.text_styles = [
-        (TextStyle::Small, FontId::new(11.0, FontFamily::Proportional)),
+        (
+            TextStyle::Small,
+            FontId::new(11.0, FontFamily::Proportional),
+        ),
         (TextStyle::Body, FontId::new(12.5, FontFamily::Proportional)),
-        (TextStyle::Button, FontId::new(12.5, FontFamily::Proportional)),
-        (TextStyle::Heading, FontId::new(17.0, FontFamily::Name(fonts::SEMIBOLD.into()))),
-        (TextStyle::Monospace, FontId::new(12.0, FontFamily::Monospace)),
+        (
+            TextStyle::Button,
+            FontId::new(12.5, FontFamily::Proportional),
+        ),
+        (
+            TextStyle::Heading,
+            FontId::new(17.0, FontFamily::Name(fonts::SEMIBOLD.into())),
+        ),
+        (
+            TextStyle::Monospace,
+            FontId::new(12.0, FontFamily::Monospace),
+        ),
     ]
     .into();
 
@@ -459,17 +497,30 @@ fn build_style(dark: bool) -> Style {
 }
 
 /// Office "super tooltip": semibold command name with its shortcut, then a one-line description.
-pub fn super_tooltip(response: egui::Response, title: &str, shortcut: Option<&str>, description: &str) -> egui::Response {
+pub fn super_tooltip(
+    response: egui::Response,
+    title: &str,
+    shortcut: Option<&str>,
+    description: &str,
+) -> egui::Response {
     response.on_hover_ui(|ui| {
         ui.set_max_width(260.0);
         let heading = match shortcut {
             Some(keys) => format!("{title} ({keys})"),
             None => title.to_owned(),
         };
-        ui.label(egui::RichText::new(heading).font(fonts::semibold(12.5)).color(colors::text_primary()));
+        ui.label(
+            egui::RichText::new(heading)
+                .font(fonts::semibold(12.5))
+                .color(colors::text_primary()),
+        );
         if !description.is_empty() {
             ui.add_space(2.0);
-            ui.label(egui::RichText::new(description).font(fonts::body()).color(colors::text_secondary()));
+            ui.label(
+                egui::RichText::new(description)
+                    .font(fonts::body())
+                    .color(colors::text_secondary()),
+            );
         }
     })
 }
@@ -492,7 +543,12 @@ pub fn ribbon_frame() -> egui::Frame {
     // Panel fill is the command-body gray; the toolbar paints the tab row white itself
     egui::Frame::none()
         .fill(colors::bg_ribbon())
-        .inner_margin(Margin { left: 0.0, right: 0.0, top: 2.0, bottom: 0.0 })
+        .inner_margin(Margin {
+            left: 0.0,
+            right: 0.0,
+            top: 2.0,
+            bottom: 0.0,
+        })
 }
 
 /// Frame style for the simple toolbar.

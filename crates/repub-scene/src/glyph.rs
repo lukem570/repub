@@ -97,8 +97,10 @@ impl ttf_parser::OutlineBuilder for Builder {
         let (ex, ey) = (x as f64 * self.scale, y as f64 * self.scale);
         self.track(cx, cy);
         self.track(ex, ey);
-        self.segments
-            .push(OutlineSegment::QuadTo(Point::new(cx, cy), Point::new(ex, ey)));
+        self.segments.push(OutlineSegment::QuadTo(
+            Point::new(cx, cy),
+            Point::new(ex, ey),
+        ));
     }
 
     fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
@@ -158,8 +160,7 @@ impl<'a> OutlineFace<'a> {
     /// glyph for the character.
     pub fn outline(&self, ch: char) -> Option<GlyphOutline> {
         let glyph_id = self.face.glyph_index(ch)?;
-        let advance =
-            self.face.glyph_hor_advance(glyph_id).unwrap_or(0) as f64 / self.units_per_em;
+        let advance = self.face.glyph_hor_advance(glyph_id).unwrap_or(0) as f64 / self.units_per_em;
         let mut builder = Builder::new(1.0 / self.units_per_em);
         // A space (or any whitespace with no contour) has no outline but still
         // advances; return an empty outline rather than None so it reserves width.

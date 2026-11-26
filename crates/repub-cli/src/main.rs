@@ -3,16 +3,14 @@
 use std::process::ExitCode;
 
 use clap::Parser;
-use repub_cli::{Cli, run};
+use repub_cli::{run, Cli};
 
 fn main() -> ExitCode {
     // Initialize logging
-    env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("warn")
-    ).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
     let cli = Cli::parse();
-    
+
     match run(cli) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {

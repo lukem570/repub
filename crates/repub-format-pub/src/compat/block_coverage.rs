@@ -158,21 +158,12 @@ impl BlockCoverage {
             self.total_parsed,
             self.total_blocks
         ));
-        s.push_str(&format!(
-            "Unique block types: {}\n",
-            self.blocks.len()
-        ));
-        s.push_str(&format!(
-            "Chunk types: {}\n",
-            self.chunks.len()
-        ));
+        s.push_str(&format!("Unique block types: {}\n", self.blocks.len()));
+        s.push_str(&format!("Chunk types: {}\n", self.chunks.len()));
 
         let unhandled = self.unhandled_blocks();
         if !unhandled.is_empty() {
-            s.push_str(&format!(
-                "Unhandled block types: {}\n",
-                unhandled.len()
-            ));
+            s.push_str(&format!("Unhandled block types: {}\n", unhandled.len()));
         }
 
         s

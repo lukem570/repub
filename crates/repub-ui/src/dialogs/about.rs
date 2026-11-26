@@ -36,13 +36,16 @@ impl AboutDialog {
                     ui.label("A desktop publishing application");
                     ui.label("inspired by Microsoft Publisher");
                     ui.add_space(16.0);
-                    ui.label(egui::RichText::new("Built with Rust and egui").color(colors::text_secondary()));
+                    ui.label(
+                        egui::RichText::new("Built with Rust and egui")
+                            .color(colors::text_secondary()),
+                    );
                     ui.add_space(8.0);
-                    
+
                     ui.hyperlink_to("GitHub Repository", "https://github.com/lukem570/repub");
-                    
+
                     ui.add_space(16.0);
-                    
+
                     if ui.button("Close").clicked() {
                         self.open = false;
                     }

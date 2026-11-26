@@ -491,9 +491,7 @@ pub fn resolve_text_effect(
         TextTransform::Preset(p) => {
             resolve_warped(&params, WarpPreset::from_model(*p), scheme, font_bytes, out)
         }
-        TextTransform::None => {
-            resolve_warped(&params, WarpPreset::Plain, scheme, font_bytes, out)
-        }
+        TextTransform::None => resolve_warped(&params, WarpPreset::Plain, scheme, font_bytes, out),
         TextTransform::Warp { .. } => {
             // Free-form control-point warp is not ported; fall back to plain.
             resolve_warped(&params, WarpPreset::Plain, scheme, font_bytes, out)
@@ -732,11 +730,7 @@ fn glyph_to_path_on_path(outline: &GlyphOutline, scale: f64, place: &Transform2D
 }
 
 /// Sample the position and (unit) tangent of a polyline at arc length `d`.
-fn sample_polyline(
-    points: &[Point],
-    lengths: &[f64],
-    d: f64,
-) -> (Point, repub_geometry::Vector) {
+fn sample_polyline(points: &[Point], lengths: &[f64], d: f64) -> (Point, repub_geometry::Vector) {
     use repub_geometry::Vector;
     if d <= 0.0 {
         let t = points[0].to(points[1]).normalized();
@@ -745,7 +739,11 @@ fn sample_polyline(
     for i in 0..points.len() - 1 {
         if d <= lengths[i + 1] {
             let seg = lengths[i + 1] - lengths[i];
-            let local = if seg > 0.0 { (d - lengths[i]) / seg } else { 0.0 };
+            let local = if seg > 0.0 {
+                (d - lengths[i]) / seg
+            } else {
+                0.0
+            };
             let pos = points[i].lerp(points[i + 1], local);
             let t = points[i].to(points[i + 1]).normalized();
             return (pos, t);
@@ -753,5 +751,12 @@ fn sample_polyline(
     }
     let n = points.len();
     let t = points[n - 2].to(points[n - 1]).normalized();
-    (points[n - 1], if t == Vector::ZERO { Vector::new(1.0, 0.0) } else { t })
+    (
+        points[n - 1],
+        if t == Vector::ZERO {
+            Vector::new(1.0, 0.0)
+        } else {
+            t
+        },
+    )
 }

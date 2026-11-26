@@ -30,11 +30,17 @@ pub enum PointOp {
 }
 
 fn doc_to_screen(page_rect: Rect, zoom: f32, p: Point) -> Pos2 {
-    Pos2::new(page_rect.min.x + p.x as f32 * zoom, page_rect.min.y + p.y as f32 * zoom)
+    Pos2::new(
+        page_rect.min.x + p.x as f32 * zoom,
+        page_rect.min.y + p.y as f32 * zoom,
+    )
 }
 
 fn screen_to_doc(page_rect: Rect, zoom: f32, p: Pos2) -> Point {
-    Point::new(((p.x - page_rect.min.x) / zoom) as f64, ((p.y - page_rect.min.y) / zoom) as f64)
+    Point::new(
+        ((p.x - page_rect.min.x) / zoom) as f64,
+        ((p.y - page_rect.min.y) / zoom) as f64,
+    )
 }
 
 /// A point of the shape's own path on the page: flipped, then turned about the center.
@@ -70,17 +76,25 @@ fn from_page(shape: &Shape, p: Point) -> Point {
 fn session(state: &AppState) -> Option<(ObjectId, &Shape, Path)> {
     let id = state.edit_points.as_ref()?.shape_id;
     let shape = state.current_page()?.get_shape(id)?;
-    let ShapeKind::AutoShape(auto) = &shape.kind else { return None };
+    let ShapeKind::AutoShape(auto) = &shape.kind else {
+        return None;
+    };
     Some((id, shape, auto.geometry.to_editable_path(shape.bounds())))
 }
 
 /// The path of the shape being edited, made editable, for `f` to change.
 fn edit_path(state: &mut AppState, id: ObjectId, f: impl FnOnce(&mut Path) -> bool) -> bool {
-    let Some(shape) = state.current_page_mut().and_then(|p| p.get_shape_mut(id)) else { return false };
+    let Some(shape) = state.current_page_mut().and_then(|p| p.get_shape_mut(id)) else {
+        return false;
+    };
     let bounds = shape.bounds();
-    let ShapeKind::AutoShape(auto) = &mut shape.kind else { return false };
+    let ShapeKind::AutoShape(auto) = &mut shape.kind else {
+        return false;
+    };
     auto.convert_to_path(bounds);
-    let ShapeGeometry::Path(path) = &mut auto.geometry else { return false };
+    let ShapeGeometry::Path(path) = &mut auto.geometry else {
+        return false;
+    };
     let changed = f(path);
     if changed {
         state.mark_dirty();
@@ -90,7 +104,9 @@ fn edit_path(state: &mut AppState, id: ObjectId, f: impl FnOnce(&mut Path) -> bo
 
 /// Draw the anchor points of the shape being edited, and the handles of the selected one.
 pub fn draw(painter: &egui::Painter, page_rect: Rect, state: &AppState) {
-    let Some((_, shape, path)) = session(state) else { return };
+    let Some((_, shape, path)) = session(state) else {
+        return;
+    };
     let zoom = state.zoom;
     let r = metrics::HANDLE_SIZE * 0.4;
     let selected = state.edit_points.as_ref().and_then(|s| s.selected);
@@ -100,26 +116,58 @@ pub fn draw(painter: &egui::Painter, page_rect: Rect, state: &AppState) {
         for (_, handle, anchor) in path.control_handles(index) {
             let (h, a) = (screen(handle), screen(anchor));
             painter.line_segment([a, h], Stroke::new(1.0, colors::accent()));
-            painter.circle(h, r * 0.7, egui::Color32::WHITE, Stroke::new(1.0, colors::accent()));
+            painter.circle(
+                h,
+                r * 0.7,
+                egui::Color32::WHITE,
+                Stroke::new(1.0, colors::accent()),
+            );
         }
     }
     for (i, p) in path.anchor_points().iter().enumerate() {
         let c = screen(*p);
-        let fill = if selected == Some(i) { colors::accent() } else { egui::Color32::WHITE };
-        painter.rect_filled(Rect::from_center_size(c, egui::Vec2::splat(r)), egui::Rounding::ZERO, fill);
-        painter.rect_stroke(Rect::from_center_size(c, egui::Vec2::splat(r)), egui::Rounding::ZERO, Stroke::new(1.0, colors::accent()));
+        let fill = if selected == Some(i) {
+            colors::accent()
+        } else {
+            egui::Color32::WHITE
+        };
+        painter.rect_filled(
+            Rect::from_center_size(c, egui::Vec2::splat(r)),
+            egui::Rounding::ZERO,
+            fill,
+        );
+        painter.rect_stroke(
+            Rect::from_center_size(c, egui::Vec2::splat(r)),
+            egui::Rounding::ZERO,
+            Stroke::new(1.0, colors::accent()),
+        );
     }
 }
 
 /// Handle point-editing input. Returns true when the input was consumed.
-pub fn handle_input(response: &egui::Response, pointer: Pos2, page_rect: Rect, state: &mut AppState) -> bool {
-    let Some((shape_id, shape, path)) = session(state) else { return false };
+pub fn handle_input(
+    response: &egui::Response,
+    pointer: Pos2,
+    page_rect: Rect,
+    state: &mut AppState,
+) -> bool {
+    let Some((shape_id, shape, path)) = session(state) else {
+        return false;
+    };
     let zoom = state.zoom;
     let is_path = matches!(&shape.kind, ShapeKind::AutoShape(a) if a.geometry.is_path());
-    let anchors: Vec<Point> = path.anchor_points().iter().map(|p| to_page(shape, *p)).collect();
+    let anchors: Vec<Point> = path
+        .anchor_points()
+        .iter()
+        .map(|p| to_page(shape, *p))
+        .collect();
     let selected = state.edit_points.as_ref().and_then(|s| s.selected);
     let handles: Vec<(ControlRef, Point)> = match (selected, is_path) {
-        (Some(i), true) => path.control_handles(i).into_iter().map(|(r, p, _)| (r, to_page(shape, p))).collect(),
+        (Some(i), true) => path
+            .control_handles(i)
+            .into_iter()
+            .map(|(r, p, _)| (r, to_page(shape, p)))
+            .collect(),
         _ => Vec::new(),
     };
     let doc = screen_to_doc(page_rect, zoom, pointer);
@@ -144,7 +192,10 @@ pub fn handle_input(response: &egui::Response, pointer: Pos2, page_rect: Rect, s
     }
 
     if response.drag_started() {
-        let control = handles.iter().find(|(_, p)| doc_to_screen(page_rect, zoom, *p).distance(pointer) <= HIT_RADIUS).map(|(r, _)| *r);
+        let control = handles
+            .iter()
+            .find(|(_, p)| doc_to_screen(page_rect, zoom, *p).distance(pointer) <= HIT_RADIUS)
+            .map(|(r, _)| *r);
         if let Some(control) = control {
             state.record_undo("Edit Shape Curve");
             if let Some(session) = state.edit_points.as_mut() {
@@ -162,7 +213,10 @@ pub fn handle_input(response: &egui::Response, pointer: Pos2, page_rect: Rect, s
         }
     }
 
-    let (dragging, dragging_control) = state.edit_points.as_ref().map_or((false, None), |s| (s.dragging, s.dragging_control));
+    let (dragging, dragging_control) = state
+        .edit_points
+        .as_ref()
+        .map_or((false, None), |s| (s.dragging, s.dragging_control));
     if response.dragged() && (dragging || dragging_control.is_some()) {
         if let Some(control) = dragging_control {
             edit_path(state, shape_id, |p| p.move_control(control, local));
@@ -197,9 +251,18 @@ pub fn handle_input(response: &egui::Response, pointer: Pos2, page_rect: Rect, s
 
 /// Whether `op` can be done now: a point is selected and the path allows it.
 pub fn can_apply(state: &AppState, op: PointOp) -> bool {
-    let Some((_, _, path)) = session(state) else { return false };
-    let Some(index) = state.edit_points.as_ref().and_then(|s| s.selected) else { return false };
-    let arrives_by_line = path.anchor_command(index).is_some_and(|i| matches!(path.commands[i], repub_model::geometry::PathCommand::LineTo(_)));
+    let Some((_, _, path)) = session(state) else {
+        return false;
+    };
+    let Some(index) = state.edit_points.as_ref().and_then(|s| s.selected) else {
+        return false;
+    };
+    let arrives_by_line = path.anchor_command(index).is_some_and(|i| {
+        matches!(
+            path.commands[i],
+            repub_model::geometry::PathCommand::LineTo(_)
+        )
+    });
     match op {
         PointOp::Delete => path.anchor_points().len() > 2,
         PointOp::Straight => path.segment_is_curved(index),
@@ -209,8 +272,12 @@ pub fn can_apply(state: &AppState, op: PointOp) -> bool {
 
 /// Do `op` to the selected point. Returns whether anything changed.
 pub fn apply_op(state: &mut AppState, op: PointOp) -> bool {
-    let Some((id, _, _)) = session(state) else { return false };
-    let Some(index) = state.edit_points.as_ref().and_then(|s| s.selected) else { return false };
+    let Some((id, _, _)) = session(state) else {
+        return false;
+    };
+    let Some(index) = state.edit_points.as_ref().and_then(|s| s.selected) else {
+        return false;
+    };
     let label = match op {
         PointOp::Delete => "Delete Shape Point",
         PointOp::Straight => "Straighten Segment",
@@ -251,9 +318,15 @@ mod tests {
     fn editing_a_rectangle() -> (AppState, ObjectId) {
         let mut state = AppState::new();
         let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
-        let id = doc.pages_mut()[0].add_shape(Shape::rectangle(DocRect::new(100.0, 100.0, 80.0, 40.0)));
+        let id =
+            doc.pages_mut()[0].add_shape(Shape::rectangle(DocRect::new(100.0, 100.0, 80.0, 40.0)));
         state.document = Some(doc);
-        state.edit_points = Some(EditPointsState { shape_id: id, selected: Some(1), dragging: false, dragging_control: None });
+        state.edit_points = Some(EditPointsState {
+            shape_id: id,
+            selected: Some(1),
+            dragging: false,
+            dragging_control: None,
+        });
         (state, id)
     }
 
@@ -285,11 +358,20 @@ mod tests {
     #[test]
     fn points_follow_the_shape_when_it_is_turned() {
         let (mut state, id) = editing_a_rectangle();
-        state.current_page_mut().unwrap().get_shape_mut(id).unwrap().common.rotation = 90.0;
+        state
+            .current_page_mut()
+            .unwrap()
+            .get_shape_mut(id)
+            .unwrap()
+            .common
+            .rotation = 90.0;
         let (_, shape, path) = session(&state).unwrap();
         // The top-left corner of an 80 x 40 box at (100,100) turned 90 degrees about (140, 120)
         let p = to_page(shape, path.anchor_points()[0]);
-        assert!((p.x - 160.0).abs() < 1e-6 && (p.y - 80.0).abs() < 1e-6, "{p:?}");
+        assert!(
+            (p.x - 160.0).abs() < 1e-6 && (p.y - 80.0).abs() < 1e-6,
+            "{p:?}"
+        );
         let back = from_page(shape, p);
         assert!((back.x - 100.0).abs() < 1e-6 && (back.y - 100.0).abs() < 1e-6);
     }

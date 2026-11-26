@@ -2,10 +2,10 @@
 
 use egui::TextEdit;
 use repub_color::Color;
-use repub_model::ObjectId;
 use repub_model::shape::{Shape, ShapeKind};
 use repub_model::styles::{CharacterStyle, UnderlineStyle};
 use repub_model::text::Hyperlink;
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::text_edit::{self, TextPos};
@@ -49,7 +49,9 @@ impl HyperlinkDialog {
             self.object_id = Some(edit.frame);
             // A caret inside a link (with nothing selected) edits that link
             if !edit.has_selection() {
-                let found = text_edit::texts_in(state, edit.frame, edit.cell).first().and_then(|t| text_edit::link_around(t, edit.caret));
+                let found = text_edit::texts_in(state, edit.frame, edit.cell)
+                    .first()
+                    .and_then(|t| text_edit::link_around(t, edit.caret));
                 if let Some((start, end, link)) = found {
                     self.text = link.text;
                     self.address = link.target;
@@ -76,7 +78,11 @@ impl HyperlinkDialog {
         let mut inserted = false;
         let mut close = false;
 
-        let title = if self.editing.is_some() { "Edit Hyperlink" } else { "Insert Hyperlink" };
+        let title = if self.editing.is_some() {
+            "Edit Hyperlink"
+        } else {
+            "Insert Hyperlink"
+        };
         let mut remove = false;
         egui::Window::new(title)
             .collapsible(false)
@@ -98,15 +104,30 @@ impl HyperlinkDialog {
                         ui.label(egui::RichText::new("Link to").font(fonts::body()));
                         ui.horizontal(|ui| {
                             ui.selectable_value(&mut self.internal, false, "Web or e-mail address");
-                            ui.selectable_value(&mut self.internal, true, "Page in this publication");
+                            ui.selectable_value(
+                                &mut self.internal,
+                                true,
+                                "Page in this publication",
+                            );
                         });
                         ui.end_row();
 
-                        ui.label(egui::RichText::new(if self.internal { "Page number" } else { "Address" }).font(fonts::body()));
+                        ui.label(
+                            egui::RichText::new(if self.internal {
+                                "Page number"
+                            } else {
+                                "Address"
+                            })
+                            .font(fonts::body()),
+                        );
                         ui.add(
                             TextEdit::singleline(&mut self.address)
                                 .desired_width(240.0)
-                                .hint_text(if self.internal { "3" } else { "https://example.com" }),
+                                .hint_text(if self.internal {
+                                    "3"
+                                } else {
+                                    "https://example.com"
+                                }),
                         );
                         ui.end_row();
                     });
@@ -129,7 +150,10 @@ impl HyperlinkDialog {
                         remove = true;
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+                        if ui
+                            .add(egui::Button::new("OK").fill(colors::accent()))
+                            .clicked()
+                        {
                             inserted = self.apply(state);
                             close = true;
                         }
@@ -149,7 +173,9 @@ impl HyperlinkDialog {
 
     /// Turn the link being edited back into plain text.
     fn remove(&mut self, state: &mut AppState) -> bool {
-        let (Some((start, end)), Some(edit)) = (self.editing, state.text_edit.clone()) else { return false };
+        let (Some((start, end)), Some(edit)) = (self.editing, state.text_edit.clone()) else {
+            return false;
+        };
         state.record_undo("Remove Hyperlink");
         let text = self.text.clone();
         let mut after = None;
@@ -176,8 +202,16 @@ impl HyperlinkDialog {
         if address.is_empty() {
             return false;
         }
-        let label = if self.text.trim().is_empty() { address } else { self.text.trim() };
-        let mut link = if self.internal { Hyperlink::internal(address, label) } else { Hyperlink::external(address, label) };
+        let label = if self.text.trim().is_empty() {
+            address
+        } else {
+            self.text.trim()
+        };
+        let mut link = if self.internal {
+            Hyperlink::internal(address, label)
+        } else {
+            Hyperlink::external(address, label)
+        };
         link.style = CharacterStyle {
             color: LINK_COLOR,
             underline: UnderlineStyle::Single,
@@ -191,7 +225,11 @@ impl HyperlinkDialog {
             let (start, end) = self.editing.unwrap_or_else(|| edit.range());
             let mut after = None;
             text_edit::for_each_text_mut(state, edit.frame, edit.cell, |content| {
-                let at = if start != end { text_edit::delete_range(content, start, end) } else { start };
+                let at = if start != end {
+                    text_edit::delete_range(content, start, end)
+                } else {
+                    start
+                };
                 after = Some(text_edit::insert_link(content, at, link.clone()));
             });
             let Some(after) = after else { return false };
@@ -207,9 +245,15 @@ impl HyperlinkDialog {
         if let Some(&id) = self.object_id.as_ref() {
             let mut placed = false;
             if let Some(page) = state.current_page_mut() {
-                if let Some(Shape { kind: ShapeKind::TextFrame(tf), .. }) = page.get_shape_mut(id) {
+                if let Some(Shape {
+                    kind: ShapeKind::TextFrame(tf),
+                    ..
+                }) = page.get_shape_mut(id)
+                {
                     if tf.content.paragraphs.is_empty() {
-                        tf.content.paragraphs.push(repub_model::text::Paragraph::new());
+                        tf.content
+                            .paragraphs
+                            .push(repub_model::text::Paragraph::new());
                     }
                     let pos = text_edit::end_pos(&tf.content);
                     text_edit::insert_link(&mut tf.content, pos, link.clone());
@@ -223,7 +267,9 @@ impl HyperlinkDialog {
         }
 
         // Nothing selected: create a small frame near the page centre.
-        let Some(size) = state.current_page().map(|p| p.size) else { return false };
+        let Some(size) = state.current_page().map(|p| p.size) else {
+            return false;
+        };
         let bounds = repub_geometry::Rect::new(
             size.width / 2.0 - 90.0,
             size.height / 2.0 - 12.0,
@@ -231,7 +277,9 @@ impl HyperlinkDialog {
             24.0,
         );
         let mut shape = Shape::text_frame(bounds);
-        let ShapeKind::TextFrame(tf) = &mut shape.kind else { unreachable!() };
+        let ShapeKind::TextFrame(tf) = &mut shape.kind else {
+            unreachable!()
+        };
         text_edit::insert_link(&mut tf.content, TextPos::new(0, 0), link);
         let id = shape.common.id;
         {

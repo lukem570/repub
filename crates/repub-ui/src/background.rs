@@ -74,49 +74,49 @@ impl Rng {
 fn generate_texture(params: &BackgroundParams) -> Vec<u8> {
     let size = params.size;
     let mut rng = Rng::new(params.seed);
-    
+
     // Generate base white noise
     let w: Vec<f32> = (0..size * size).map(|_| rng.normal()).collect();
-    
+
     // Apply spatial filter: subtract cardinal neighbors, add diagonal neighbors
     // This creates the fine-grain pattern without clumps
     let mut noise = vec![0.0f32; size * size];
-    
+
     for y in 0..size {
         for x in 0..size {
             let idx = y * size + x;
-            
+
             // Wrap-around indices for seamless tiling
             let x_prev = if x == 0 { size - 1 } else { x - 1 };
             let x_next = if x == size - 1 { 0 } else { x + 1 };
             let y_prev = if y == 0 { size - 1 } else { y - 1 };
             let y_next = if y == size - 1 { 0 } else { y + 1 };
-            
+
             // Cardinal neighbors (subtract)
             let cross = w[y * size + x_next]
                 + w[y * size + x_prev]
                 + w[y_next * size + x]
                 + w[y_prev * size + x];
-            
+
             // Diagonal neighbors (add)
             let diag = w[y_next * size + x_next]
                 + w[y_next * size + x_prev]
                 + w[y_prev * size + x_next]
                 + w[y_prev * size + x_prev];
-            
+
             noise[idx] = w[idx] - 0.1 * cross + 0.1 * diag;
         }
     }
-    
+
     // Normalize to unit standard deviation
     let mean: f32 = noise.iter().sum::<f32>() / noise.len() as f32;
     let variance: f32 = noise.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / noise.len() as f32;
     let std_dev = variance.sqrt().max(0.001);
-    
+
     for n in &mut noise {
         *n = (*n - mean) / std_dev;
     }
-    
+
     // Convert to RGB pixels
     let mut pixels = Vec::with_capacity(size * size * 4);
     for n in &noise {
@@ -126,7 +126,7 @@ fn generate_texture(params: &BackgroundParams) -> Vec<u8> {
         pixels.push(v); // B
         pixels.push(255); // A
     }
-    
+
     pixels
 }
 
@@ -139,17 +139,10 @@ pub fn get_background_texture(ctx: &egui::Context) -> TextureHandle {
             size: params.size,
         }
     });
-    
-    let image = ColorImage::from_rgba_unmultiplied(
-        [data.size, data.size],
-        &data.pixels,
-    );
-    
-    ctx.load_texture(
-        "workspace_background",
-        image,
-        TextureOptions::LINEAR,
-    )
+
+    let image = ColorImage::from_rgba_unmultiplied([data.size, data.size], &data.pixels);
+
+    ctx.load_texture("workspace_background", image, TextureOptions::LINEAR)
 }
 
 /// Paint the workspace background with the grainy texture.
@@ -160,24 +153,22 @@ pub fn paint_workspace_background(
     base_color: Color32,
 ) {
     let texture_size = texture.size_vec2();
-    
+
     // Calculate UV coordinates for tiling
     let uv_scale = egui::vec2(
         rect.width() / texture_size.x,
         rect.height() / texture_size.y,
     );
-    
+
     // Create a mesh with the tiled texture
     let mut mesh = egui::Mesh::with_texture(texture.id());
-    
+
     // Add a quad covering the entire rect
-    let uv_rect = egui::Rect::from_min_max(
-        egui::pos2(0.0, 0.0),
-        egui::pos2(uv_scale.x, uv_scale.y),
-    );
-    
+    let uv_rect =
+        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(uv_scale.x, uv_scale.y));
+
     mesh.add_rect_with_uv(rect, uv_rect, base_color);
-    
+
     painter.add(egui::Shape::mesh(mesh));
 }
 
@@ -190,25 +181,23 @@ pub fn paint_workspace_with_pan(
     pan_offset: egui::Vec2,
 ) {
     let tile_size = 256.0; // Fixed tile size for consistent look
-    
+
     // Offset the tiling grid by the pan amount (creates the scrolling effect)
     // We negate pan_offset so the texture moves opposite to the view movement
     let offset_x = (-pan_offset.x).rem_euclid(tile_size);
     let offset_y = (-pan_offset.y).rem_euclid(tile_size);
-    
+
     // Start tiling from before the visible area to cover edges
     let start_x = rect.left() - offset_x - tile_size;
     let start_y = rect.top() - offset_y - tile_size;
-    
+
     let mut x = start_x;
     while x < rect.right() + tile_size {
         let mut y = start_y;
         while y < rect.bottom() + tile_size {
-            let tile_rect = egui::Rect::from_min_size(
-                egui::pos2(x, y),
-                egui::vec2(tile_size, tile_size),
-            );
-            
+            let tile_rect =
+                egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(tile_size, tile_size));
+
             // Clip to workspace bounds
             let clipped = tile_rect.intersect(rect);
             if clipped.width() > 0.0 && clipped.height() > 0.0 {
@@ -221,19 +210,19 @@ pub fn paint_workspace_with_pan(
                     (clipped.right() - tile_rect.left()) / tile_size,
                     (clipped.bottom() - tile_rect.top()) / tile_size,
                 );
-                
+
                 // The texture is light grey; dark mode scales it down to a
                 // charcoal workspace, grain and all
-                let tint = if crate::theme::colors::is_dark() { Color32::from_gray(46) } else { Color32::WHITE };
+                let tint = if crate::theme::colors::is_dark() {
+                    Color32::from_gray(46)
+                } else {
+                    Color32::WHITE
+                };
                 let mut mesh = egui::Mesh::with_texture(texture.id());
-                mesh.add_rect_with_uv(
-                    clipped,
-                    egui::Rect::from_min_max(uv_min, uv_max),
-                    tint,
-                );
+                mesh.add_rect_with_uv(clipped, egui::Rect::from_min_max(uv_min, uv_max), tint);
                 painter.add(egui::Shape::mesh(mesh));
             }
-            
+
             y += tile_size;
         }
         x += tile_size;
@@ -241,10 +230,6 @@ pub fn paint_workspace_with_pan(
 }
 
 /// Paint workspace with simple tinted texture (stationary, no pan).
-pub fn paint_workspace_simple(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    texture: &TextureHandle,
-) {
+pub fn paint_workspace_simple(painter: &egui::Painter, rect: egui::Rect, texture: &TextureHandle) {
     paint_workspace_with_pan(painter, rect, texture, egui::Vec2::ZERO);
 }

@@ -23,7 +23,11 @@ pub struct EditPointsState {
 impl EditPointsState {
     /// Start a point-editing session for `shape_id`.
     pub fn new(shape_id: ObjectId) -> Self {
-        Self { shape_id, selected: None, dragging: false }
+        Self {
+            shape_id,
+            selected: None,
+            dragging: false,
+        }
     }
 }
 

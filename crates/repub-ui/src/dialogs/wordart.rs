@@ -3,9 +3,11 @@
 
 use egui::Ui;
 use repub_color::Color;
-use repub_model::shape::{BevelType, Extrusion3D, Preset3DStyle, TextEffectData, TextTransform, WordArtPreset};
-use repub_model::styles::{FontStyle, FontWeight};
 use repub_model::shape::ShapeKind;
+use repub_model::shape::{
+    BevelType, Extrusion3D, Preset3DStyle, TextEffectData, TextTransform, WordArtPreset,
+};
+use repub_model::styles::{FontStyle, FontWeight};
 use repub_model::ObjectId;
 
 use super::controls::{choice, color_edit, number_row, ok_cancel, row};
@@ -83,8 +85,12 @@ impl WordArtDialog {
 
     /// Open on the selected WordArt.
     pub fn open_for_selection(&mut self, state: &AppState) {
-        let [shape] = state.selected_objects()[..] else { return };
-        let ShapeKind::TextEffect(data) = &shape.kind else { return };
+        let [shape] = state.selected_objects()[..] else {
+            return;
+        };
+        let ShapeKind::TextEffect(data) = &shape.kind else {
+            return;
+        };
         self.id = Some(shape.common.id);
         self.work = Some(data.clone());
         self.open = true;
@@ -99,16 +105,21 @@ impl WordArtDialog {
             return;
         };
         let mut result = None;
-        egui::Window::new("Edit WordArt").collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.set_min_width(420.0);
-            fields(ui, work);
-            result = ok_cancel(ui);
-        });
+        egui::Window::new("Edit WordArt")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.set_min_width(420.0);
+                fields(ui, work);
+                result = ok_cancel(ui);
+            });
         match result {
             Some(true) => {
                 if let (Some(id), Some(work)) = (self.id, self.work.take()) {
                     state.begin_edit();
-                    if let Some(shape) = state.current_page_mut().and_then(|p| p.get_shape_mut(id)) {
+                    if let Some(shape) = state.current_page_mut().and_then(|p| p.get_shape_mut(id))
+                    {
                         if let ShapeKind::TextEffect(data) = &mut shape.kind {
                             *data = work;
                         }
@@ -124,25 +135,46 @@ impl WordArtDialog {
 }
 
 fn fields(ui: &mut Ui, data: &mut TextEffectData) {
-    row(ui, "Text", |ui| ui.add(egui::TextEdit::multiline(&mut data.text).desired_rows(2).desired_width(280.0)));
+    row(ui, "Text", |ui| {
+        ui.add(
+            egui::TextEdit::multiline(&mut data.text)
+                .desired_rows(2)
+                .desired_width(280.0),
+        )
+    });
     row(ui, "Font", |ui| family_box(ui, &mut data.style.font.family));
     row(ui, "", |ui| {
         let mut bold = data.style.font.weight.weight() >= 600;
         let mut italic = data.style.font.style != FontStyle::Normal;
         if ui.checkbox(&mut bold, "Bold").changed() {
-            data.style.font.weight = if bold { FontWeight::Bold } else { FontWeight::Normal };
+            data.style.font.weight = if bold {
+                FontWeight::Bold
+            } else {
+                FontWeight::Normal
+            };
         }
         if ui.checkbox(&mut italic, "Italic").changed() {
-            data.style.font.style = if italic { FontStyle::Italic } else { FontStyle::Normal };
+            data.style.font.style = if italic {
+                FontStyle::Italic
+            } else {
+                FontStyle::Normal
+            };
         }
     });
     let mut preset = match data.transform {
         TextTransform::Preset(p) => p,
         _ => WordArtPreset::Plain,
     };
-    let known = matches!(data.transform, TextTransform::None | TextTransform::Preset(_));
+    let known = matches!(
+        data.transform,
+        TextTransform::None | TextTransform::Preset(_)
+    );
     if known && choice(ui, "wordart_shape", "Shape", &mut preset, &PRESETS) {
-        data.transform = if preset == WordArtPreset::Plain { TextTransform::None } else { TextTransform::Preset(preset) };
+        data.transform = if preset == WordArtPreset::Plain {
+            TextTransform::None
+        } else {
+            TextTransform::Preset(preset)
+        };
     } else if !known {
         row(ui, "Shape", |ui| ui.label("Custom path"));
     }
@@ -156,7 +188,10 @@ fn fields(ui: &mut Ui, data: &mut TextEffectData) {
     let mut on = data.extrusion.is_some();
     row(ui, "Extrusion", |ui| {
         if ui.checkbox(&mut on, "").changed() {
-            data.extrusion = on.then(|| Extrusion3D { depth: 12.0, ..Default::default() });
+            data.extrusion = on.then(|| Extrusion3D {
+                depth: 12.0,
+                ..Default::default()
+            });
         }
     });
     if let Some(ext) = &mut data.extrusion {
@@ -172,13 +207,48 @@ fn fields(ui: &mut Ui, data: &mut TextEffectData) {
         });
         choice(ui, "wordart_bevel", "Bevel", &mut ext.bevel, &BEVELS);
         if ext.bevel.is_some() {
-            number_row(ui, "Bevel size", &mut ext.bevel_size, 0.0..=50.0, 0.5, " pt");
+            number_row(
+                ui,
+                "Bevel size",
+                &mut ext.bevel_size,
+                0.0..=50.0,
+                0.5,
+                " pt",
+            );
         }
-        number_row(ui, "Contour width", &mut ext.contour_width, 0.0..=20.0, 0.1, " pt");
+        number_row(
+            ui,
+            "Contour width",
+            &mut ext.contour_width,
+            0.0..=20.0,
+            0.1,
+            " pt",
+        );
     }
-    number_row(ui, "Rotate X", &mut data.rotation_3d.x, -90.0..=90.0, 1.0, "°");
-    number_row(ui, "Rotate Y", &mut data.rotation_3d.y, -90.0..=90.0, 1.0, "°");
-    number_row(ui, "Perspective", &mut data.rotation_3d.perspective, 0.0..=1.0, 0.01, "");
+    number_row(
+        ui,
+        "Rotate X",
+        &mut data.rotation_3d.x,
+        -90.0..=90.0,
+        1.0,
+        "°",
+    );
+    number_row(
+        ui,
+        "Rotate Y",
+        &mut data.rotation_3d.y,
+        -90.0..=90.0,
+        1.0,
+        "°",
+    );
+    number_row(
+        ui,
+        "Perspective",
+        &mut data.rotation_3d.perspective,
+        0.0..=1.0,
+        0.01,
+        "",
+    );
 }
 
 #[cfg(test)]

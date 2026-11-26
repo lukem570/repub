@@ -1,8 +1,8 @@
 //! Local storage for web.
 
-use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
 
 /// Get localStorage.
 fn get_storage() -> Option<web_sys::Storage> {
@@ -29,10 +29,8 @@ pub fn remove(key: &str) -> Result<(), JsValue> {
 
 /// Save a serializable value to localStorage.
 pub fn save<T: Serialize>(key: &str, value: &T) -> Result<(), String> {
-    let json = serde_json::to_string(value)
-        .map_err(|e| e.to_string())?;
-    save_string(key, &json)
-        .map_err(|e| format!("{:?}", e))
+    let json = serde_json::to_string(value).map_err(|e| e.to_string())?;
+    save_string(key, &json).map_err(|e| format!("{:?}", e))
 }
 
 /// Load a deserializable value from localStorage.
@@ -103,10 +101,10 @@ impl WebSettings {
     pub fn add_recent(&mut self, name: String, json: String) {
         // Remove if already exists
         self.recent_documents.remove(&name);
-        
+
         // Add new
         self.recent_documents.insert(name, json);
-        
+
         // Trim if too many
         while self.recent_documents.len() > self.max_recent {
             // Remove oldest (arbitrary since HashMap doesn't preserve order)
@@ -178,13 +176,14 @@ impl AutoSave {
     /// List all auto-saved documents.
     pub fn list_autosaves() -> Vec<String> {
         let mut names = Vec::new();
-        
+
         if let Some(storage) = get_storage() {
             if let Ok(len) = storage.length() {
                 for i in 0..len {
                     if let Ok(Some(key)) = storage.key(i) {
                         if key.starts_with(Self::STORAGE_PREFIX) {
-                            let name = key.strip_prefix(Self::STORAGE_PREFIX)
+                            let name = key
+                                .strip_prefix(Self::STORAGE_PREFIX)
                                 .unwrap_or(&key)
                                 .to_string();
                             names.push(name);
@@ -193,7 +192,7 @@ impl AutoSave {
                 }
             }
         }
-        
+
         names
     }
 }
@@ -222,7 +221,7 @@ mod tests {
         let mut settings = WebSettings::default();
         settings.dark_mode = true;
         settings.save();
-        
+
         let loaded = WebSettings::load();
         assert!(loaded.dark_mode);
     }

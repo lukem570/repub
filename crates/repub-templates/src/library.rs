@@ -60,7 +60,9 @@ pub struct TemplateLibrary {
 impl TemplateLibrary {
     /// Create a new empty library.
     pub fn new() -> Self {
-        Self { templates: HashMap::new() }
+        Self {
+            templates: HashMap::new(),
+        }
     }
 
     /// Create a library with built-in templates.
@@ -92,7 +94,8 @@ impl TemplateLibrary {
 
     /// Add a template to the library.
     pub fn add(&mut self, template: Template) {
-        self.templates.insert(template.metadata.id.clone(), template);
+        self.templates
+            .insert(template.metadata.id.clone(), template);
     }
 
     /// Remove a template from the library.
@@ -112,7 +115,10 @@ impl TemplateLibrary {
 
     /// Get templates by category.
     pub fn by_category(&self, category: TemplateCategory) -> Vec<&Template> {
-        self.templates.values().filter(|t| t.metadata.category == category).collect()
+        self.templates
+            .values()
+            .filter(|t| t.metadata.category == category)
+            .collect()
     }
 
     /// Search templates by name or tags.
@@ -123,7 +129,10 @@ impl TemplateLibrary {
             .filter(|t| {
                 t.metadata.name.to_lowercase().contains(&query_lower)
                     || t.metadata.description.to_lowercase().contains(&query_lower)
-                    || t.metadata.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+                    || t.metadata
+                        .tags
+                        .iter()
+                        .any(|tag| tag.to_lowercase().contains(&query_lower))
             })
             .collect()
     }

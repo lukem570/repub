@@ -11,8 +11,8 @@
 
 use repub_color::Color;
 use repub_model::styles::{
-    BaselineShift, CharacterStyle, FontStyle, FontWeight, LineSpacing, ListStyle, NumberFormat, ParagraphStyle, TextAlignment,
-    UnderlineStyle,
+    BaselineShift, CharacterStyle, FontStyle, FontWeight, LineSpacing, ListStyle, NumberFormat,
+    ParagraphStyle, TextAlignment, UnderlineStyle,
 };
 use repub_model::text::{InlineElement, StyledText};
 
@@ -59,11 +59,41 @@ impl Toggle {
     /// Set this toggle on or off in `style`.
     pub fn set(self, style: &mut CharacterStyle, on: bool) {
         match self {
-            Toggle::Bold => style.font.weight = if on { FontWeight::Bold } else { FontWeight::Normal },
-            Toggle::Italic => style.font.style = if on { FontStyle::Italic } else { FontStyle::Normal },
-            Toggle::Underline => style.underline = if on { UnderlineStyle::Single } else { UnderlineStyle::None },
-            Toggle::Superscript => style.baseline_shift = if on { BaselineShift::Superscript } else { BaselineShift::Normal },
-            Toggle::Subscript => style.baseline_shift = if on { BaselineShift::Subscript } else { BaselineShift::Normal },
+            Toggle::Bold => {
+                style.font.weight = if on {
+                    FontWeight::Bold
+                } else {
+                    FontWeight::Normal
+                }
+            }
+            Toggle::Italic => {
+                style.font.style = if on {
+                    FontStyle::Italic
+                } else {
+                    FontStyle::Normal
+                }
+            }
+            Toggle::Underline => {
+                style.underline = if on {
+                    UnderlineStyle::Single
+                } else {
+                    UnderlineStyle::None
+                }
+            }
+            Toggle::Superscript => {
+                style.baseline_shift = if on {
+                    BaselineShift::Superscript
+                } else {
+                    BaselineShift::Normal
+                }
+            }
+            Toggle::Subscript => {
+                style.baseline_shift = if on {
+                    BaselineShift::Subscript
+                } else {
+                    BaselineShift::Normal
+                }
+            }
         }
     }
 }
@@ -91,9 +121,18 @@ pub const FONT_SIZES: [f64; 16] = [
 /// The next font size up (`up`) or down the standard list from `size`.
 pub fn step_size(size: f64, up: bool) -> f64 {
     if up {
-        FONT_SIZES.iter().copied().find(|&s| s > size + 0.01).unwrap_or((size + 10.0).min(1638.0))
+        FONT_SIZES
+            .iter()
+            .copied()
+            .find(|&s| s > size + 0.01)
+            .unwrap_or((size + 10.0).min(1638.0))
     } else {
-        FONT_SIZES.iter().rev().copied().find(|&s| s < size - 0.01).unwrap_or((size - 1.0).max(1.0))
+        FONT_SIZES
+            .iter()
+            .rev()
+            .copied()
+            .find(|&s| s < size - 0.01)
+            .unwrap_or((size - 1.0).max(1.0))
     }
 }
 
@@ -124,13 +163,21 @@ impl CharChange {
 fn para_span(text: &StyledText, para: usize, a: TextPos, b: TextPos) -> (usize, usize) {
     let len = text.paragraphs.get(para).map_or(0, para_len);
     let start = if para == a.para { a.offset.min(len) } else { 0 };
-    let end = if para == b.para { b.offset.min(len) } else { len };
+    let end = if para == b.para {
+        b.offset.min(len)
+    } else {
+        len
+    };
     (start, end)
 }
 
 /// Run `f` on the style of every character in `[a, b)` (whole text when `None`),
 /// splitting runs at the ends so nothing outside changes.
-pub fn style_range(text: &mut StyledText, range: Option<(TextPos, TextPos)>, f: &mut dyn FnMut(&mut CharacterStyle)) {
+pub fn style_range(
+    text: &mut StyledText,
+    range: Option<(TextPos, TextPos)>,
+    f: &mut dyn FnMut(&mut CharacterStyle),
+) {
     let Some((a, b)) = range else {
         for p in &mut text.paragraphs {
             f(&mut p.style.default_char_style);
@@ -168,7 +215,11 @@ pub fn style_range(text: &mut StyledText, range: Option<(TextPos, TextPos)>, f: 
 }
 
 /// Apply a character change over a range (whole text when `None`).
-pub fn apply_char_change(text: &mut StyledText, range: Option<(TextPos, TextPos)>, change: &CharChange) {
+pub fn apply_char_change(
+    text: &mut StyledText,
+    range: Option<(TextPos, TextPos)>,
+    change: &CharChange,
+) {
     style_range(text, range, &mut |s| change.apply(s));
 }
 
@@ -207,7 +258,11 @@ pub fn all_on(styles: &[CharacterStyle], toggle: Toggle) -> bool {
 }
 
 /// Run `f` on the style of every paragraph whose index is in `range`.
-pub fn style_paragraphs(text: &mut StyledText, range: std::ops::RangeInclusive<usize>, f: &mut dyn FnMut(&mut ParagraphStyle)) {
+pub fn style_paragraphs(
+    text: &mut StyledText,
+    range: std::ops::RangeInclusive<usize>,
+    f: &mut dyn FnMut(&mut ParagraphStyle),
+) {
     for (i, p) in text.paragraphs.iter_mut().enumerate() {
         if range.contains(&i) {
             f(&mut p.style);
@@ -237,8 +292,15 @@ pub fn list_kind(style: &ListStyle) -> Option<ListKind> {
 pub fn list_style_for(kind: ListKind, on: bool) -> ListStyle {
     match (on, kind) {
         (false, _) => ListStyle::None,
-        (true, ListKind::Bullets) => ListStyle::Bullet { character: '•', indent: 18.0 },
-        (true, ListKind::Numbering) => ListStyle::Numbered { format: NumberFormat::Arabic, start: 1, indent: 18.0 },
+        (true, ListKind::Bullets) => ListStyle::Bullet {
+            character: '•',
+            indent: 18.0,
+        },
+        (true, ListKind::Numbering) => ListStyle::Numbered {
+            format: NumberFormat::Arabic,
+            start: 1,
+            indent: 18.0,
+        },
     }
 }
 
@@ -276,7 +338,9 @@ pub fn line_spacing_multiple(spacing: &LineSpacing) -> Option<f64> {
 }
 
 /// The alignment shared by `styles`, if they agree.
-pub fn shared_alignment<'a>(styles: impl IntoIterator<Item = &'a ParagraphStyle>) -> Option<TextAlignment> {
+pub fn shared_alignment<'a>(
+    styles: impl IntoIterator<Item = &'a ParagraphStyle>,
+) -> Option<TextAlignment> {
     let mut found = None;
     for p in styles {
         match found {
@@ -298,7 +362,9 @@ mod tests {
             .elements
             .iter()
             .filter_map(|e| match e {
-                InlineElement::Text(r) if !r.text.is_empty() => Some((r.text.clone(), r.style.font.weight == FontWeight::Bold)),
+                InlineElement::Text(r) if !r.text.is_empty() => {
+                    Some((r.text.clone(), r.style.font.weight == FontWeight::Bold))
+                }
                 _ => None,
             })
             .collect()
@@ -306,30 +372,54 @@ mod tests {
 
     #[test]
     fn range_styling_splits_runs_and_leaves_the_rest() {
-        let mut text = StyledText { paragraphs: vec![Paragraph::plain("Hello brave world")] };
-        style_range(&mut text, Some((TextPos::new(0, 6), TextPos::new(0, 11))), &mut |s| Toggle::Bold.set(s, true));
+        let mut text = StyledText {
+            paragraphs: vec![Paragraph::plain("Hello brave world")],
+        };
+        style_range(
+            &mut text,
+            Some((TextPos::new(0, 6), TextPos::new(0, 11))),
+            &mut |s| Toggle::Bold.set(s, true),
+        );
         assert_eq!(
             bold_of(&text),
-            vec![("Hello ".into(), false), ("brave".into(), true), (" world".into(), false)]
+            vec![
+                ("Hello ".into(), false),
+                ("brave".into(), true),
+                (" world".into(), false)
+            ]
         );
     }
 
     #[test]
     fn range_across_paragraphs() {
-        let mut text = StyledText { paragraphs: vec![Paragraph::plain("One two"), Paragraph::plain("Three four")] };
-        style_range(&mut text, Some((TextPos::new(0, 4), TextPos::new(1, 5))), &mut |s| s.font_size = 30.0);
+        let mut text = StyledText {
+            paragraphs: vec![Paragraph::plain("One two"), Paragraph::plain("Three four")],
+        };
+        style_range(
+            &mut text,
+            Some((TextPos::new(0, 4), TextPos::new(1, 5))),
+            &mut |s| s.font_size = 30.0,
+        );
         let sizes = |p: &Paragraph| {
             p.elements
                 .iter()
                 .filter_map(|e| match e {
-                    InlineElement::Text(r) if !r.text.is_empty() => Some((r.text.clone(), r.style.font_size)),
+                    InlineElement::Text(r) if !r.text.is_empty() => {
+                        Some((r.text.clone(), r.style.font_size))
+                    }
                     _ => None,
                 })
                 .collect::<Vec<_>>()
         };
         let default = CharacterStyle::default().font_size;
-        assert_eq!(sizes(&text.paragraphs[0]), vec![("One ".into(), default), ("two".into(), 30.0)]);
-        assert_eq!(sizes(&text.paragraphs[1]), vec![("Three".into(), 30.0), (" four".into(), default)]);
+        assert_eq!(
+            sizes(&text.paragraphs[0]),
+            vec![("One ".into(), default), ("two".into(), 30.0)]
+        );
+        assert_eq!(
+            sizes(&text.paragraphs[1]),
+            vec![("Three".into(), 30.0), (" four".into(), default)]
+        );
     }
 
     #[test]
@@ -338,8 +428,11 @@ mod tests {
         let mut bold = CharacterStyle::default();
         bold.font.weight = FontWeight::Bold;
         p.elements.push(InlineElement::Text(TextRun::new("plain ")));
-        p.elements.push(InlineElement::Text(TextRun::styled("bold", bold)));
-        let text = StyledText { paragraphs: vec![p] };
+        p.elements
+            .push(InlineElement::Text(TextRun::styled("bold", bold)));
+        let text = StyledText {
+            paragraphs: vec![p],
+        };
         let styles = styles_in(&text, Some((TextPos::new(0, 6), TextPos::new(0, 10))));
         assert!(styles.iter().all(|s| s.font.weight == FontWeight::Bold));
         assert_eq!(styles_in(&text, None).len(), 2);
@@ -356,8 +449,12 @@ mod tests {
 
     #[test]
     fn paragraph_styling_and_helpers() {
-        let mut text = StyledText { paragraphs: vec![Paragraph::plain("a"), Paragraph::plain("b")] };
-        style_paragraphs(&mut text, 0..=0, &mut |p| p.alignment = TextAlignment::Center);
+        let mut text = StyledText {
+            paragraphs: vec![Paragraph::plain("a"), Paragraph::plain("b")],
+        };
+        style_paragraphs(&mut text, 0..=0, &mut |p| {
+            p.alignment = TextAlignment::Center
+        });
         assert_eq!(text.paragraphs[0].style.alignment, TextAlignment::Center);
         assert_eq!(text.paragraphs[1].style.alignment, TextAlignment::Left);
         assert_eq!(step_indent(0.0, true), INDENT_STEP);

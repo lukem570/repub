@@ -5,8 +5,8 @@
 //! text in place and "Replace" can edit exactly the matched range.
 
 use egui::{Key, TextEdit};
-use repub_model::ObjectId;
 use repub_model::shape::ShapeKind;
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::text_edit::{self, TextPos};
@@ -169,15 +169,21 @@ impl FindReplaceDialog {
         if self.query.is_empty() {
             return;
         }
-        let Some(doc) = state.document.as_ref() else { return };
+        let Some(doc) = state.document.as_ref() else {
+            return;
+        };
         for (page_idx, page) in doc.pages().iter().enumerate() {
             for obj in page.layers().iter().flat_map(|l| l.shapes()) {
-                let ShapeKind::TextFrame(tf) = &obj.kind else { continue };
+                let ShapeKind::TextFrame(tf) = &obj.kind else {
+                    continue;
+                };
                 for (para_idx, para) in tf.content.paragraphs.iter().enumerate() {
                     let chars = text_edit::para_chars(para);
                     let mut start = 0;
                     while start < chars.len() {
-                        if let Some(len) = match_at(&chars, start, &self.query, self.match_case, self.whole_word) {
+                        if let Some(len) =
+                            match_at(&chars, start, &self.query, self.match_case, self.whole_word)
+                        {
                             self.matches.push(Match {
                                 page: page_idx,
                                 object: obj.common.id,
@@ -214,7 +220,9 @@ impl FindReplaceDialog {
     }
 
     fn select_match(&mut self, state: &mut AppState, now: f64) {
-        let Some(m) = self.matches.get(self.current).copied() else { return };
+        let Some(m) = self.matches.get(self.current).copied() else {
+            return;
+        };
         state.current_page = m.page;
         state.selection = vec![m.object];
         state.fit_page_pending = false;
@@ -264,7 +272,11 @@ impl FindReplaceDialog {
     }
 
     fn replace_in_object(&self, state: &mut AppState, m: Match) -> bool {
-        let Some(page) = state.document.as_mut().and_then(|d| d.pages_mut().get_mut(m.page)) else {
+        let Some(page) = state
+            .document
+            .as_mut()
+            .and_then(|d| d.pages_mut().get_mut(m.page))
+        else {
             return false;
         };
         let Some(shape) = page.get_shape_mut(m.object) else {
@@ -291,14 +303,24 @@ impl FindReplaceDialog {
 }
 
 /// Match `query` at `start` in `chars`; returns its length when it matches.
-fn match_at(chars: &[char], start: usize, query: &str, match_case: bool, whole_word: bool) -> Option<usize> {
+fn match_at(
+    chars: &[char],
+    start: usize,
+    query: &str,
+    match_case: bool,
+    whole_word: bool,
+) -> Option<usize> {
     let q: Vec<char> = query.chars().collect();
     if q.is_empty() || start + q.len() > chars.len() {
         return None;
     }
     for (i, qc) in q.iter().enumerate() {
         let c = chars[start + i];
-        let ok = if match_case { c == *qc } else { c.eq_ignore_ascii_case(qc) };
+        let ok = if match_case {
+            c == *qc
+        } else {
+            c.eq_ignore_ascii_case(qc)
+        };
         if !ok {
             return None;
         }

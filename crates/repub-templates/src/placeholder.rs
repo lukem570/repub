@@ -188,25 +188,31 @@ impl PlaceholderValues {
 
     /// Set a text value.
     pub fn set(&mut self, id: &str, value: &str) {
-        self.values.insert(id.to_string(), PlaceholderValue::Text(value.to_string()));
+        self.values
+            .insert(id.to_string(), PlaceholderValue::Text(value.to_string()));
     }
 
     /// Set an image value.
     pub fn set_image(&mut self, id: &str, source: &str, alt: Option<&str>) {
         self.values.insert(
             id.to_string(),
-            PlaceholderValue::Image(ImageValue { source: source.to_string(), alt: alt.map(|s| s.to_string()) }),
+            PlaceholderValue::Image(ImageValue {
+                source: source.to_string(),
+                alt: alt.map(|s| s.to_string()),
+            }),
         );
     }
 
     /// Set a date value.
     pub fn set_date(&mut self, id: &str, date: chrono::NaiveDate) {
-        self.values.insert(id.to_string(), PlaceholderValue::Date(date));
+        self.values
+            .insert(id.to_string(), PlaceholderValue::Date(date));
     }
 
     /// Set a number value.
     pub fn set_number(&mut self, id: &str, value: f64) {
-        self.values.insert(id.to_string(), PlaceholderValue::Number(value));
+        self.values
+            .insert(id.to_string(), PlaceholderValue::Number(value));
     }
 
     /// Get a value.
@@ -284,7 +290,9 @@ mod tests {
             placeholder_type: PlaceholderType::Email,
             default_value: None,
             required: true,
-            validation: PlaceholderType::Email.default_validation().map(|s| s.to_string()),
+            validation: PlaceholderType::Email
+                .default_validation()
+                .map(|s| s.to_string()),
             example: None,
         };
 

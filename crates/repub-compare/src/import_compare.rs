@@ -9,7 +9,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use repub_model::shape::{ImageSource, Shape, ShapeKind};
-use repub_model::styles::{FontWeight, FontStyle, TextAlignment, LineSpacing};
+use repub_model::styles::{FontStyle, FontWeight, LineSpacing, TextAlignment};
 use repub_model::text::InlineElement;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -136,8 +136,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     println!("Loading {}...", args.input.display());
-    let doc = repub_format_pub::import(&args.input)
-        .context("Failed to import Publisher file")?;
+    let doc = repub_format_pub::import(&args.input).context("Failed to import Publisher file")?;
 
     // Parse document into structured format
     let parsed = parse_document(&doc, &args.input);
@@ -160,18 +159,21 @@ fn main() -> Result<()> {
             print_summary(&parsed);
         }
         _ => {
-            anyhow::bail!("Unknown format: {}. Use json, text, or summary", args.format);
+            anyhow::bail!(
+                "Unknown format: {}. Use json, text, or summary",
+                args.format
+            );
         }
     }
 
     // Compare with reference if provided
     if let Some(ref ref_path) = args.reference {
         println!("\n========== Comparison with Reference ==========");
-        let ref_json = std::fs::read_to_string(ref_path)
-            .context("Failed to read reference file")?;
-        let reference: ParsedDocument = serde_json::from_str(&ref_json)
-            .context("Failed to parse reference JSON")?;
-        
+        let ref_json =
+            std::fs::read_to_string(ref_path).context("Failed to read reference file")?;
+        let reference: ParsedDocument =
+            serde_json::from_str(&ref_json).context("Failed to parse reference JSON")?;
+
         compare_documents(&parsed, &reference);
     }
 
@@ -186,23 +188,31 @@ fn main() -> Result<()> {
 }
 
 fn parse_document(doc: &repub_model::Document, path: &std::path::Path) -> ParsedDocument {
-    let filename = path.file_name()
+    let filename = path
+        .file_name()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    let pages: Vec<ParsedPage> = doc.pages().iter().enumerate().map(|(i, page)| {
-        let objects: Vec<ParsedObject> = page.layers().iter()
-            .flat_map(|layer| layer.shapes().iter())
-            .map(|obj| parse_object(obj))
-            .collect();
+    let pages: Vec<ParsedPage> = doc
+        .pages()
+        .iter()
+        .enumerate()
+        .map(|(i, page)| {
+            let objects: Vec<ParsedObject> = page
+                .layers()
+                .iter()
+                .flat_map(|layer| layer.shapes().iter())
+                .map(|obj| parse_object(obj))
+                .collect();
 
-        ParsedPage {
-            index: i,
-            width: page.size.width,
-            height: page.size.height,
-            objects,
-        }
-    }).collect();
+            ParsedPage {
+                index: i,
+                width: page.size.width,
+                height: page.size.height,
+                objects,
+            }
+        })
+        .collect();
 
     ParsedDocument {
         filename,
@@ -214,25 +224,36 @@ fn parse_document(doc: &repub_model::Document, path: &std::path::Path) -> Parsed
 fn parse_object(obj: &Shape) -> ParsedObject {
     let bounds = obj.common.bounds;
     match &obj.kind {
-        ShapeKind::TextFrame(tf) => {
-            ParsedObject::TextFrame(ParsedTextFrame {
-                x: bounds.origin.x,
-                y: bounds.origin.y,
-                width: bounds.width(),
-                height: bounds.height(),
-                paragraphs: tf.content.paragraphs.iter().map(|p| parse_paragraph(p)).collect(),
-            })
-        }
+        ShapeKind::TextFrame(tf) => ParsedObject::TextFrame(ParsedTextFrame {
+            x: bounds.origin.x,
+            y: bounds.origin.y,
+            width: bounds.width(),
+            height: bounds.height(),
+            paragraphs: tf
+                .content
+                .paragraphs
+                .iter()
+                .map(|p| parse_paragraph(p))
+                .collect(),
+        }),
         ShapeKind::Table(table) => {
             let cols = table.cols as usize;
-            let cells: Vec<ParsedCell> = table.cells.iter().enumerate().map(|(i, cell)| {
-                ParsedCell {
+            let cells: Vec<ParsedCell> = table
+                .cells
+                .iter()
+                .enumerate()
+                .map(|(i, cell)| ParsedCell {
                     row: i / cols,
                     col: i % cols,
-                    paragraphs: cell.content.paragraphs.iter().map(|p| parse_paragraph(p)).collect(),
+                    paragraphs: cell
+                        .content
+                        .paragraphs
+                        .iter()
+                        .map(|p| parse_paragraph(p))
+                        .collect(),
                     has_fill: !matches!(cell.fill, repub_model::styles::Fill::None),
-                }
-            }).collect();
+                })
+                .collect();
 
             ParsedObject::Table(ParsedTable {
                 x: bounds.origin.x,
@@ -246,28 +267,24 @@ fn parse_object(obj: &Shape) -> ParsedObject {
                 cells,
             })
         }
-        ShapeKind::AutoShape(auto) => {
-            ParsedObject::Shape(ParsedShape {
-                x: bounds.origin.x,
-                y: bounds.origin.y,
-                width: bounds.width(),
-                height: bounds.height(),
-                shape_type: format!("{:?}", auto.geometry),
-                has_fill: !matches!(obj.fill, repub_model::styles::Fill::None),
-                has_stroke: obj.line.is_some(),
-            })
-        }
-        ShapeKind::Line(_) => {
-            ParsedObject::Shape(ParsedShape {
-                x: bounds.origin.x,
-                y: bounds.origin.y,
-                width: bounds.width(),
-                height: bounds.height(),
-                shape_type: "Line".to_string(),
-                has_fill: !matches!(obj.fill, repub_model::styles::Fill::None),
-                has_stroke: obj.line.is_some(),
-            })
-        }
+        ShapeKind::AutoShape(auto) => ParsedObject::Shape(ParsedShape {
+            x: bounds.origin.x,
+            y: bounds.origin.y,
+            width: bounds.width(),
+            height: bounds.height(),
+            shape_type: format!("{:?}", auto.geometry),
+            has_fill: !matches!(obj.fill, repub_model::styles::Fill::None),
+            has_stroke: obj.line.is_some(),
+        }),
+        ShapeKind::Line(_) => ParsedObject::Shape(ParsedShape {
+            x: bounds.origin.x,
+            y: bounds.origin.y,
+            width: bounds.width(),
+            height: bounds.height(),
+            shape_type: "Line".to_string(),
+            has_fill: !matches!(obj.fill, repub_model::styles::Fill::None),
+            has_stroke: obj.line.is_some(),
+        }),
         ShapeKind::Picture(pic) => {
             let source_type = match &pic.source {
                 ImageSource::File(_) => "file",
@@ -306,25 +323,30 @@ fn parse_paragraph(para: &repub_model::text::Paragraph) -> ParsedParagraph {
         LineSpacing::AtLeast(pts) => format!(">={}pt", pts),
     };
 
-    let runs: Vec<ParsedRun> = para.elements.iter().filter_map(|elem| {
-        match elem {
-            InlineElement::Text(run) => {
-                Some(ParsedRun {
-                    text: run.text.clone(),
-                    font_family: run.style.font.family.clone(),
-                    font_size: run.style.font_size,
-                    bold: matches!(run.style.font.weight, 
-                        FontWeight::Bold | FontWeight::SemiBold | 
-                        FontWeight::ExtraBold | FontWeight::Black),
-                    italic: matches!(run.style.font.style,
-                        FontStyle::Italic | FontStyle::Oblique),
-                    underline: !matches!(run.style.underline, 
-                        repub_model::styles::UnderlineStyle::None),
-                })
-            }
+    let runs: Vec<ParsedRun> = para
+        .elements
+        .iter()
+        .filter_map(|elem| match elem {
+            InlineElement::Text(run) => Some(ParsedRun {
+                text: run.text.clone(),
+                font_family: run.style.font.family.clone(),
+                font_size: run.style.font_size,
+                bold: matches!(
+                    run.style.font.weight,
+                    FontWeight::Bold
+                        | FontWeight::SemiBold
+                        | FontWeight::ExtraBold
+                        | FontWeight::Black
+                ),
+                italic: matches!(run.style.font.style, FontStyle::Italic | FontStyle::Oblique),
+                underline: !matches!(
+                    run.style.underline,
+                    repub_model::styles::UnderlineStyle::None
+                ),
+            }),
             _ => None,
-        }
-    }).collect();
+        })
+        .collect();
 
     ParsedParagraph {
         alignment: alignment.to_string(),
@@ -338,21 +360,30 @@ fn print_document(doc: &ParsedDocument, verbose: bool) {
     println!("Pages: {}", doc.page_count);
 
     for page in &doc.pages {
-        println!("\n--- Page {} ({:.0}x{:.0}pt) ---", page.index + 1, page.width, page.height);
+        println!(
+            "\n--- Page {} ({:.0}x{:.0}pt) ---",
+            page.index + 1,
+            page.width,
+            page.height
+        );
         println!("Objects: {}", page.objects.len());
 
         for obj in &page.objects {
             match obj {
                 ParsedObject::TextFrame(tf) => {
-                    println!("  TextFrame at ({:.0},{:.0}) {:.0}x{:.0}pt", 
-                        tf.x, tf.y, tf.width, tf.height);
+                    println!(
+                        "  TextFrame at ({:.0},{:.0}) {:.0}x{:.0}pt",
+                        tf.x, tf.y, tf.width, tf.height
+                    );
                     for para in &tf.paragraphs {
                         print_paragraph(para, verbose, "    ");
                     }
                 }
                 ParsedObject::Table(table) => {
-                    println!("  Table {}x{} at ({:.0},{:.0})", 
-                        table.rows, table.cols, table.x, table.y);
+                    println!(
+                        "  Table {}x{} at ({:.0},{:.0})",
+                        table.rows, table.cols, table.x, table.y
+                    );
                     println!("    Row heights: {:?}", table.row_heights);
                     println!("    Col widths: {:?}", table.col_widths);
                     for cell in &table.cells {
@@ -365,12 +396,16 @@ fn print_document(doc: &ParsedDocument, verbose: bool) {
                     }
                 }
                 ParsedObject::Shape(shape) => {
-                    println!("  Shape {} at ({:.0},{:.0}) {:.0}x{:.0}", 
-                        shape.shape_type, shape.x, shape.y, shape.width, shape.height);
+                    println!(
+                        "  Shape {} at ({:.0},{:.0}) {:.0}x{:.0}",
+                        shape.shape_type, shape.x, shape.y, shape.width, shape.height
+                    );
                 }
                 ParsedObject::Image(img) => {
-                    println!("  Image ({}) at ({:.0},{:.0}) {:.0}x{:.0}", 
-                        img.source_type, img.x, img.y, img.width, img.height);
+                    println!(
+                        "  Image ({}) at ({:.0},{:.0}) {:.0}x{:.0}",
+                        img.source_type, img.x, img.y, img.width, img.height
+                    );
                 }
                 ParsedObject::Other { description } => {
                     println!("  Other: {}", description);
@@ -384,31 +419,49 @@ fn print_paragraph(para: &ParsedParagraph, verbose: bool, indent: &str) {
     if para.runs.is_empty() {
         return;
     }
-    
+
     let text: String = para.runs.iter().map(|r| r.text.as_str()).collect();
     let preview: String = text.chars().take(50).collect();
-    
+
     if verbose {
-        println!("{}Para: align={}, spacing={}", indent, para.alignment, para.line_spacing);
+        println!(
+            "{}Para: align={}, spacing={}",
+            indent, para.alignment, para.line_spacing
+        );
         for run in &para.runs {
-            let style_flags = format!("{}{}{}",
+            let style_flags = format!(
+                "{}{}{}",
                 if run.bold { "B" } else { "" },
                 if run.italic { "I" } else { "" },
-                if run.underline { "U" } else { "" });
-            println!("{}  {:.0}pt {} {}: {:?}", 
-                indent, run.font_size, run.font_family, style_flags, 
-                run.text.chars().take(30).collect::<String>());
+                if run.underline { "U" } else { "" }
+            );
+            println!(
+                "{}  {:.0}pt {} {}: {:?}",
+                indent,
+                run.font_size,
+                run.font_family,
+                style_flags,
+                run.text.chars().take(30).collect::<String>()
+            );
         }
     } else {
         // Compact output
         let first_run = para.runs.first().unwrap();
-        let style_flags = format!("{}{}{}",
+        let style_flags = format!(
+            "{}{}{}",
             if first_run.bold { "B" } else { "" },
             if first_run.italic { "I" } else { "" },
-            if first_run.underline { "U" } else { "" });
-        println!("{}{:.0}pt {} {} [{}]: {:?}", 
-            indent, first_run.font_size, first_run.font_family, style_flags,
-            para.alignment, preview);
+            if first_run.underline { "U" } else { "" }
+        );
+        println!(
+            "{}{:.0}pt {} {} [{}]: {:?}",
+            indent,
+            first_run.font_size,
+            first_run.font_family,
+            style_flags,
+            para.alignment,
+            preview
+        );
     }
 }
 
@@ -432,8 +485,12 @@ fn print_summary(doc: &ParsedDocument) {
                     for para in &tf.paragraphs {
                         for run in &para.runs {
                             total_runs += 1;
-                            if run.bold { bold_runs += 1; }
-                            if run.italic { italic_runs += 1; }
+                            if run.bold {
+                                bold_runs += 1;
+                            }
+                            if run.italic {
+                                italic_runs += 1;
+                            }
                         }
                     }
                 }
@@ -443,8 +500,12 @@ fn print_summary(doc: &ParsedDocument) {
                         for para in &cell.paragraphs {
                             for run in &para.runs {
                                 total_runs += 1;
-                                if run.bold { bold_runs += 1; }
-                                if run.italic { italic_runs += 1; }
+                                if run.bold {
+                                    bold_runs += 1;
+                                }
+                                if run.italic {
+                                    italic_runs += 1;
+                                }
                             }
                         }
                     }
@@ -461,33 +522,58 @@ fn print_summary(doc: &ParsedDocument) {
     println!("  Tables: {}", tables);
     println!("  Shapes: {}", shapes);
     println!("  Images: {}", images);
-    
+
     println!("\nText:");
     println!("  Total text runs: {}", total_runs);
-    println!("  Bold runs: {} ({:.1}%)", bold_runs, 
-        if total_runs > 0 { bold_runs as f64 / total_runs as f64 * 100.0 } else { 0.0 });
-    println!("  Italic runs: {} ({:.1}%)", italic_runs,
-        if total_runs > 0 { italic_runs as f64 / total_runs as f64 * 100.0 } else { 0.0 });
+    println!(
+        "  Bold runs: {} ({:.1}%)",
+        bold_runs,
+        if total_runs > 0 {
+            bold_runs as f64 / total_runs as f64 * 100.0
+        } else {
+            0.0
+        }
+    );
+    println!(
+        "  Italic runs: {} ({:.1}%)",
+        italic_runs,
+        if total_runs > 0 {
+            italic_runs as f64 / total_runs as f64 * 100.0
+        } else {
+            0.0
+        }
+    );
 }
 
 fn compare_documents(parsed: &ParsedDocument, reference: &ParsedDocument) {
-    println!("\nPage count: {} vs {} {}", 
-        parsed.page_count, reference.page_count,
-        if parsed.page_count == reference.page_count { "✓" } else { "✗" });
+    println!(
+        "\nPage count: {} vs {} {}",
+        parsed.page_count,
+        reference.page_count,
+        if parsed.page_count == reference.page_count {
+            "✓"
+        } else {
+            "✗"
+        }
+    );
 
     let mut total_checks = 0;
     let mut passed_checks = 0;
 
     for (i, (p_page, r_page)) in parsed.pages.iter().zip(reference.pages.iter()).enumerate() {
         println!("\nPage {}:", i + 1);
-        
+
         // Compare object counts
         total_checks += 1;
         if p_page.objects.len() == r_page.objects.len() {
             passed_checks += 1;
             println!("  Object count: {} ✓", p_page.objects.len());
         } else {
-            println!("  Object count: {} vs {} ✗", p_page.objects.len(), r_page.objects.len());
+            println!(
+                "  Object count: {} vs {} ✗",
+                p_page.objects.len(),
+                r_page.objects.len()
+            );
         }
 
         // Compare each object type
@@ -510,8 +596,10 @@ fn compare_documents(parsed: &ParsedDocument, reference: &ParsedDocument) {
                         passed_checks += 1;
                         println!("  Table {}x{}: ✓", p_t.rows, p_t.cols);
                     } else {
-                        println!("  Table: size mismatch {}x{} vs {}x{} ✗", 
-                            p_t.rows, p_t.cols, r_t.rows, r_t.cols);
+                        println!(
+                            "  Table: size mismatch {}x{} vs {}x{} ✗",
+                            p_t.rows, p_t.cols, r_t.rows, r_t.cols
+                        );
                     }
                 }
                 _ => {
@@ -522,6 +610,14 @@ fn compare_documents(parsed: &ParsedDocument, reference: &ParsedDocument) {
     }
 
     println!("\n========== Comparison Result ==========");
-    println!("Passed: {}/{} ({:.1}%)", passed_checks, total_checks,
-        if total_checks > 0 { passed_checks as f64 / total_checks as f64 * 100.0 } else { 0.0 });
+    println!(
+        "Passed: {}/{} ({:.1}%)",
+        passed_checks,
+        total_checks,
+        if total_checks > 0 {
+            passed_checks as f64 / total_checks as f64 * 100.0
+        } else {
+            0.0
+        }
+    );
 }

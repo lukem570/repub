@@ -1,7 +1,7 @@
 //! Text Fit dialog for auto-sizing text to fit the frame.
 
-use repub_model::ObjectId;
 use repub_model::shape::{Shape, ShapeKind, TextFitMode};
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::theme::{colors, fonts, section_header};
@@ -32,7 +32,11 @@ impl TextFitDialog {
     }
 
     pub fn open_for_text_frame(&mut self, state: &AppState, obj_id: ObjectId) {
-        if let Some(Shape { kind: ShapeKind::TextFrame(tf), .. }) = Self::get_object(state, obj_id) {
+        if let Some(Shape {
+            kind: ShapeKind::TextFrame(tf),
+            ..
+        }) = Self::get_object(state, obj_id)
+        {
             self.object_id = Some(obj_id);
             self.fit_mode = tf.text_fit;
             self.original_fit_mode = self.fit_mode;
@@ -62,10 +66,26 @@ impl TextFitDialog {
                 ui.add_space(4.0);
 
                 let modes = [
-                    (TextFitMode::None, "Do not Autofit", "Text may overflow the frame boundaries."),
-                    (TextFitMode::ShrinkOnOverflow, "Shrink text on overflow", "Reduce font size only if text doesn't fit."),
-                    (TextFitMode::GrowToFit, "Grow text to fill", "Increase font size to fill the frame."),
-                    (TextFitMode::BestFit, "Best fit", "Find optimal size that fills without overflow."),
+                    (
+                        TextFitMode::None,
+                        "Do not Autofit",
+                        "Text may overflow the frame boundaries.",
+                    ),
+                    (
+                        TextFitMode::ShrinkOnOverflow,
+                        "Shrink text on overflow",
+                        "Reduce font size only if text doesn't fit.",
+                    ),
+                    (
+                        TextFitMode::GrowToFit,
+                        "Grow text to fill",
+                        "Increase font size to fill the frame.",
+                    ),
+                    (
+                        TextFitMode::BestFit,
+                        "Best fit",
+                        "Find optimal size that fills without overflow.",
+                    ),
                 ];
 
                 for (mode, label, description) in modes {
@@ -101,7 +121,10 @@ impl TextFitDialog {
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+                        if ui
+                            .add(egui::Button::new("OK").fill(colors::accent()))
+                            .clicked()
+                        {
                             if let Some(obj_id) = self.object_id {
                                 self.apply_changes(state, obj_id);
                             }
@@ -118,7 +141,11 @@ impl TextFitDialog {
     fn apply_changes(&self, state: &mut AppState, obj_id: ObjectId) {
         state.record_undo("Text Fit");
         if let Some(page) = state.current_page_mut() {
-            if let Some(Shape { kind: ShapeKind::TextFrame(tf), .. }) = page.get_shape_mut(obj_id) {
+            if let Some(Shape {
+                kind: ShapeKind::TextFrame(tf),
+                ..
+            }) = page.get_shape_mut(obj_id)
+            {
                 tf.text_fit = self.fit_mode;
             }
         }

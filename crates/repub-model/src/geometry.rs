@@ -176,7 +176,9 @@ impl Path {
     /// Move the anchor point at `index` to `p`, taking the control handles that hang from it
     /// along. Returns whether it existed.
     pub fn move_anchor_point(&mut self, index: usize, p: Point) -> bool {
-        let Some(i) = self.anchor_command(index) else { return false };
+        let Some(i) = self.anchor_command(index) else {
+            return false;
+        };
         let old = match &self.commands[i] {
             PathCommand::MoveTo(q) | PathCommand::LineTo(q) => *q,
             PathCommand::QuadTo { end, .. } | PathCommand::CubicTo { end, .. } => *end,
@@ -485,7 +487,11 @@ mod tests {
 
     #[test]
     fn builder_builds() {
-        let path = Path::builder().move_to(0.0, 0.0).line_to(1.0, 1.0).close().build();
+        let path = Path::builder()
+            .move_to(0.0, 0.0)
+            .line_to(1.0, 1.0)
+            .close()
+            .build();
         assert_eq!(path.commands.len(), 3);
     }
 }

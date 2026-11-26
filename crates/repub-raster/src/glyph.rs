@@ -71,7 +71,9 @@ impl GlyphRenderer {
                 .ok()
             });
 
-        let font = loaded.map(Arc::new).unwrap_or_else(|| self.fallback.clone());
+        let font = loaded
+            .map(Arc::new)
+            .unwrap_or_else(|| self.fallback.clone());
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         let entry = (font, hasher.finish());

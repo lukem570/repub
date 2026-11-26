@@ -64,7 +64,13 @@ impl Tool {
         match self {
             Tool::Select => egui::CursorIcon::Default,
             Tool::Text => egui::CursorIcon::Text,
-            Tool::Rectangle | Tool::Ellipse | Tool::Polygon | Tool::Star | Tool::Preset(_) | Tool::Freeform | Tool::Pencil => egui::CursorIcon::Crosshair,
+            Tool::Rectangle
+            | Tool::Ellipse
+            | Tool::Polygon
+            | Tool::Star
+            | Tool::Preset(_)
+            | Tool::Freeform
+            | Tool::Pencil => egui::CursorIcon::Crosshair,
             Tool::Line => egui::CursorIcon::Crosshair,
             Tool::Image => egui::CursorIcon::Crosshair,
             Tool::Table => egui::CursorIcon::Crosshair,
@@ -77,7 +83,14 @@ impl Tool {
     pub fn is_creation_tool(&self) -> bool {
         matches!(
             self,
-            Tool::Rectangle | Tool::Ellipse | Tool::Line | Tool::Polygon | Tool::Star | Tool::Text | Tool::Table | Tool::Preset(_)
+            Tool::Rectangle
+                | Tool::Ellipse
+                | Tool::Line
+                | Tool::Polygon
+                | Tool::Star
+                | Tool::Text
+                | Tool::Table
+                | Tool::Preset(_)
         )
     }
 }
@@ -86,7 +99,9 @@ impl Tool {
 pub fn path_from_points(points: &[Point], closed: bool) -> Option<Path> {
     let mut deduped: Vec<Point> = Vec::new();
     for p in points {
-        if deduped.last().map_or(true, |q| (q.x - p.x).abs() > 1e-6 || (q.y - p.y).abs() > 1e-6) {
+        if deduped.last().map_or(true, |q| {
+            (q.x - p.x).abs() > 1e-6 || (q.y - p.y).abs() > 1e-6
+        }) {
             deduped.push(*p);
         }
     }
@@ -120,7 +135,11 @@ pub fn simplify(points: &[Point], epsilon: f64) -> Vec<Point> {
             ((p.x - first.x) * dy - (p.y - first.y) * dx).abs() / len
         }
     };
-    let (index, max) = points[1..points.len() - 1].iter().enumerate().map(|(i, p)| (i + 1, distance(p))).fold((0, 0.0), |a, b| if b.1 > a.1 { b } else { a });
+    let (index, max) = points[1..points.len() - 1]
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (i + 1, distance(p)))
+        .fold((0, 0.0), |a, b| if b.1 > a.1 { b } else { a });
     if max <= epsilon {
         return vec![first, last];
     }
@@ -141,7 +160,12 @@ pub fn smooth_path(points: &[Point], epsilon: f64) -> Option<Path> {
     let mut path = Path::new();
     path.move_to(pts[0].x, pts[0].y);
     for i in 0..pts.len() - 1 {
-        let (p0, p1, p2, p3) = (pts[i.saturating_sub(1)], pts[i], pts[i + 1], pts[(i + 2).min(pts.len() - 1)]);
+        let (p0, p1, p2, p3) = (
+            pts[i.saturating_sub(1)],
+            pts[i],
+            pts[i + 1],
+            pts[(i + 2).min(pts.len() - 1)],
+        );
         path.cubic_to(
             p1.x + (p2.x - p0.x) / 6.0,
             p1.y + (p2.y - p0.y) / 6.0,
@@ -156,15 +180,29 @@ pub fn smooth_path(points: &[Point], epsilon: f64) -> Option<Path> {
 
 /// A shape outlined by `path`, with the fill of any new shape (none for an open path, always).
 pub fn shape_from_path(path: Path) -> Option<Shape> {
-    let closed = path.commands.iter().any(|c| matches!(c, repub_model::geometry::PathCommand::Close));
+    let closed = path
+        .commands
+        .iter()
+        .any(|c| matches!(c, repub_model::geometry::PathCommand::Close));
     let b = path.bounds()?;
     // A straight horizontal or vertical stroke has no area: give the box a hairline extent
-    let bounds = Rect::new(b.origin.x, b.origin.y, b.size.width.max(0.01), b.size.height.max(0.01));
-    let mut shape = Shape::new(bounds, ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Path(path))));
+    let bounds = Rect::new(
+        b.origin.x,
+        b.origin.y,
+        b.size.width.max(0.01),
+        b.size.height.max(0.01),
+    );
+    let mut shape = Shape::new(
+        bounds,
+        ShapeKind::AutoShape(AutoShape::new(ShapeGeometry::Path(path))),
+    );
     if !closed {
         shape.fill = repub_model::styles::Fill::None;
     }
-    shape.line = Some(repub_model::styles::Stroke::new(DEFAULT_OUTLINE, DEFAULT_OUTLINE_WIDTH));
+    shape.line = Some(repub_model::styles::Stroke::new(
+        DEFAULT_OUTLINE,
+        DEFAULT_OUTLINE_WIDTH,
+    ));
     Some(shape)
 }
 
@@ -301,7 +339,8 @@ impl DrawState {
             let dx = end.x - start.x;
             let dy = end.y - start.y;
             let angle = dy.atan2(dx);
-            let snapped_angle = (angle / (std::f64::consts::PI / 4.0)).round() * (std::f64::consts::PI / 4.0);
+            let snapped_angle =
+                (angle / (std::f64::consts::PI / 4.0)).round() * (std::f64::consts::PI / 4.0);
             let length = (dx * dx + dy * dy).sqrt();
             end = Point::new(
                 start.x + length * snapped_angle.cos(),
@@ -319,7 +358,10 @@ impl DrawState {
         match &obj.kind {
             ShapeKind::AutoShape(_) | ShapeKind::Line(_) => {
                 let color = obj.line.as_ref().map_or(DEFAULT_OUTLINE, |s| s.color);
-                obj.line = Some(repub_model::styles::Stroke::new(color, DEFAULT_OUTLINE_WIDTH));
+                obj.line = Some(repub_model::styles::Stroke::new(
+                    color,
+                    DEFAULT_OUTLINE_WIDTH,
+                ));
             }
             _ => {}
         }
@@ -350,7 +392,10 @@ impl DrawState {
             }
             Tool::Text => {
                 let bounds = self.bounds()?;
-                Some(Shape::new(bounds, ShapeKind::TextFrame(TextFrameData::new())))
+                Some(Shape::new(
+                    bounds,
+                    ShapeKind::TextFrame(TextFrameData::new()),
+                ))
             }
             Tool::Preset(spt) => {
                 let bounds = self.bounds()?;
@@ -364,7 +409,10 @@ impl DrawState {
                 let bounds = self.bounds()?;
                 let rows = self.table_rows.max(1);
                 let cols = self.table_cols.max(1);
-                Some(Shape::new(bounds, ShapeKind::Table(TableData::new(bounds, rows, cols))))
+                Some(Shape::new(
+                    bounds,
+                    ShapeKind::Table(TableData::new(bounds, rows, cols)),
+                ))
             }
             _ => None,
         }
@@ -462,8 +510,12 @@ impl ResizeHandle {
         match self {
             ResizeHandle::TopLeft | ResizeHandle::BottomRight => egui::CursorIcon::ResizeNwSe,
             ResizeHandle::TopRight | ResizeHandle::BottomLeft => egui::CursorIcon::ResizeNeSw,
-            ResizeHandle::TopCenter | ResizeHandle::BottomCenter => egui::CursorIcon::ResizeVertical,
-            ResizeHandle::MiddleLeft | ResizeHandle::MiddleRight => egui::CursorIcon::ResizeHorizontal,
+            ResizeHandle::TopCenter | ResizeHandle::BottomCenter => {
+                egui::CursorIcon::ResizeVertical
+            }
+            ResizeHandle::MiddleLeft | ResizeHandle::MiddleRight => {
+                egui::CursorIcon::ResizeHorizontal
+            }
         }
     }
 
@@ -525,7 +577,7 @@ impl SelectState {
     pub fn end_marquee(&mut self) -> Option<Rect> {
         let start = self.marquee_start?;
         let end = self.marquee_current?;
-        
+
         self.is_marquee = false;
         self.marquee_start = None;
         self.marquee_current = None;
@@ -567,7 +619,7 @@ impl SelectState {
     pub fn end_drag(&mut self) -> Option<Point> {
         let start = self.drag_start?;
         let end = self.drag_current?;
-        
+
         self.is_dragging = false;
         self.drag_start = None;
         self.drag_current = None;
@@ -616,7 +668,7 @@ impl SelectState {
     pub fn end_rotation(&mut self) -> Option<f64> {
         let start = self.rotation_start_angle?;
         let current = self.rotation_current_angle?;
-        
+
         self.is_rotating = false;
         self.rotation_center = None;
         self.rotation_start_angle = None;
@@ -667,7 +719,7 @@ mod tests {
         let mut state = DrawState::new();
         state.start(Point::new(100.0, 100.0));
         state.update(Point::new(200.0, 150.0));
-        
+
         let bounds = state.bounds().unwrap();
         assert_eq!(bounds.origin.x, 100.0);
         assert_eq!(bounds.origin.y, 100.0);
@@ -681,7 +733,7 @@ mod tests {
         state.constrain = true;
         state.start(Point::new(100.0, 100.0));
         state.update(Point::new(200.0, 120.0));
-        
+
         let bounds = state.bounds().unwrap();
         // Should be a square
         assert_eq!(bounds.width(), bounds.height());
@@ -692,7 +744,7 @@ mod tests {
         let mut state = SelectState::new();
         state.start_marquee(Point::new(100.0, 100.0));
         state.update_marquee(Point::new(50.0, 150.0));
-        
+
         let rect = state.marquee_rect().unwrap();
         assert_eq!(rect.origin.x, 50.0);
         assert_eq!(rect.origin.y, 100.0);
@@ -707,29 +759,53 @@ mod pen_tests {
 
     #[test]
     fn clicked_points_make_an_open_or_closed_outline() {
-        let pts = [Point::new(0.0, 0.0), Point::new(10.0, 0.0), Point::new(10.0, 10.0)];
+        let pts = [
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 0.0),
+            Point::new(10.0, 10.0),
+        ];
         let open = path_from_points(&pts, false).unwrap();
         assert_eq!(open.anchor_points().len(), 3);
         assert!(shape_from_path(open).unwrap().fill.is_none());
         let closed = path_from_points(&pts, true).unwrap();
-        assert_eq!(shape_from_path(closed).unwrap().fill, Shape::rectangle(Rect::default()).fill, "closed outlines are filled like any new shape");
+        assert_eq!(
+            shape_from_path(closed).unwrap().fill,
+            Shape::rectangle(Rect::default()).fill,
+            "closed outlines are filled like any new shape"
+        );
         assert!(path_from_points(&pts[..1], false).is_none());
-        assert!(path_from_points(&pts[..2], true).is_none(), "a closed outline needs three points");
+        assert!(
+            path_from_points(&pts[..2], true).is_none(),
+            "a closed outline needs three points"
+        );
     }
 
     #[test]
     fn a_straight_freehand_stroke_collapses_to_its_ends() {
-        let stroke: Vec<Point> = (0..=20).map(|i| Point::new(i as f64, 0.2 * (i % 2) as f64)).collect();
+        let stroke: Vec<Point> = (0..=20)
+            .map(|i| Point::new(i as f64, 0.2 * (i % 2) as f64))
+            .collect();
         assert_eq!(simplify(&stroke, 1.0).len(), 2);
-        let bent: Vec<Point> = (0..=10).map(|i| Point::new(i as f64, 0.0)).chain((1..=10).map(|i| Point::new(10.0, i as f64))).collect();
+        let bent: Vec<Point> = (0..=10)
+            .map(|i| Point::new(i as f64, 0.0))
+            .chain((1..=10).map(|i| Point::new(10.0, i as f64)))
+            .collect();
         assert_eq!(simplify(&bent, 0.5).len(), 3);
     }
 
     #[test]
     fn smoothing_passes_through_the_simplified_points() {
-        let pts = [Point::new(0.0, 0.0), Point::new(10.0, 8.0), Point::new(20.0, 0.0)];
+        let pts = [
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 8.0),
+            Point::new(20.0, 0.0),
+        ];
         let path = smooth_path(&pts, 0.1).unwrap();
         assert_eq!(path.anchor_points(), pts.to_vec());
-        assert!(path.commands.iter().skip(1).all(|c| matches!(c, repub_model::geometry::PathCommand::CubicTo { .. })));
+        assert!(path
+            .commands
+            .iter()
+            .skip(1)
+            .all(|c| matches!(c, repub_model::geometry::PathCommand::CubicTo { .. })));
     }
 }

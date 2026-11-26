@@ -312,7 +312,8 @@ impl Command for ResizeShapeCommand {
     }
 
     fn undo(&mut self, doc: &mut Document) {
-        if let (Some(old), Some(page)) = (self.old_bounds, doc.pages_mut().get_mut(self.page_index)) {
+        if let (Some(old), Some(page)) = (self.old_bounds, doc.pages_mut().get_mut(self.page_index))
+        {
             if let Some(shape) = page.get_shape_mut(self.shape_id) {
                 shape.set_bounds(old);
             }
@@ -461,8 +462,14 @@ mod tests {
             .add_shape(Shape::rectangle(Rect::new(10.0, 10.0, 20.0, 20.0)));
         let mut cmd = MoveShapesCommand::new(0, vec![id], Point::new(5.0, 7.0));
         cmd.execute(&mut doc);
-        assert_eq!(doc.page(0).unwrap().get_shape(id).unwrap().bounds().origin, Point::new(15.0, 17.0));
+        assert_eq!(
+            doc.page(0).unwrap().get_shape(id).unwrap().bounds().origin,
+            Point::new(15.0, 17.0)
+        );
         cmd.undo(&mut doc);
-        assert_eq!(doc.page(0).unwrap().get_shape(id).unwrap().bounds().origin, Point::new(10.0, 10.0));
+        assert_eq!(
+            doc.page(0).unwrap().get_shape(id).unwrap().bounds().origin,
+            Point::new(10.0, 10.0)
+        );
     }
 }

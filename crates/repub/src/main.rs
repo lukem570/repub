@@ -6,8 +6,11 @@ use repub_ui::RepubApp;
 
 fn main() -> eframe::Result<()> {
     // Initialize logging
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn,wgpu_core=off,wgpu_hal=off,naga=off")).init();
-    
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("warn,wgpu_core=off,wgpu_hal=off,naga=off"),
+    )
+    .init();
+
     log::info!("Starting Repub Desktop");
 
     // Configure native options
@@ -42,23 +45,23 @@ fn main() -> eframe::Result<()> {
             // Create native menu bar
             #[cfg(not(target_arch = "wasm32"))]
             let (menu, menu_rx) = repub_ui::native_menu::create_menu();
-            
+
             #[cfg(target_os = "macos")]
             repub_ui::native_menu::init_menu_for_nsapp(&menu);
             repub_ui::native_menu::force_light_appearance();
-            
+
             // Create the app with native menu support
             #[cfg(not(target_arch = "wasm32"))]
             let mut app = RepubApp::with_native_menu(cc, menu, menu_rx);
-            
+
             #[cfg(target_arch = "wasm32")]
             let mut app = RepubApp::new(cc);
-            
+
             // Open a document passed on the command line: `repub-gui file.pub` or `repub-gui file.repub`
             if let Some(path) = std::env::args_os().nth(1) {
                 app.open_path(path.into());
             }
-            
+
             Ok(Box::new(app))
         }),
     )

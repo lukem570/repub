@@ -37,10 +37,10 @@
 
 pub mod error;
 pub mod protocol;
-pub mod server;
-pub mod tools;
 pub mod resources;
+pub mod server;
 pub mod session;
+pub mod tools;
 
 pub use error::{McpError, McpResult};
 pub use server::McpServer;

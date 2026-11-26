@@ -137,14 +137,23 @@ mod tests {
         );
         assert_eq!(
             points(&PresetGeometry::new(3).path(b).unwrap()),
-            vec![(108.0, 0.0), (0.0, 54.0), (108.0, 108.0), (216.0, 54.0), (108.0, 0.0)]
+            vec![
+                (108.0, 0.0),
+                (0.0, 54.0),
+                (108.0, 108.0),
+                (216.0, 54.0),
+                (108.0, 0.0)
+            ]
         );
     }
 
     #[test]
     fn adjust_values_move_the_outline() {
         let b = Rect::new(0.0, 0.0, 216.0, 216.0);
-        assert_eq!(points(&PresetGeometry::new(5).path(b).unwrap())[0], (108.0, 0.0));
+        assert_eq!(
+            points(&PresetGeometry::new(5).path(b).unwrap())[0],
+            (108.0, 0.0)
+        );
         let moved = PresetGeometry {
             spt: 5,
             adjust: vec![Some(5400)],
@@ -158,14 +167,23 @@ mod tests {
         let mut tri = PresetGeometry::new(5);
         let h = tri.handles(b);
         assert_eq!(h.len(), 1);
-        assert!((h[0].x - 108.0).abs() < 0.01 && h[0].y.abs() < 0.01, "{h:?}");
-        assert!(tri.drag_handle(0, b, Point::new(54.0, 80.0)), "x moves the apex; y is fixed");
+        assert!(
+            (h[0].x - 108.0).abs() < 0.01 && h[0].y.abs() < 0.01,
+            "{h:?}"
+        );
+        assert!(
+            tri.drag_handle(0, b, Point::new(54.0, 80.0)),
+            "x moves the apex; y is fixed"
+        );
         assert_eq!(tri.adjust_value(0), 5400);
         tri.drag_handle(0, b, Point::new(500.0, 0.0));
         assert_eq!(tri.adjust_value(0), 21600);
         let mut arrow = PresetGeometry::new(13);
         arrow.drag_handle(0, b, Point::new(108.0, 20.0));
-        assert_eq!((arrow.adjust_value(0), arrow.adjust_value(1)), (10800, 2000));
+        assert_eq!(
+            (arrow.adjust_value(0), arrow.adjust_value(1)),
+            (10800, 2000)
+        );
     }
 
     #[test]

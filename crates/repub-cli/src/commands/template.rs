@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use console::style;
 
-use repub_templates::{TemplateLibrary, TemplateCategory, PlaceholderValues};
 use repub_format_native as native;
+use repub_templates::{PlaceholderValues, TemplateCategory, TemplateLibrary};
 
 use crate::cli::GlobalOptions;
 
@@ -81,8 +81,10 @@ fn list(args: ListArgs, global: &GlobalOptions) -> Result<()> {
     let library = TemplateLibrary::with_builtins();
 
     // Filter by category if specified
-    let category = args.category.as_ref().and_then(|c| {
-        match c.to_lowercase().as_str() {
+    let category = args
+        .category
+        .as_ref()
+        .and_then(|c| match c.to_lowercase().as_str() {
             "business" => Some(TemplateCategory::Business),
             "marketing" => Some(TemplateCategory::Marketing),
             "publications" => Some(TemplateCategory::Publications),
@@ -90,8 +92,7 @@ fn list(args: ListArgs, global: &GlobalOptions) -> Result<()> {
             "office" => Some(TemplateCategory::Office),
             "custom" => Some(TemplateCategory::Custom),
             _ => None,
-        }
-    });
+        });
 
     let templates: Vec<_> = if let Some(cat) = category {
         library.by_category(cat)
@@ -100,15 +101,18 @@ fn list(args: ListArgs, global: &GlobalOptions) -> Result<()> {
     };
 
     if global.output == crate::cli::OutputFormat::Json {
-        let items: Vec<_> = templates.iter().map(|t| {
-            serde_json::json!({
-                "id": t.metadata.id,
-                "name": t.metadata.name,
-                "category": format!("{:?}", t.metadata.category),
-                "description": t.metadata.description,
-                "tags": t.metadata.tags,
+        let items: Vec<_> = templates
+            .iter()
+            .map(|t| {
+                serde_json::json!({
+                    "id": t.metadata.id,
+                    "name": t.metadata.name,
+                    "category": format!("{:?}", t.metadata.category),
+                    "description": t.metadata.description,
+                    "tags": t.metadata.tags,
+                })
             })
-        }).collect();
+            .collect();
         println!("{}", serde_json::to_string_pretty(&items)?);
     } else {
         if templates.is_empty() {
@@ -117,16 +121,21 @@ fn list(args: ListArgs, global: &GlobalOptions) -> Result<()> {
         }
 
         // Group by category
-        let mut by_category: std::collections::HashMap<TemplateCategory, Vec<_>> = std::collections::HashMap::new();
+        let mut by_category: std::collections::HashMap<TemplateCategory, Vec<_>> =
+            std::collections::HashMap::new();
         for template in templates {
-            by_category.entry(template.metadata.category).or_default().push(template);
+            by_category
+                .entry(template.metadata.category)
+                .or_default()
+                .push(template);
         }
 
         for category in TemplateCategory::all() {
             if let Some(templates) = by_category.get(category) {
                 println!("\n{}", style(category.name()).bold().underlined());
                 for template in templates {
-                    println!("  {} - {}", 
+                    println!(
+                        "  {} - {}",
                         style(&template.metadata.id).cyan(),
                         template.metadata.name
                     );
@@ -144,21 +153,26 @@ fn list(args: ListArgs, global: &GlobalOptions) -> Result<()> {
 
 fn info(args: InfoArgs, global: &GlobalOptions) -> Result<()> {
     let library = TemplateLibrary::with_builtins();
-    
-    let template = library.get(&args.id)
+
+    let template = library
+        .get(&args.id)
         .context(format!("Template not found: {}", args.id))?;
 
     if global.output == crate::cli::OutputFormat::Json {
-        let placeholders: Vec<_> = template.placeholders.iter().map(|p| {
-            serde_json::json!({
-                "id": p.id,
-                "name": p.name,
-                "type": format!("{:?}", p.placeholder_type),
-                "required": p.required,
-                "default": p.default_value,
-                "description": p.description,
+        let placeholders: Vec<_> = template
+            .placeholders
+            .iter()
+            .map(|p| {
+                serde_json::json!({
+                    "id": p.id,
+                    "name": p.name,
+                    "type": format!("{:?}", p.placeholder_type),
+                    "required": p.required,
+                    "default": p.default_value,
+                    "description": p.description,
+                })
             })
-        }).collect();
+            .collect();
 
         let info = serde_json::json!({
             "id": template.metadata.id,
@@ -176,7 +190,7 @@ fn info(args: InfoArgs, global: &GlobalOptions) -> Result<()> {
         println!("ID: {}", template.metadata.id);
         println!("Category: {}", template.metadata.category.name());
         println!("Version: {}", template.metadata.version);
-        
+
         if !template.metadata.description.is_empty() {
             println!("\n{}", template.metadata.description);
         }
@@ -188,12 +202,17 @@ fn info(args: InfoArgs, global: &GlobalOptions) -> Result<()> {
         if !template.placeholders.is_empty() {
             println!("\n{}", style("Placeholders:").bold());
             for p in &template.placeholders {
-                let required = if p.required { 
-                    style("*").red().to_string() 
-                } else { 
-                    " ".to_string() 
+                let required = if p.required {
+                    style("*").red().to_string()
+                } else {
+                    " ".to_string()
                 };
-                println!("  {}{} ({:?})", required, style(&p.id).yellow(), p.placeholder_type);
+                println!(
+                    "  {}{} ({:?})",
+                    required,
+                    style(&p.id).yellow(),
+                    p.placeholder_type
+                );
                 println!("    Name: {}", p.name);
                 if !p.description.is_empty() {
                     println!("    {}", style(&p.description).dim());
@@ -211,8 +230,9 @@ fn info(args: InfoArgs, global: &GlobalOptions) -> Result<()> {
 
 fn create(args: CreateArgs, global: &GlobalOptions) -> Result<()> {
     let library = TemplateLibrary::with_builtins();
-    
-    let template = library.get(&args.template)
+
+    let template = library
+        .get(&args.template)
         .context(format!("Template not found: {}", args.template))?;
 
     let mut values = PlaceholderValues::new();
@@ -228,7 +248,7 @@ fn create(args: CreateArgs, global: &GlobalOptions) -> Result<()> {
 
     // Interactive mode
     if args.interactive {
-        use dialoguer::{Input, theme::ColorfulTheme};
+        use dialoguer::{theme::ColorfulTheme, Input};
 
         for placeholder in &template.placeholders {
             if values.has(&placeholder.id) {
@@ -255,7 +275,8 @@ fn create(args: CreateArgs, global: &GlobalOptions) -> Result<()> {
     }
 
     // Apply template
-    let document = template.apply(&values)
+    let document = template
+        .apply(&values)
         .context("Failed to apply template")?;
 
     // Save document
@@ -263,7 +284,8 @@ fn create(args: CreateArgs, global: &GlobalOptions) -> Result<()> {
         .context("Failed to save document")?;
 
     if !global.quiet {
-        println!("{} Created {} from template '{}'", 
+        println!(
+            "{} Created {} from template '{}'",
             style("✓").green().bold(),
             args.output.display(),
             template.metadata.name
@@ -278,14 +300,17 @@ fn search(args: SearchArgs, global: &GlobalOptions) -> Result<()> {
     let results = library.search(&args.query);
 
     if global.output == crate::cli::OutputFormat::Json {
-        let items: Vec<_> = results.iter().map(|t| {
-            serde_json::json!({
-                "id": t.metadata.id,
-                "name": t.metadata.name,
-                "category": format!("{:?}", t.metadata.category),
-                "description": t.metadata.description,
+        let items: Vec<_> = results
+            .iter()
+            .map(|t| {
+                serde_json::json!({
+                    "id": t.metadata.id,
+                    "name": t.metadata.name,
+                    "category": format!("{:?}", t.metadata.category),
+                    "description": t.metadata.description,
+                })
             })
-        }).collect();
+            .collect();
         println!("{}", serde_json::to_string_pretty(&items)?);
     } else {
         if results.is_empty() {
@@ -293,9 +318,14 @@ fn search(args: SearchArgs, global: &GlobalOptions) -> Result<()> {
             return Ok(());
         }
 
-        println!("\nFound {} template(s) matching '{}':\n", results.len(), args.query);
+        println!(
+            "\nFound {} template(s) matching '{}':\n",
+            results.len(),
+            args.query
+        );
         for template in results {
-            println!("  {} - {}", 
+            println!(
+                "  {} - {}",
                 style(&template.metadata.id).cyan(),
                 template.metadata.name
             );

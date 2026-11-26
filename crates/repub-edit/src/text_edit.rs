@@ -134,7 +134,8 @@ fn insert_in_para(p: &mut Paragraph, offset: usize, text: &str) {
         pos += element_len(&p.elements[index]);
         index += 1;
     }
-    p.elements.insert(index, InlineElement::Text(TextRun::styled(text, style)));
+    p.elements
+        .insert(index, InlineElement::Text(TextRun::styled(text, style)));
 }
 
 /// Delete character offsets `start..end` from a paragraph.
@@ -150,11 +151,17 @@ fn delete_in_para(p: &mut Paragraph, start: usize, end: usize) {
         if s < t {
             match &mut e {
                 InlineElement::Text(run) => {
-                    let (a, b) = (byte_index(&run.text, s - pos), byte_index(&run.text, t - pos));
+                    let (a, b) = (
+                        byte_index(&run.text, s - pos),
+                        byte_index(&run.text, t - pos),
+                    );
                     run.text.replace_range(a..b, "");
                 }
                 InlineElement::Link(link) => {
-                    let (a, b) = (byte_index(&link.text, s - pos), byte_index(&link.text, t - pos));
+                    let (a, b) = (
+                        byte_index(&link.text, s - pos),
+                        byte_index(&link.text, t - pos),
+                    );
                     link.text.replace_range(a..b, "");
                 }
                 // Non-text elements inside the range are removed entirely
@@ -242,7 +249,8 @@ pub fn split_run_at(p: &mut Paragraph, offset: usize) {
                     if let InlineElement::Text(run) = &mut p.elements[i] {
                         run.text.truncate(at);
                     }
-                    p.elements.insert(i + 1, InlineElement::Text(TextRun::styled(&right, style)));
+                    p.elements
+                        .insert(i + 1, InlineElement::Text(TextRun::styled(&right, style)));
                 }
                 InlineElement::Link(link) => {
                     let at = byte_index(&link.text, local);
@@ -343,9 +351,17 @@ pub fn text_between(text: &StyledText, a: TextPos, b: TextPos) -> String {
     for para in start.para..=end.para.min(text.paragraphs.len() - 1) {
         let chars = para_chars(&text.paragraphs[para]);
         let from = if para == start.para { start.offset } else { 0 };
-        let to = if para == end.para { end.offset.min(chars.len()) } else { chars.len() };
+        let to = if para == end.para {
+            end.offset.min(chars.len())
+        } else {
+            chars.len()
+        };
         if from < to {
-            out.extend(chars[from..to].iter().map(|&c| if c == '\u{FFFC}' { ' ' } else { c }));
+            out.extend(
+                chars[from..to]
+                    .iter()
+                    .map(|&c| if c == '\u{FFFC}' { ' ' } else { c }),
+            );
         }
         if para != end.para {
             out.push('\n');
@@ -407,7 +423,11 @@ pub fn prev_word(text: &StyledText, pos: TextPos) -> TextPos {
 
 /// End of the next word (Option/Alt+Right).
 pub fn next_word(text: &StyledText, pos: TextPos) -> TextPos {
-    let chars = text.paragraphs.get(pos.para).map(para_chars).unwrap_or_default();
+    let chars = text
+        .paragraphs
+        .get(pos.para)
+        .map(para_chars)
+        .unwrap_or_default();
     if pos.offset >= chars.len() {
         return next_pos(text, pos);
     }
@@ -423,7 +443,9 @@ pub fn next_word(text: &StyledText, pos: TextPos) -> TextPos {
 
 /// Word around a position (double-click).
 pub fn word_at(text: &StyledText, pos: TextPos) -> (TextPos, TextPos) {
-    let Some(p) = text.paragraphs.get(pos.para) else { return (pos, pos) };
+    let Some(p) = text.paragraphs.get(pos.para) else {
+        return (pos, pos);
+    };
     let chars = para_chars(p);
     let (mut a, mut b) = (pos.offset.min(chars.len()), pos.offset.min(chars.len()));
     let class = |c: char| is_word(c);
@@ -446,7 +468,10 @@ pub fn word_at(text: &StyledText, pos: TextPos) -> (TextPos, TextPos) {
 /// Rotate a document point into the text frame's unrotated coordinates.
 pub fn to_frame_space(shape: &Shape, x: f32, y: f32) -> (f32, f32) {
     let b = shape.common.bounds;
-    let (cx, cy) = ((b.origin.x + b.size.width / 2.0) as f32, (b.origin.y + b.size.height / 2.0) as f32);
+    let (cx, cy) = (
+        (b.origin.x + b.size.width / 2.0) as f32,
+        (b.origin.y + b.size.height / 2.0) as f32,
+    );
     let (sin, cos) = (-(shape.common.rotation as f32)).to_radians().sin_cos();
     let (dx, dy) = (x - cx, y - cy);
     (cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
@@ -455,7 +480,10 @@ pub fn to_frame_space(shape: &Shape, x: f32, y: f32) -> (f32, f32) {
 /// Rotate an unrotated frame-space point into document coordinates.
 pub fn from_frame_space(shape: &Shape, x: f32, y: f32) -> (f32, f32) {
     let b = shape.common.bounds;
-    let (cx, cy) = ((b.origin.x + b.size.width / 2.0) as f32, (b.origin.y + b.size.height / 2.0) as f32);
+    let (cx, cy) = (
+        (b.origin.x + b.size.width / 2.0) as f32,
+        (b.origin.y + b.size.height / 2.0) as f32,
+    );
     let (sin, cos) = (shape.common.rotation as f32).to_radians().sin_cos();
     let (dx, dy) = (x - cx, y - cy);
     (cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
@@ -473,7 +501,10 @@ pub fn frame_contains(shape: &Shape, x: f32, y: f32) -> bool {
 
 /// Whether a rectangle (document points) contains a point.
 pub fn rect_contains(r: Rect, x: f64, y: f64) -> bool {
-    x >= r.origin.x && x <= r.origin.x + r.size.width && y >= r.origin.y && y <= r.origin.y + r.size.height
+    x >= r.origin.x
+        && x <= r.origin.x + r.size.width
+        && y >= r.origin.y
+        && y <= r.origin.y + r.size.height
 }
 
 #[cfg(test)]
@@ -485,11 +516,16 @@ mod tests {
     }
 
     fn text(paras: &[&str]) -> StyledText {
-        StyledText { paragraphs: paras.iter().map(|s| para(s)).collect() }
+        StyledText {
+            paragraphs: paras.iter().map(|s| para(s)).collect(),
+        }
     }
 
     fn plain(t: &StyledText) -> Vec<String> {
-        t.paragraphs.iter().map(|p| para_chars(p).into_iter().collect()).collect()
+        t.paragraphs
+            .iter()
+            .map(|p| para_chars(p).into_iter().collect())
+            .collect()
     }
 
     #[test]
@@ -536,8 +572,11 @@ mod tests {
         let mut p = Paragraph::new();
         let mut bold = p.style.default_char_style.clone();
         bold.font.weight = repub_model::styles::FontWeight::Bold;
-        p.elements.push(InlineElement::Text(TextRun::styled("Bold", bold.clone())));
-        let mut t = StyledText { paragraphs: vec![p] };
+        p.elements
+            .push(InlineElement::Text(TextRun::styled("Bold", bold.clone())));
+        let mut t = StyledText {
+            paragraphs: vec![p],
+        };
         insert_text(&mut t, TextPos::new(0, 4), "er");
         match &t.paragraphs[0].elements[0] {
             InlineElement::Text(run) => {
@@ -564,13 +603,19 @@ mod tests {
         assert_eq!(next_word(&t, TextPos::new(0, 0)), TextPos::new(0, 5));
         assert_eq!(next_word(&t, TextPos::new(0, 5)), TextPos::new(0, 11));
         assert_eq!(prev_word(&t, TextPos::new(0, 18)), TextPos::new(0, 13));
-        assert_eq!(word_at(&t, TextPos::new(0, 7)), (TextPos::new(0, 6), TextPos::new(0, 11)));
+        assert_eq!(
+            word_at(&t, TextPos::new(0, 7)),
+            (TextPos::new(0, 6), TextPos::new(0, 11))
+        );
     }
 
     #[test]
     fn text_between_spans_paragraphs() {
         let t = text(&["one", "two"]);
-        assert_eq!(text_between(&t, TextPos::new(0, 1), TextPos::new(1, 2)), "ne\ntw");
+        assert_eq!(
+            text_between(&t, TextPos::new(0, 1), TextPos::new(1, 2)),
+            "ne\ntw"
+        );
     }
 
     #[test]
@@ -579,7 +624,10 @@ mod tests {
         let link = Hyperlink::external("https://example.com", "link");
         let caret = insert_link(&mut t, TextPos::new(0, 1), link);
         assert_eq!(caret, TextPos::new(0, 5));
-        assert!(matches!(&t.paragraphs[0].elements[1], InlineElement::Link(_)));
+        assert!(matches!(
+            &t.paragraphs[0].elements[1],
+            InlineElement::Link(_)
+        ));
     }
 
     #[test]

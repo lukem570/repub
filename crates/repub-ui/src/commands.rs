@@ -1,8 +1,8 @@
 //! Command pattern for undo/redo.
 
-use repub_model::Document;
 use repub_geometry::Point;
 use repub_model::shape::Shape;
+use repub_model::Document;
 use repub_model::ObjectId;
 
 /// A command that can be executed, undone, and redone.
@@ -41,7 +41,7 @@ impl CommandHistory {
         command.execute(doc);
         self.undo_stack.push(command);
         self.redo_stack.clear();
-        
+
         // Trim history if too large
         while self.undo_stack.len() > self.max_size {
             self.undo_stack.remove(0);
@@ -104,7 +104,10 @@ impl CommandHistory {
     /// Record a change that the caller is about to make (or has made) directly on
     /// the document. `before` is the document as it was before the change.
     pub fn record(&mut self, label: &str, before: Document) {
-        self.undo_stack.push(Box::new(SnapshotCommand { label: label.to_owned(), other: before }));
+        self.undo_stack.push(Box::new(SnapshotCommand {
+            label: label.to_owned(),
+            other: before,
+        }));
         self.redo_stack.clear();
         while self.undo_stack.len() > self.max_size {
             self.undo_stack.remove(0);
@@ -376,32 +379,32 @@ impl Command for DeletePageCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{PageSize, PageOrientation};
-    use repub_model::shape::Shape;
     use repub_geometry::Rect;
+    use repub_model::shape::Shape;
+    use repub_model::{PageOrientation, PageSize};
 
     #[test]
     fn test_command_history() {
         let mut history = CommandHistory::new();
         let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
-        
+
         assert!(!history.can_undo());
         assert!(!history.can_redo());
-        
+
         let shape = Shape::rectangle(Rect::new(100.0, 100.0, 200.0, 150.0));
         let cmd = AddObjectCommand::new(0, shape);
         history.execute(Box::new(cmd), &mut doc);
-        
+
         assert!(history.can_undo());
         assert!(!history.can_redo());
-        
+
         history.undo(&mut doc);
-        
+
         assert!(!history.can_undo());
         assert!(history.can_redo());
-        
+
         history.redo(&mut doc);
-        
+
         assert!(history.can_undo());
         assert!(!history.can_redo());
     }
@@ -410,16 +413,16 @@ mod tests {
     fn test_add_page_command() {
         let mut history = CommandHistory::new();
         let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
-        
+
         assert_eq!(doc.pages().len(), 1);
-        
+
         let cmd = AddPageCommand::new(None);
         history.execute(Box::new(cmd), &mut doc);
-        
+
         assert_eq!(doc.pages().len(), 2);
-        
+
         history.undo(&mut doc);
-        
+
         assert_eq!(doc.pages().len(), 1);
     }
 }

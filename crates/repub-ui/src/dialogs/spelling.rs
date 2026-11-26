@@ -78,20 +78,22 @@ impl SpellingDialog {
 
                         section_header(ui, "Suggestions");
                         let suggestions = self.session.suggestions();
-                        egui::ScrollArea::vertical().max_height(110.0).show(ui, |ui| {
-                            if suggestions.is_empty() {
-                                ui.label(
-                                    egui::RichText::new("No suggestions.")
-                                        .font(fonts::caption())
-                                        .color(colors::text_secondary()),
-                                );
-                            }
-                            for s in suggestions {
-                                if ui.selectable_label(false, s.clone()).clicked() {
-                                    self.change_to = s;
+                        egui::ScrollArea::vertical()
+                            .max_height(110.0)
+                            .show(ui, |ui| {
+                                if suggestions.is_empty() {
+                                    ui.label(
+                                        egui::RichText::new("No suggestions.")
+                                            .font(fonts::caption())
+                                            .color(colors::text_secondary()),
+                                    );
                                 }
-                            }
-                        });
+                                for s in suggestions {
+                                    if ui.selectable_label(false, s.clone()).clicked() {
+                                        self.change_to = s;
+                                    }
+                                }
+                            });
 
                         ui.add_space(6.0);
                         ui.horizontal(|ui| {
@@ -121,7 +123,10 @@ impl SpellingDialog {
                         ui.add_space(6.0);
                         ui.horizontal(|ui| {
                             let enabled = !self.change_to.trim().is_empty();
-                            if ui.add_enabled(enabled, egui::Button::new("Change")).clicked() {
+                            if ui
+                                .add_enabled(enabled, egui::Button::new("Change"))
+                                .clicked()
+                            {
                                 let replacement = self.change_to.trim().to_string();
                                 if self.session.change_current(state, &replacement) {
                                     applied = true;
@@ -129,7 +134,10 @@ impl SpellingDialog {
                                 }
                                 self.change_to.clear();
                             }
-                            if ui.add_enabled(enabled, egui::Button::new("Change All")).clicked() {
+                            if ui
+                                .add_enabled(enabled, egui::Button::new("Change All"))
+                                .clicked()
+                            {
                                 let replacement = self.change_to.trim().to_string();
                                 if self.session.change_all_current(state, &replacement) {
                                     applied = true;
@@ -154,7 +162,10 @@ impl SpellingDialog {
                 ui.separator();
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
-                    if ui.add(egui::Button::new("Close").fill(colors::accent())).clicked() {
+                    if ui
+                        .add(egui::Button::new("Close").fill(colors::accent()))
+                        .clicked()
+                    {
                         close = true;
                     }
                     if !self.session.errors.is_empty() {

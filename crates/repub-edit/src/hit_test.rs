@@ -87,7 +87,10 @@ pub fn member_at(group: &GroupData, pos: Point, tolerance: f64) -> Option<&Shape
         .rev()
         .filter_map(|c| hit(c, pos, tolerance).map(|h| (c, h)))
         .collect();
-    hits.iter().find(|(_, h)| *h == Hit::Strong).or(hits.first()).map(|(c, _)| *c)
+    hits.iter()
+        .find(|(_, h)| *h == Hit::Strong)
+        .or(hits.first())
+        .map(|(c, _)| *c)
 }
 
 /// How `pos` hits `shape`, if at all.
@@ -103,7 +106,11 @@ pub fn hit(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         }
         ShapeKind::TextFrame(_) => hit_text_frame(shape, pos, tolerance),
         // A group is hit wherever one of its members is
-        ShapeKind::Group(group) => group.children.iter().filter_map(|c| hit(c, pos, tolerance)).max(),
+        ShapeKind::Group(group) => group
+            .children
+            .iter()
+            .filter_map(|c| hit(c, pos, tolerance))
+            .max(),
         // Pictures, tables, text effects are solid rectangles
         _ => {
             let local = unrotate(pos, shape);
@@ -113,7 +120,9 @@ pub fn hit(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
 }
 
 fn hit_auto_shape(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
-    let ShapeKind::AutoShape(auto) = &shape.kind else { return None };
+    let ShapeKind::AutoShape(auto) = &shape.kind else {
+        return None;
+    };
     let stroke = shape.line.as_ref().map_or(0.0, |s| s.width.max(0.0));
     let local = unrotate(pos, shape);
 
@@ -121,19 +130,33 @@ fn hit_auto_shape(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         // Subpath by subpath: near an outlined one, or inside the filled area
         // (the path's winding rule, so a donut's hole is empty).
         let subpaths = polyline_subpaths(path);
-        let near = subpaths
-            .iter()
-            .filter(|sp| !sp.no_stroke)
-            .any(|sp| distance_to_polyline(local, &sp.points, sp.closed) <= tolerance + stroke / 2.0);
+        let near = subpaths.iter().filter(|sp| !sp.no_stroke).any(|sp| {
+            distance_to_polyline(local, &sp.points, sp.closed) <= tolerance + stroke / 2.0
+        });
         if near {
             return Some(Hit::Strong);
         }
-        let filled: Vec<&Vec<Point>> = subpaths.iter().filter(|sp| !sp.no_fill).map(|sp| &sp.points).collect();
+        let filled: Vec<&Vec<Point>> = subpaths
+            .iter()
+            .filter(|sp| !sp.no_fill)
+            .map(|sp| &sp.points)
+            .collect();
         let winding: i32 = filled.iter().map(|pts| winding_number(local, pts)).sum();
-        let crossings: usize = filled.iter().filter(|pts| point_in_polygon(local, pts)).count();
-        let inside = if path.even_odd { crossings % 2 == 1 } else { winding != 0 };
+        let crossings: usize = filled
+            .iter()
+            .filter(|pts| point_in_polygon(local, pts))
+            .count();
+        let inside = if path.even_odd {
+            crossings % 2 == 1
+        } else {
+            winding != 0
+        };
         if inside {
-            return Some(if is_filled(&shape.fill) { Hit::Strong } else { Hit::Weak });
+            return Some(if is_filled(&shape.fill) {
+                Hit::Strong
+            } else {
+                Hit::Weak
+            });
         }
         return None;
     }
@@ -147,7 +170,11 @@ fn hit_auto_shape(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         return Some(Hit::Strong);
     }
     if point_in_polygon(local, &outline) {
-        return Some(if is_filled(&shape.fill) { Hit::Strong } else { Hit::Weak });
+        return Some(if is_filled(&shape.fill) {
+            Hit::Strong
+        } else {
+            Hit::Weak
+        });
     }
     None
 }
@@ -172,7 +199,12 @@ fn polyline_subpaths(path: &repub_model::geometry::Path) -> Vec<SubpathLine> {
             PathCommand::MoveTo(p) => {
                 if !current.is_empty() {
                     let style = path.subpath_style(index);
-                    out.push(SubpathLine { points: std::mem::take(&mut current), closed, no_fill: style.no_fill, no_stroke: style.no_stroke });
+                    out.push(SubpathLine {
+                        points: std::mem::take(&mut current),
+                        closed,
+                        no_fill: style.no_fill,
+                        no_stroke: style.no_stroke,
+                    });
                     index += 1;
                     closed = false;
                 }
@@ -183,7 +215,11 @@ fn polyline_subpaths(path: &repub_model::geometry::Path) -> Vec<SubpathLine> {
                 current.push(*control);
                 current.push(*end);
             }
-            PathCommand::CubicTo { control1, control2, end } => {
+            PathCommand::CubicTo {
+                control1,
+                control2,
+                end,
+            } => {
                 current.push(*control1);
                 current.push(*control2);
                 current.push(*end);
@@ -193,7 +229,12 @@ fn polyline_subpaths(path: &repub_model::geometry::Path) -> Vec<SubpathLine> {
     }
     if !current.is_empty() {
         let style = path.subpath_style(index);
-        out.push(SubpathLine { points: current, closed, no_fill: style.no_fill, no_stroke: style.no_stroke });
+        out.push(SubpathLine {
+            points: current,
+            closed,
+            no_fill: style.no_fill,
+            no_stroke: style.no_stroke,
+        });
     }
     out
 }
@@ -274,7 +315,9 @@ fn distance_to_polyline(p: Point, points: &[Point], closed: bool) -> f64 {
     if points.is_empty() {
         return f64::INFINITY;
     }
-    let open = points.windows(2).map(|w| distance_to_segment(p, w[0], w[1]));
+    let open = points
+        .windows(2)
+        .map(|w| distance_to_segment(p, w[0], w[1]));
     let closing = closed.then(|| distance_to_segment(p, points[points.len() - 1], points[0]));
     open.chain(closing).fold(f64::INFINITY, f64::min)
 }
@@ -301,10 +344,10 @@ mod tests {
     use super::*;
     use repub_color::Color;
     use repub_geometry::Rect;
+    use repub_model::shape::{Shape, ShapeKind};
     use repub_model::styles::Fill;
     use repub_model::text::{Paragraph, StyledText};
     use repub_model::{Document, PageOrientation, PageSize};
-    use repub_model::shape::{Shape, ShapeKind};
 
     const TOL: f64 = 5.0;
 
@@ -332,7 +375,9 @@ mod tests {
     fn text(r: Rect, s: &str) -> Shape {
         let mut tf = Shape::text_frame(r);
         if let ShapeKind::TextFrame(data) = &mut tf.kind {
-            data.content = StyledText { paragraphs: vec![Paragraph::plain(s)] };
+            data.content = StyledText {
+                paragraphs: vec![Paragraph::plain(s)],
+            };
         }
         tf.fill = Fill::None;
         tf
@@ -346,7 +391,10 @@ mod tests {
         let bx = empty_box(Rect::new(50.0, 50.0, 400.0, 400.0));
         let (shape_id, box_id) = (shape.id(), bx.id());
         let page = page_with(vec![shape, bx]);
-        assert_eq!(shape_at(&page, Point::new(200.0, 200.0), TOL), Some(shape_id));
+        assert_eq!(
+            shape_at(&page, Point::new(200.0, 200.0), TOL),
+            Some(shape_id)
+        );
         // On the box's border: strong hit on the box
         assert_eq!(shape_at(&page, Point::new(50.0, 200.0), TOL), Some(box_id));
         // Inside the box over blank page (below the filled shape): the box
@@ -368,7 +416,10 @@ mod tests {
         let tf = text(Rect::new(100.0, 100.0, 300.0, 300.0), "Hi");
         let shape_id = shape.id();
         let page = page_with(vec![shape, tf]);
-        assert_eq!(shape_at(&page, Point::new(250.0, 350.0), TOL), Some(shape_id));
+        assert_eq!(
+            shape_at(&page, Point::new(250.0, 350.0), TOL),
+            Some(shape_id)
+        );
         // Blank page inside an unfilled text box with nothing behind: the box
         let page = page_with(vec![text(Rect::new(100.0, 100.0, 300.0, 300.0), "Hi")]);
         assert!(shape_at(&page, Point::new(250.0, 350.0), TOL).is_some());

@@ -81,7 +81,9 @@ impl Guides {
         }
         match raw {
             0x100..=0x109 => HandleParam::Adjust((raw - 0x100) as usize),
-            3..=0x82 => HandleParam::Value(self.values.get((raw - 3) as usize).copied().unwrap_or(0.0)),
+            3..=0x82 => {
+                HandleParam::Value(self.values.get((raw - 3) as usize).copied().unwrap_or(0.0))
+            }
             0 => HandleParam::Value(0.0),
             1 => HandleParam::Value(UNITS),
             2 => HandleParam::Value(UNITS / 2.0),
@@ -122,9 +124,18 @@ impl Handle {
             flags: f,
             x: g.handle_param(raw[1], true),
             y: g.handle_param(raw[2], true),
-            center: (g.value(g.handle_param(raw[3], f & H_CENTER_X_REF != 0)), g.value(g.handle_param(raw[4], f & H_CENTER_Y_REF != 0))),
-            x_range: (g.limit(raw[5], f & H_X_MIN_REF != 0), g.limit(raw[6], f & H_X_MAX_REF != 0)),
-            y_range: (g.limit(raw[7], f & H_Y_MIN_REF != 0), g.limit(raw[8], f & H_Y_MAX_REF != 0)),
+            center: (
+                g.value(g.handle_param(raw[3], f & H_CENTER_X_REF != 0)),
+                g.value(g.handle_param(raw[4], f & H_CENTER_Y_REF != 0)),
+            ),
+            x_range: (
+                g.limit(raw[5], f & H_X_MIN_REF != 0),
+                g.limit(raw[6], f & H_X_MAX_REF != 0),
+            ),
+            y_range: (
+                g.limit(raw[7], f & H_Y_MIN_REF != 0),
+                g.limit(raw[8], f & H_Y_MAX_REF != 0),
+            ),
         }
     }
 
@@ -176,11 +187,15 @@ impl Guides {
             return f64::from(raw);
         }
         match raw {
-            0x140 | 0x141 => 0.0,              // geoLeft, geoTop
-            0x142 | 0x143 => UNITS,            // geoRight, geoBottom
+            0x140 | 0x141 => 0.0,   // geoLeft, geoTop
+            0x142 | 0x143 => UNITS, // geoRight, geoBottom
             0x147..=0x150 => self.adjust[usize::from(raw - 0x147)],
-            0x400..=0x7ff => self.values.get(usize::from(raw - 0x400)).copied().unwrap_or(0.0),
-            _ => 0.0,                          // e.g. line width (0x1fc), not modelled
+            0x400..=0x7ff => self
+                .values
+                .get(usize::from(raw - 0x400))
+                .copied()
+                .unwrap_or(0.0),
+            _ => 0.0, // e.g. line width (0x1fc), not modelled
         }
     }
 
@@ -191,12 +206,24 @@ impl Guides {
         let c = self.param(g[3], flags & 0x8000 != 0);
         match flags & 0x1fff {
             0 => a + b - c,
-            1 => if c == 0.0 { 0.0 } else { a * b / c },
+            1 => {
+                if c == 0.0 {
+                    0.0
+                } else {
+                    a * b / c
+                }
+            }
             2 => (a + b) / 2.0,
             3 => a.abs(),
             4 => a.min(b),
             5 => a.max(b),
-            6 => if a > 0.0 { b } else { c },
+            6 => {
+                if a > 0.0 {
+                    b
+                } else {
+                    c
+                }
+            }
             7 => (a * a + b * b + c * c).sqrt(),
             8 => b.atan2(a).to_degrees() * 65536.0,
             9 => a * fixed_rad(b).sin(),
@@ -206,7 +233,11 @@ impl Guides {
             13 => a.max(0.0).sqrt(),
             14 => a + (b - c) * 65536.0,
             15 => {
-                if b == 0.0 { 0.0 } else { c * (1.0 - (a / b) * (a / b)).max(0.0).sqrt() }
+                if b == 0.0 {
+                    0.0
+                } else {
+                    c * (1.0 - (a / b) * (a / b)).max(0.0).sqrt()
+                }
             }
             16 => a * fixed_rad(b).tan(),
             _ => 0.0,
@@ -217,7 +248,10 @@ impl Guides {
     pub(crate) fn coord(&self, v: i32) -> f64 {
         let u = v as u32;
         if u & 0x8000_0000 != 0 && u & 0x7fff_ffff < 0x1_0000 {
-            self.values.get((u & 0x7fff_ffff) as usize).copied().unwrap_or(0.0)
+            self.values
+                .get((u & 0x7fff_ffff) as usize)
+                .copied()
+                .unwrap_or(0.0)
         } else {
             f64::from(v)
         }
@@ -269,7 +303,11 @@ impl Builder {
         if self.current.is_none() {
             self.move_to(c1);
         }
-        self.path.commands.push(PathCommand::CubicTo { control1: c1, control2: c2, end });
+        self.path.commands.push(PathCommand::CubicTo {
+            control1: c1,
+            control2: c2,
+            end,
+        });
         self.current = Some(end);
     }
 
@@ -284,7 +322,9 @@ impl Builder {
     fn end_group(&mut self) {
         if self.group_style != SubpathStyle::default() {
             if self.path.subpaths.len() < self.subpath_count {
-                self.path.subpaths.resize(self.subpath_count, SubpathStyle::default());
+                self.path
+                    .subpaths
+                    .resize(self.subpath_count, SubpathStyle::default());
             }
             for s in &mut self.path.subpaths[self.group_start..self.subpath_count] {
                 s.no_fill |= self.group_style.no_fill;
@@ -299,12 +339,20 @@ impl Builder {
     /// Quarter ellipse from the current point to `p`, leaving horizontally
     /// (`x_first`) or vertically.
     fn quadrant(&mut self, p: Point, x_first: bool) {
-        let Some(c) = self.current else { return self.move_to(p) };
+        let Some(c) = self.current else {
+            return self.move_to(p);
+        };
         let (dx, dy) = (p.x - c.x, p.y - c.y);
         let (c1, c2) = if x_first {
-            (Point::new(c.x + dx * KAPPA, c.y), Point::new(p.x, p.y - dy * KAPPA))
+            (
+                Point::new(c.x + dx * KAPPA, c.y),
+                Point::new(p.x, p.y - dy * KAPPA),
+            )
         } else {
-            (Point::new(c.x, c.y + dy * KAPPA), Point::new(p.x - dx * KAPPA, p.y))
+            (
+                Point::new(c.x, c.y + dy * KAPPA),
+                Point::new(p.x - dx * KAPPA, p.y),
+            )
         };
         self.cubic(c1, c2, p);
     }
@@ -366,10 +414,19 @@ impl Builder {
             *c = match *c {
                 PathCommand::MoveTo(p) => PathCommand::MoveTo(s(p)),
                 PathCommand::LineTo(p) => PathCommand::LineTo(s(p)),
-                PathCommand::QuadTo { control, end } => PathCommand::QuadTo { control: s(control), end: s(end) },
-                PathCommand::CubicTo { control1, control2, end } => {
-                    PathCommand::CubicTo { control1: s(control1), control2: s(control2), end: s(end) }
-                }
+                PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
+                    control: s(control),
+                    end: s(end),
+                },
+                PathCommand::CubicTo {
+                    control1,
+                    control2,
+                    end,
+                } => PathCommand::CubicTo {
+                    control1: s(control1),
+                    control2: s(control2),
+                    end: s(end),
+                },
                 PathCommand::Close => PathCommand::Close,
             };
         }
@@ -383,7 +440,11 @@ impl Builder {
 
 impl PresetDef {
     pub(crate) fn build(&self, g: &Guides, bounds: Rect) -> Path {
-        let pts: Vec<Point> = self.vertices.iter().map(|&(x, y)| Point::new(g.coord(x), g.coord(y))).collect();
+        let pts: Vec<Point> = self
+            .vertices
+            .iter()
+            .map(|&(x, y)| Point::new(g.coord(x), g.coord(y)))
+            .collect();
         let mut b = Builder::new();
         let mut next = 0usize;
         let mut take = |n: usize| -> Vec<Point> {
@@ -395,7 +456,11 @@ impl PresetDef {
         if self.segments.is_empty() {
             // One closed polygon through every point
             for (i, p) in take(pts.len()).into_iter().enumerate() {
-                if i == 0 { b.move_to(p) } else { b.line_to(p) }
+                if i == 0 {
+                    b.move_to(p)
+                } else {
+                    b.line_to(p)
+                }
             }
             b.close();
             return b.finish(bounds);
@@ -428,14 +493,25 @@ impl PresetDef {
                             for (i, e) in take(n).chunks_exact(3).enumerate() {
                                 let (start, sweep) = (fixed_rad(e[2].x), fixed_rad(e[2].y));
                                 // Office angles run counter-clockwise; y is down here
-                                b.arc(e[0], e[1].x.abs(), e[1].y.abs(), -start, -sweep, code == 1 || i > 0);
+                                b.arc(
+                                    e[0],
+                                    e[1].x.abs(),
+                                    e[1].y.abs(),
+                                    -start,
+                                    -sweep,
+                                    code == 1 || i > 0,
+                                );
                             }
                         }
                         // arcTo / arc / clockwiseArcTo / clockwiseArc: box corners, from, to
                         // (as above: one figure per command)
                         3..=6 => {
                             for (i, a) in take(n).chunks_exact(4).enumerate() {
-                                b.box_arc([a[0], a[1], a[2], a[3]], code >= 5, code == 3 || code == 5 || i > 0);
+                                b.box_arc(
+                                    [a[0], a[1], a[2], a[3]],
+                                    code >= 5,
+                                    code == 3 || code == 5 || i > 0,
+                                );
                             }
                         }
                         // ellipticalQuadrantX / Y, alternating direction
@@ -450,8 +526,14 @@ impl PresetDef {
                         9 => {
                             for q in take(n).chunks_exact(2) {
                                 if let Some(c) = b.current {
-                                    let c1 = Point::new(c.x + 2.0 / 3.0 * (q[0].x - c.x), c.y + 2.0 / 3.0 * (q[0].y - c.y));
-                                    let c2 = Point::new(q[1].x + 2.0 / 3.0 * (q[0].x - q[1].x), q[1].y + 2.0 / 3.0 * (q[0].y - q[1].y));
+                                    let c1 = Point::new(
+                                        c.x + 2.0 / 3.0 * (q[0].x - c.x),
+                                        c.y + 2.0 / 3.0 * (q[0].y - c.y),
+                                    );
+                                    let c2 = Point::new(
+                                        q[1].x + 2.0 / 3.0 * (q[0].x - q[1].x),
+                                        q[1].y + 2.0 / 3.0 * (q[0].y - q[1].y),
+                                    );
                                     b.cubic(c1, c2, q[1]);
                                 }
                             }
@@ -521,7 +603,9 @@ pub(crate) fn build_path(spt: u16, adjust: &[Option<i32>], bounds: Rect) -> Opti
 
 /// The text rectangle of preset `spt` for `bounds` (the whole box if none).
 pub(crate) fn text_rect(spt: u16, adjust: &[Option<i32>], bounds: Rect) -> Rect {
-    let Some(def) = def_of(spt) else { return bounds };
+    let Some(def) = def_of(spt) else {
+        return bounds;
+    };
     let Some(r) = def.inscribe.first() else {
         return bounds;
     };

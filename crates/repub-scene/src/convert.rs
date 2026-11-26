@@ -98,13 +98,19 @@ pub fn paint_with_opacity(paint: Paint, opacity: f64) -> Paint {
     }
     match paint {
         Paint::Solid(c) => Paint::Solid(c.with_alpha(c.a * opacity)),
-        Paint::LinearGradient { mut gradient, bounds } => {
+        Paint::LinearGradient {
+            mut gradient,
+            bounds,
+        } => {
             for stop in &mut gradient.stops {
                 stop.color = stop.color.with_alpha(stop.color.a * opacity);
             }
             Paint::LinearGradient { gradient, bounds }
         }
-        Paint::RadialGradient { mut gradient, bounds } => {
+        Paint::RadialGradient {
+            mut gradient,
+            bounds,
+        } => {
             for stop in &mut gradient.stops {
                 stop.color = stop.color.with_alpha(stop.color.a * opacity);
             }

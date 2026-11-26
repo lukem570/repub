@@ -1,20 +1,18 @@
 //! Serde DTOs for shapes and their kind-specific payloads.
 
-use repub_model::shape::{
-    CellHAlign, CellVAlign, ColumnSpec, ConnectorType, Extrusion3D, GroupData, ImageFit,
-    ImageSource, LineData, LineEnding, LineEndingStyle, Margins, PictureData, Rotation3D, Shape,
-    ShapeCommon, ShapeKind, TableBorders, TableCell, TableData, TextEffectData, TextFrameData,
-    TextOverflow, TextPathAlign, TextPathSpacing, TextTransform, TextFitMode, VerticalAlignment,
-    WordArtAlign, WordArtPreset, BevelType,
-};
 use repub_model::id::ObjectId;
+use repub_model::shape::{
+    BevelType, CellHAlign, CellVAlign, ColumnSpec, ConnectorType, Extrusion3D, GroupData, ImageFit,
+    ImageSource, LineData, LineEnding, LineEndingStyle, Margins, PictureData, Rotation3D, Shape,
+    ShapeCommon, ShapeKind, TableBorders, TableCell, TableData, TextEffectData, TextFitMode,
+    TextFrameData, TextOverflow, TextPathAlign, TextPathSpacing, TextTransform, VerticalAlignment,
+    WordArtAlign, WordArtPreset,
+};
 use serde::{Deserialize, Serialize};
 
 use super::geometry::{ColorDto, PointDto, RectDto, TransformDto};
 use super::shape_geometry::{AutoShapeDto, ModelPathDto};
-use super::styles::{
-    CharacterStyleDto, EffectsDto, FillDto, ParagraphStyleDto, StrokeDto,
-};
+use super::styles::{CharacterStyleDto, EffectsDto, FillDto, ParagraphStyleDto, StrokeDto};
 use super::text::StyledTextDto;
 use super::text_wrap::TextWrapDto;
 

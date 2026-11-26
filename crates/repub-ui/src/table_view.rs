@@ -32,10 +32,21 @@ impl TableGrid {
     pub fn of(shape: &Shape) -> Self {
         let b = shape.common.bounds;
         let Some(table) = table_data(shape) else {
-            return Self { xs: vec![b.origin.x], ys: vec![b.origin.y] };
+            return Self {
+                xs: vec![b.origin.x],
+                ys: vec![b.origin.y],
+            };
         };
-        let xs = edges(b.origin.x, b.size.width, &table.col_widths, table.cols as usize);
-        Self { ys: row_edges(shape, &xs), xs }
+        let xs = edges(
+            b.origin.x,
+            b.size.width,
+            &table.col_widths,
+            table.cols as usize,
+        );
+        Self {
+            ys: row_edges(shape, &xs),
+            xs,
+        }
     }
 
     pub fn rows(&self) -> usize {
@@ -51,7 +62,12 @@ impl TableGrid {
     pub fn span_rect(&self, row: usize, col: usize, row_span: usize, col_span: usize) -> Rect {
         let r1 = (row + row_span.max(1)).min(self.rows());
         let c1 = (col + col_span.max(1)).min(self.cols());
-        Rect::new(self.xs[col], self.ys[row], self.xs[c1] - self.xs[col], self.ys[r1] - self.ys[row])
+        Rect::new(
+            self.xs[col],
+            self.ys[row],
+            self.xs[c1] - self.xs[col],
+            self.ys[r1] - self.ys[row],
+        )
     }
 }
 
@@ -67,7 +83,11 @@ fn edges(start: f64, length: f64, sizes: &[f64], count: usize) -> Vec<f64> {
     out.push(start);
     let mut acc = 0.0;
     for i in 0..count {
-        acc += if total > 0.0 { sizes[i] / total } else { 1.0 / count as f64 };
+        acc += if total > 0.0 {
+            sizes[i] / total
+        } else {
+            1.0 / count as f64
+        };
         out.push(start + acc * length);
     }
     out
@@ -79,7 +99,9 @@ fn edges(start: f64, length: f64, sizes: &[f64], count: usize) -> Vec<f64> {
 /// rather than clipping or scaling the text.
 fn row_edges(shape: &Shape, xs: &[f64]) -> Vec<f64> {
     let b = shape.common.bounds;
-    let Some(table) = table_data(shape) else { return vec![b.origin.y] };
+    let Some(table) = table_data(shape) else {
+        return vec![b.origin.y];
+    };
     let rows = table.rows.max(1) as usize;
     let base = edges(b.origin.y, b.size.height, &table.row_heights, rows);
     let mut heights: Vec<f64> = (0..rows).map(|i| base[i + 1] - base[i]).collect();
@@ -87,12 +109,16 @@ fn row_edges(shape: &Shape, xs: &[f64]) -> Vec<f64> {
     let needed = row_min_heights(shape, xs);
     // Deficit is paid for by rows with slack; anything left over grows the table
     for _ in 0..rows + 1 {
-        let deficits: Vec<f64> = (0..rows).map(|i| (needed[i] - heights[i]).max(0.0)).collect();
+        let deficits: Vec<f64> = (0..rows)
+            .map(|i| (needed[i] - heights[i]).max(0.0))
+            .collect();
         let total_deficit: f64 = deficits.iter().sum();
         if total_deficit <= 0.001 {
             break;
         }
-        let slack: Vec<f64> = (0..rows).map(|i| (heights[i] - needed[i]).max(0.0)).collect();
+        let slack: Vec<f64> = (0..rows)
+            .map(|i| (heights[i] - needed[i]).max(0.0))
+            .collect();
         let total_slack: f64 = slack.iter().sum();
         if total_slack <= 0.001 {
             for i in 0..rows {
@@ -126,7 +152,9 @@ fn row_edges(shape: &Shape, xs: &[f64]) -> Vec<f64> {
 #[allow(clippy::needless_range_loop)]
 fn row_min_heights(shape: &Shape, xs: &[f64]) -> Vec<f64> {
     let b = shape.common.bounds;
-    let Some(table) = table_data(shape) else { return Vec::new() };
+    let Some(table) = table_data(shape) else {
+        return Vec::new();
+    };
     let rows = table.rows.max(1) as usize;
     let cols = table.cols.max(1) as usize;
     let mut needed = vec![0.0f64; rows];
@@ -162,7 +190,9 @@ pub struct VisibleCell<'a> {
 /// Every cell that is drawn, in row-major order. Cells covered by a merged
 /// neighbour's span are left out.
 pub fn visible_cells<'a>(shape: &'a Shape, grid: &TableGrid) -> Vec<VisibleCell<'a>> {
-    let Some(table) = table_data(shape) else { return Vec::new() };
+    let Some(table) = table_data(shape) else {
+        return Vec::new();
+    };
     let (rows, cols) = (grid.rows(), grid.cols());
     let mut covered = vec![false; rows * cols];
     let mut out = Vec::new();
@@ -171,7 +201,9 @@ pub fn visible_cells<'a>(shape: &'a Shape, grid: &TableGrid) -> Vec<VisibleCell<
             if covered[row * cols + col] {
                 continue;
             }
-            let Some(cell) = table.cells.get(row * cols + col) else { continue };
+            let Some(cell) = table.cells.get(row * cols + col) else {
+                continue;
+            };
             let row_span = (cell.row_span.max(1) as usize).min(rows - row);
             let col_span = (cell.col_span.max(1) as usize).min(cols - col);
             for r in row..row + row_span {
@@ -179,7 +211,12 @@ pub fn visible_cells<'a>(shape: &'a Shape, grid: &TableGrid) -> Vec<VisibleCell<
                     covered[r * cols + c] = true;
                 }
             }
-            out.push(VisibleCell { row, col, cell, rect: grid.span_rect(row, col, row_span, col_span) });
+            out.push(VisibleCell {
+                row,
+                col,
+                cell,
+                rect: grid.span_rect(row, col, row_span, col_span),
+            });
         }
     }
     out
@@ -189,7 +226,9 @@ pub fn visible_cells<'a>(shape: &'a Shape, grid: &TableGrid) -> Vec<VisibleCell<
 /// alignment, so cell text is laid out and drawn exactly like a text box.
 pub fn cell_text_frame(cell: &TableCell, rect: Rect) -> Shape {
     let mut shape = Shape::text_frame(rect);
-    let ShapeKind::TextFrame(tf) = &mut shape.kind else { unreachable!() };
+    let ShapeKind::TextFrame(tf) = &mut shape.kind else {
+        unreachable!()
+    };
     tf.content = cell.content.clone();
     // The cell's horizontal alignment applies unless the paragraph sets its own
     if cell.h_align != CellHAlign::Left {
@@ -226,7 +265,8 @@ pub fn placed_cell_frame(shape: &Shape, cell: &TableCell, rect: Rect) -> Shape {
         let (dx, dy) = (cc.x - tc.x, cc.y - tc.y);
         let (sin, cos) = rotation.to_radians().sin_cos();
         let (mx, my) = (tc.x + dx * cos - dy * sin, tc.y + dx * sin + dy * cos);
-        tf.common.bounds.origin = repub_geometry::Point::new(mx - rect.size.width / 2.0, my - rect.size.height / 2.0);
+        tf.common.bounds.origin =
+            repub_geometry::Point::new(mx - rect.size.width / 2.0, my - rect.size.height / 2.0);
         tf.common.rotation = rotation;
     }
     tf
@@ -249,15 +289,30 @@ pub fn cell_at(shape: &Shape, p: repub_geometry::Point) -> Option<(usize, usize)
     let (dx, dy) = (p.x - c.x, p.y - c.y);
     let p = repub_geometry::Point::new(c.x + dx * cos - dy * sin, c.y + dx * sin + dy * cos);
     let grid = TableGrid::of(shape);
-    visible_cells(shape, &grid).into_iter().find(|v| v.rect.contains(p)).map(|v| (v.row, v.col))
+    visible_cells(shape, &grid)
+        .into_iter()
+        .find(|v| v.rect.contains(p))
+        .map(|v| (v.row, v.col))
 }
 
 /// The visible cell after (`forward`) or before (`row`, `col`) in reading order.
-pub fn neighbour_cell(shape: &Shape, row: usize, col: usize, forward: bool) -> Option<(usize, usize)> {
+pub fn neighbour_cell(
+    shape: &Shape,
+    row: usize,
+    col: usize,
+    forward: bool,
+) -> Option<(usize, usize)> {
     let grid = TableGrid::of(shape);
-    let cells: Vec<(usize, usize)> = visible_cells(shape, &grid).iter().map(|c| (c.row, c.col)).collect();
+    let cells: Vec<(usize, usize)> = visible_cells(shape, &grid)
+        .iter()
+        .map(|c| (c.row, c.col))
+        .collect();
     let i = cells.iter().position(|&rc| rc == (row, col))?;
-    if forward { cells.get(i + 1).copied() } else { i.checked_sub(1).map(|j| cells[j]) }
+    if forward {
+        cells.get(i + 1).copied()
+    } else {
+        i.checked_sub(1).map(|j| cells[j])
+    }
 }
 
 #[cfg(test)]

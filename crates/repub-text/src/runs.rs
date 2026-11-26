@@ -89,7 +89,8 @@ mod tests {
     #[test]
     fn markers_and_fields_are_flattened() {
         let mut para = Paragraph::new();
-        para.elements.push(InlineElement::Text(TextRun::new("Page ")));
+        para.elements
+            .push(InlineElement::Text(TextRun::new("Page ")));
         para.add_field(Field::page_number());
         para.add_tab();
         para.add_line_break();

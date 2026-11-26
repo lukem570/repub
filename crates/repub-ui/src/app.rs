@@ -2,22 +2,30 @@
 
 use std::path::{Path, PathBuf};
 
-use repub_model::Document;
 use repub_geometry::Point;
-use repub_model::ObjectId;
 use repub_model::shape::{Shape, ShapeKind};
+use repub_model::Document;
+use repub_model::ObjectId;
 
 use crate::canvas::Canvas;
-use crate::text_format::{self, CharChange, Toggle};
-use repub_model::styles::TextAlignment;
-use crate::dialogs::{AboutDialog, DocumentPropertiesDialog, ErrorAlert, ExportDialog, SaveChangesPrompt, SaveChoice, FindReplaceDialog, FontDialog, FormatShapeDialog, ParagraphDialog, HyperlinkDialog, InsertTableDialog, MovePageDialog, NewDocumentDialog, PagePropertiesDialog, RenamePageDialog, SpellingDialog, TablePropertiesDialog, TemplatesDialog, TextBoxMarginsDialog, TextColumnsDialog, TextFitDialog, TextWrapDialog, WordArtDialog};
+use crate::dialogs::{
+    AboutDialog, DocumentPropertiesDialog, ErrorAlert, ExportDialog, FindReplaceDialog, FontDialog,
+    FormatShapeDialog, HyperlinkDialog, InsertTableDialog, MovePageDialog, NewDocumentDialog,
+    PagePropertiesDialog, ParagraphDialog, RenamePageDialog, SaveChangesPrompt, SaveChoice,
+    SpellingDialog, TablePropertiesDialog, TemplatesDialog, TextBoxMarginsDialog,
+    TextColumnsDialog, TextFitDialog, TextWrapDialog, WordArtDialog,
+};
 use crate::menus;
 use crate::panels::{PagesPanel, Toolbar};
 use crate::settings::Settings;
 use crate::start_screen::{DocumentInfo, StartPage, StartScreen, StartScreenAction};
 use crate::state::{AppState, Guide, GuideOrientation};
+use crate::text_format::{self, CharChange, Toggle};
 use crate::tools::Tool;
-use crate::widgets::{Ruler, RulerInteraction, RulerOrientation, StatusBar, StatusBarAction, StatusBarInfo};
+use crate::widgets::{
+    Ruler, RulerInteraction, RulerOrientation, StatusBar, StatusBarAction, StatusBarInfo,
+};
+use repub_model::styles::TextAlignment;
 
 /// Clipboard for copy/paste operations.
 #[derive(Debug, Default)]
@@ -48,7 +56,7 @@ pub enum AppAction {
     /// Print: the publication as a PDF, opened in the system's viewer to print.
     Print,
     Quit,
-    
+
     // Edit actions
     Undo,
     Redo,
@@ -65,7 +73,7 @@ pub enum AppAction {
     Find,
     /// Open Find and Replace in replace mode
     Replace,
-    
+
     // View actions
     ZoomIn,
     ZoomOut,
@@ -79,7 +87,7 @@ pub enum AppAction {
     ClearGuides,
     /// Switch between the light, dark and system themes
     SetTheme(crate::theme::ThemeMode),
-    
+
     // Insert actions
     InsertText,
     InsertImage,
@@ -111,7 +119,7 @@ pub enum AppAction {
     DeletePage(usize),
     MovePage,
     RenamePage,
-    
+
     // Arrange actions
     Group,
     Ungroup,
@@ -125,7 +133,7 @@ pub enum AppAction {
     AlignTop,
     AlignMiddle,
     AlignBottom,
-    
+
     // Text formatting
     TextAlignLeft,
     TextAlignCenter,
@@ -154,7 +162,10 @@ pub enum AppAction {
     /// Pick a picture file and place it on the page.
     InsertPicture,
     /// Page size for every page, portrait width and height in points (orientation kept).
-    SetPageSize { width: f64, height: f64 },
+    SetPageSize {
+        width: f64,
+        height: f64,
+    },
     /// Orientation for every page (`true` = landscape).
     SetOrientation(bool),
     /// Equal margins on every side of every page, points.
@@ -184,13 +195,13 @@ pub enum AppAction {
     RotateBy(f64),
     /// Start editing the selected text box's text (caret at the end).
     EditText,
-    
+
     // View modes
     ToggleTwoPageSpread,
-    
+
     // Help
     ShowAbout,
-    
+
     // Dialogs
     ShowPageProperties,
     /// Text wrapping options for the selected object
@@ -225,12 +236,12 @@ pub enum AppAction {
     ShowTextBoxMargins,
     /// File tab: open the Backstage view
     ShowBackstage,
-    
+
     // Panes
     TogglePagesPane,
     /// Show or hide the Selection pane.
     ToggleSelectionPane,
-    
+
     // Master Pages
     /// Edit a master page (switch to master page editing mode)
     EditMasterPage(Option<repub_model::MasterPageId>),
@@ -272,7 +283,8 @@ impl TableEdit {
     /// Whether it can run now: a table is selected, and deleting a row or
     /// column needs a cell being edited.
     pub fn enabled(self, state: &AppState) -> bool {
-        let table = matches!(state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::Table(_)));
+        let table =
+            matches!(state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::Table(_)));
         let in_cell = state.text_edit.as_ref().is_some_and(|e| e.cell.is_some());
         match self {
             TableEdit::DeleteRow | TableEdit::DeleteColumn => table && in_cell,
@@ -610,12 +622,19 @@ impl RepubApp {
     /// Spell-check the document and return the words flagged (tests).
     pub fn spelling_check_for_test(&mut self) -> Vec<String> {
         self.spelling_dialog.open(&self.state);
-        self.spelling_dialog.session.errors.iter().map(|e| e.word.clone()).collect()
+        self.spelling_dialog
+            .session
+            .errors
+            .iter()
+            .map(|e| e.word.clone())
+            .collect()
     }
 
     /// Apply the spelling dialog's suggested change (tests).
     pub fn spelling_change_for_test(&mut self, replacement: &str) -> bool {
-        self.spelling_dialog.session.change_current(&mut self.state, replacement)
+        self.spelling_dialog
+            .session
+            .change_current(&mut self.state, replacement)
     }
 
     /// Whether the hyperlink dialog is open.
@@ -635,12 +654,14 @@ impl RepubApp {
 
     /// Select the dialog's current hit (tests).
     pub fn find_replace_select_current(&mut self, now: f64) {
-        self.find_replace_dialog.select_current(&mut self.state, now);
+        self.find_replace_dialog
+            .select_current(&mut self.state, now);
     }
 
     /// Replace the dialog's current hit (tests).
     pub fn find_replace_replace_current(&mut self, now: f64) {
-        self.find_replace_dialog.replace_current(&mut self.state, now);
+        self.find_replace_dialog
+            .replace_current(&mut self.state, now);
     }
 
     /// Mutable access to the canvas (for tests).
@@ -659,15 +680,34 @@ impl RepubApp {
             // Any other command ends text editing first
             let keeps_editing = matches!(
                 action,
-                AppAction::ZoomIn | AppAction::ZoomOut | AppAction::ZoomActual | AppAction::ZoomFit
-                    | AppAction::SaveDocument | AppAction::SaveDocumentAs
-                    | AppAction::TextBold | AppAction::TextItalic | AppAction::TextUnderline
-                    | AppAction::TextSuperscript | AppAction::TextSubscript | AppAction::ToggleBullets | AppAction::ToggleNumbering
-                    | AppAction::GrowFont | AppAction::ShrinkFont | AppAction::SetFontSize(_) | AppAction::SetFontFamily(_)
-                    | AppAction::TextAlignLeft | AppAction::TextAlignCenter | AppAction::TextAlignRight | AppAction::TextAlignJustify
-                    | AppAction::SetFontColor(_) | AppAction::ChangeIndent(_) | AppAction::SetLineSpacing(_)
-                    | AppAction::TableEdit(_) | AppAction::CancelMode
-                    | AppAction::TogglePagesPane | AppAction::ToggleSelectionPane
+                AppAction::ZoomIn
+                    | AppAction::ZoomOut
+                    | AppAction::ZoomActual
+                    | AppAction::ZoomFit
+                    | AppAction::SaveDocument
+                    | AppAction::SaveDocumentAs
+                    | AppAction::TextBold
+                    | AppAction::TextItalic
+                    | AppAction::TextUnderline
+                    | AppAction::TextSuperscript
+                    | AppAction::TextSubscript
+                    | AppAction::ToggleBullets
+                    | AppAction::ToggleNumbering
+                    | AppAction::GrowFont
+                    | AppAction::ShrinkFont
+                    | AppAction::SetFontSize(_)
+                    | AppAction::SetFontFamily(_)
+                    | AppAction::TextAlignLeft
+                    | AppAction::TextAlignCenter
+                    | AppAction::TextAlignRight
+                    | AppAction::TextAlignJustify
+                    | AppAction::SetFontColor(_)
+                    | AppAction::ChangeIndent(_)
+                    | AppAction::SetLineSpacing(_)
+                    | AppAction::TableEdit(_)
+                    | AppAction::CancelMode
+                    | AppAction::TogglePagesPane
+                    | AppAction::ToggleSelectionPane
                     | AppAction::SetTheme(_)
             );
             if !keeps_editing {
@@ -704,7 +744,7 @@ impl RepubApp {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
-            
+
             AppAction::Undo => {
                 self.state.undo();
             }
@@ -733,7 +773,7 @@ impl RepubApp {
             AppAction::Duplicate => {
                 self.duplicate_selected_objects();
             }
-            
+
             AppAction::ZoomIn => self.state.zoom_in(),
             AppAction::ZoomOut => self.state.zoom_out(),
             AppAction::ZoomActual => self.state.zoom_actual(),
@@ -741,7 +781,7 @@ impl RepubApp {
                 // Canvas applies this next frame, once it knows its viewport size
                 self.state.fit_page_pending = true;
             }
-            
+
             AppAction::ToggleRulers => {
                 self.state.show_rulers = !self.state.show_rulers;
             }
@@ -760,7 +800,7 @@ impl RepubApp {
             AppAction::ClearGuides => {
                 self.state.clear_guides();
             }
-            
+
             AppAction::InsertText => {
                 self.state.current_tool = Tool::Text;
             }
@@ -812,7 +852,7 @@ impl RepubApp {
                     self.state.mark_dirty();
                 }
             }
-            
+
             AppAction::InsertPageAt(index) => self.state.insert_page_at(index),
             AppAction::InsertSpread(index) => self.state.insert_spread_after(index),
             AppAction::DuplicatePage(index) => self.state.duplicate_pages(&[index]),
@@ -821,7 +861,11 @@ impl RepubApp {
                 let ids = self.state.selection.clone();
                 if ids.len() >= 2 {
                     self.state.record_undo("Group");
-                    if let Some(id) = self.state.current_page_mut().and_then(|p| p.group_shapes(&ids)) {
+                    if let Some(id) = self
+                        .state
+                        .current_page_mut()
+                        .and_then(|p| p.group_shapes(&ids))
+                    {
                         self.state.selection = vec![id];
                         self.state.mark_dirty();
                     }
@@ -859,40 +903,84 @@ impl RepubApp {
             AppAction::SendBackward => {
                 self.reorder_selected_objects(ObjectReorder::SendBackward);
             }
-            AppAction::AlignLeft | AppAction::AlignCenter | AppAction::AlignRight |
-            AppAction::AlignTop | AppAction::AlignMiddle | AppAction::AlignBottom => {
+            AppAction::AlignLeft
+            | AppAction::AlignCenter
+            | AppAction::AlignRight
+            | AppAction::AlignTop
+            | AppAction::AlignMiddle
+            | AppAction::AlignBottom => {
                 self.align_selected_objects(&action);
             }
-            
-            AppAction::TextAlignLeft => { text_format::set_alignment(&mut self.state, TextAlignment::Left); }
-            AppAction::TextAlignCenter => { text_format::set_alignment(&mut self.state, TextAlignment::Center); }
-            AppAction::TextAlignRight => { text_format::set_alignment(&mut self.state, TextAlignment::Right); }
-            AppAction::TextAlignJustify => { text_format::set_alignment(&mut self.state, TextAlignment::Justify); }
-            
+
+            AppAction::TextAlignLeft => {
+                text_format::set_alignment(&mut self.state, TextAlignment::Left);
+            }
+            AppAction::TextAlignCenter => {
+                text_format::set_alignment(&mut self.state, TextAlignment::Center);
+            }
+            AppAction::TextAlignRight => {
+                text_format::set_alignment(&mut self.state, TextAlignment::Right);
+            }
+            AppAction::TextAlignJustify => {
+                text_format::set_alignment(&mut self.state, TextAlignment::Justify);
+            }
+
             AppAction::ToggleTwoPageSpread => {
                 self.state.two_page_spread = !self.state.two_page_spread;
                 self.state.fit_page_pending = true;
             }
-            
-            AppAction::TextBold => { text_format::toggle(&mut self.state, Toggle::Bold); }
-            AppAction::TextItalic => { text_format::toggle(&mut self.state, Toggle::Italic); }
-            AppAction::TextUnderline => { text_format::toggle(&mut self.state, Toggle::Underline); }
-            AppAction::TextSuperscript => { text_format::toggle(&mut self.state, Toggle::Superscript); }
-            AppAction::TextSubscript => { text_format::toggle(&mut self.state, Toggle::Subscript); }
-            AppAction::ToggleBullets => { text_format::toggle_list(&mut self.state, text_format::ListKind::Bullets); }
-            AppAction::ToggleNumbering => { text_format::toggle_list(&mut self.state, text_format::ListKind::Numbering); }
-            AppAction::GrowFont => { text_format::apply(&mut self.state, CharChange::StepSize(true)); }
-            AppAction::ShrinkFont => { text_format::apply(&mut self.state, CharChange::StepSize(false)); }
-            AppAction::SetFontSize(size) => { text_format::apply(&mut self.state, CharChange::Size(size)); }
-            AppAction::SetFontFamily(family) => { text_format::apply(&mut self.state, CharChange::Family(family)); }
-            AppAction::SetFontColor(color) => { text_format::apply(&mut self.state, CharChange::Color(color)); }
-            AppAction::ChangeIndent(increase) => { text_format::change_indent(&mut self.state, increase); }
-            AppAction::SetLineSpacing(multiple) => { text_format::set_line_spacing(&mut self.state, multiple); }
+
+            AppAction::TextBold => {
+                text_format::toggle(&mut self.state, Toggle::Bold);
+            }
+            AppAction::TextItalic => {
+                text_format::toggle(&mut self.state, Toggle::Italic);
+            }
+            AppAction::TextUnderline => {
+                text_format::toggle(&mut self.state, Toggle::Underline);
+            }
+            AppAction::TextSuperscript => {
+                text_format::toggle(&mut self.state, Toggle::Superscript);
+            }
+            AppAction::TextSubscript => {
+                text_format::toggle(&mut self.state, Toggle::Subscript);
+            }
+            AppAction::ToggleBullets => {
+                text_format::toggle_list(&mut self.state, text_format::ListKind::Bullets);
+            }
+            AppAction::ToggleNumbering => {
+                text_format::toggle_list(&mut self.state, text_format::ListKind::Numbering);
+            }
+            AppAction::GrowFont => {
+                text_format::apply(&mut self.state, CharChange::StepSize(true));
+            }
+            AppAction::ShrinkFont => {
+                text_format::apply(&mut self.state, CharChange::StepSize(false));
+            }
+            AppAction::SetFontSize(size) => {
+                text_format::apply(&mut self.state, CharChange::Size(size));
+            }
+            AppAction::SetFontFamily(family) => {
+                text_format::apply(&mut self.state, CharChange::Family(family));
+            }
+            AppAction::SetFontColor(color) => {
+                text_format::apply(&mut self.state, CharChange::Color(color));
+            }
+            AppAction::ChangeIndent(increase) => {
+                text_format::change_indent(&mut self.state, increase);
+            }
+            AppAction::SetLineSpacing(multiple) => {
+                text_format::set_line_spacing(&mut self.state, multiple);
+            }
             AppAction::InsertPicture => self.insert_picture(),
             AppAction::SetPageSize { width, height } => {
                 self.page_setup("Page Size", |page| {
                     let landscape = page.size.width > page.size.height;
-                    page.size = if landscape { repub_geometry::Size::new(height, width) } else { repub_geometry::Size::new(width, height) };
+                    page.size = if landscape {
+                        repub_geometry::Size::new(height, width)
+                    } else {
+                        repub_geometry::Size::new(width, height)
+                    };
                 });
                 if let Some(doc) = self.state.document.as_mut() {
                     doc.default_page_size = repub_model::PageSize::Custom { width, height };
@@ -907,13 +995,22 @@ impl RepubApp {
                     }
                 });
                 if let Some(doc) = self.state.document.as_mut() {
-                    doc.default_orientation = if landscape { repub_model::PageOrientation::Landscape } else { repub_model::PageOrientation::Portrait };
+                    doc.default_orientation = if landscape {
+                        repub_model::PageOrientation::Landscape
+                    } else {
+                        repub_model::PageOrientation::Portrait
+                    };
                 }
                 self.state.fit_page_pending = true;
             }
             AppAction::SetMargins(margin) => {
                 self.page_setup("Margins", |page| {
-                    page.margins = repub_model::Margins { top: margin, right: margin, bottom: margin, left: margin };
+                    page.margins = repub_model::Margins {
+                        top: margin,
+                        right: margin,
+                        bottom: margin,
+                        left: margin,
+                    };
                 });
             }
             AppAction::SetPageBackground(color) => {
@@ -927,7 +1024,10 @@ impl RepubApp {
             }
             AppAction::SetShapeFill(color) => self.edit_selected("Shape Fill", |obj| {
                 if has_fill(obj) {
-                    obj.fill = color.map_or(repub_model::styles::Fill::None, repub_model::styles::Fill::Solid);
+                    obj.fill = color.map_or(
+                        repub_model::styles::Fill::None,
+                        repub_model::styles::Fill::Solid,
+                    );
                 }
             }),
             AppAction::SetShapeOutline(color) => self.edit_selected("Shape Outline", |obj| {
@@ -935,7 +1035,9 @@ impl RepubApp {
                     match (color, obj.line.as_mut()) {
                         (None, _) => obj.line = None,
                         (Some(c), Some(stroke)) => stroke.color = c,
-                        (Some(c), None) => obj.line = Some(repub_model::styles::Stroke::solid(c, 1.0)),
+                        (Some(c), None) => {
+                            obj.line = Some(repub_model::styles::Stroke::solid(c, 1.0))
+                        }
                     }
                 }
             }),
@@ -960,8 +1062,18 @@ impl RepubApp {
                 }
             }
             AppAction::Flip(horizontal) => {
-                let label = if horizontal { "Flip Horizontal" } else { "Flip Vertical" };
-                let locked: Vec<_> = self.state.selection.iter().copied().filter(|id| self.state.is_locked(*id)).collect();
+                let label = if horizontal {
+                    "Flip Horizontal"
+                } else {
+                    "Flip Vertical"
+                };
+                let locked: Vec<_> = self
+                    .state
+                    .selection
+                    .iter()
+                    .copied()
+                    .filter(|id| self.state.is_locked(*id))
+                    .collect();
                 self.state.selection.retain(|id| !locked.contains(id));
                 self.edit_selected(label, |obj| obj.flip(horizontal));
                 self.state.selection.extend(locked);
@@ -970,11 +1082,18 @@ impl RepubApp {
                 if has_outline(obj) {
                     match obj.line.as_mut() {
                         Some(stroke) => stroke.width = weight,
-                        None => obj.line = Some(repub_model::styles::Stroke::solid(repub_color::Color::BLACK, weight)),
+                        None => {
+                            obj.line = Some(repub_model::styles::Stroke::solid(
+                                repub_color::Color::BLACK,
+                                weight,
+                            ))
+                        }
                     }
                 }
             }),
-            AppAction::RotateBy(degrees) => crate::panels::toolbar::rotate_selection(&mut self.state, degrees),
+            AppAction::RotateBy(degrees) => {
+                crate::panels::toolbar::rotate_selection(&mut self.state, degrees)
+            }
             AppAction::CancelMode => {
                 self.state.link_source = None;
                 self.state.deactivate_format_painter();
@@ -1008,17 +1127,18 @@ impl RepubApp {
                     if crate::text_edit::is_text_frame(&self.state, id) {
                         crate::text_edit::begin(&mut self.state, id, None, now);
                         self.state.current_tool = Tool::Select;
-                    } else if matches!(self.state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::Table(_))) {
+                    } else if matches!(self.state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::Table(_)))
+                    {
                         crate::text_edit::begin_cell(&mut self.state, id, 0, 0, None, now);
                         self.state.current_tool = Tool::Select;
                     }
                 }
             }
-            
+
             AppAction::ShowAbout => {
                 self.about_dialog.open();
             }
-            
+
             AppAction::ShowPageProperties => {
                 self.page_properties_dialog.open_for_page(&self.state);
             }
@@ -1037,7 +1157,9 @@ impl RepubApp {
             AppAction::NewFromTemplate => self.templates_dialog.open(),
             AppAction::ShowWordArt => self.wordart_dialog.open_for_selection(&self.state),
             AppAction::InsertWordArt(preset) => self.insert_wordart(preset),
-            AppAction::ShowTableProperties => self.table_properties_dialog.open_for_selection(&self.state),
+            AppAction::ShowTableProperties => {
+                self.table_properties_dialog.open_for_selection(&self.state)
+            }
             AppAction::ShowDocumentProperties => {
                 self.document_properties_dialog.open_for(&self.state);
             }
@@ -1046,27 +1168,32 @@ impl RepubApp {
             }
             AppAction::ShowTextFit => {
                 if let Some(&obj_id) = self.state.selection.first() {
-                    self.text_fit_dialog.open_for_text_frame(&self.state, obj_id);
+                    self.text_fit_dialog
+                        .open_for_text_frame(&self.state, obj_id);
                 }
             }
             AppAction::ShowTextColumns => {
                 if let Some(&obj_id) = self.state.selection.first() {
-                    self.text_columns_dialog.open_for_text_frame(&self.state, obj_id);
+                    self.text_columns_dialog
+                        .open_for_text_frame(&self.state, obj_id);
                 }
             }
             AppAction::ShowTextBoxMargins => {
                 if let Some(&obj_id) = self.state.selection.first() {
-                    self.text_box_margins_dialog.open_for_text_frame(&self.state, obj_id);
+                    self.text_box_margins_dialog
+                        .open_for_text_frame(&self.state, obj_id);
                 }
             }
             AppAction::MovePage => {
                 if self.state.has_document() {
-                    self.move_page_dialog.open_for_page(&self.state, self.state.current_page);
+                    self.move_page_dialog
+                        .open_for_page(&self.state, self.state.current_page);
                 }
             }
             AppAction::RenamePage => {
                 if self.state.has_document() {
-                    self.rename_page_dialog.open_for_page(&self.state, self.state.current_page);
+                    self.rename_page_dialog
+                        .open_for_page(&self.state, self.state.current_page);
                 }
             }
             AppAction::FormatPainter => {
@@ -1094,7 +1221,7 @@ impl RepubApp {
                 self.settings.save();
                 crate::theme::apply_theme(ctx, mode);
             }
-            
+
             AppAction::EditMasterPage(master_id) => {
                 self.edit_master_page(master_id);
             }
@@ -1110,24 +1237,26 @@ impl RepubApp {
         }
     }
 
-
     /// Move selected objects by the given delta.
     fn move_selected_objects(&mut self, delta_x: f64, delta_y: f64) {
         // Repeated arrow-key nudges collapse into one undo step
         self.state.record_undo_coalesced("Nudge");
-        let selected_ids: Vec<_> = self.state.selection.iter().copied().filter(|id| !self.state.is_locked(*id)).collect();
+        let selected_ids: Vec<_> = self
+            .state
+            .selection
+            .iter()
+            .copied()
+            .filter(|id| !self.state.is_locked(*id))
+            .collect();
         let current_page = self.state.current_page;
-        
+
         {
             if let Some(page) = self.state.current_page_mut() {
                 for layer in page.layers_mut() {
                     for obj in layer.shapes_mut() {
                         if selected_ids.contains(&obj.id()) {
                             let pos = obj.position();
-                            obj.set_position(Point::new(
-                                pos.x + delta_x,
-                                pos.y + delta_y,
-                            ));
+                            obj.set_position(Point::new(pos.x + delta_x, pos.y + delta_y));
                         }
                     }
                 }
@@ -1141,12 +1270,18 @@ impl RepubApp {
         if self.state.selection.is_empty() {
             return;
         }
-        
+
         self.state.record_undo("Delete");
         // Locked objects stay
-        let selected_ids: Vec<_> = self.state.selection.iter().copied().filter(|id| !self.state.is_locked(*id)).collect();
+        let selected_ids: Vec<_> = self
+            .state
+            .selection
+            .iter()
+            .copied()
+            .filter(|id| !self.state.is_locked(*id))
+            .collect();
         let current_page = self.state.current_page;
-        
+
         {
             if let Some(page) = self.state.current_page_mut() {
                 // Linked text boxes keep their story
@@ -1156,7 +1291,7 @@ impl RepubApp {
                 }
             }
         }
-        
+
         self.state.selection.clear();
         self.state.mark_dirty();
     }
@@ -1170,7 +1305,12 @@ impl RepubApp {
                 page.layers()
                     .iter()
                     .filter(|l| l.visible && !l.locked)
-                    .flat_map(|l| l.shapes().iter().filter(|o| o.common.visible).map(|o| o.id()))
+                    .flat_map(|l| {
+                        l.shapes()
+                            .iter()
+                            .filter(|o| o.common.visible)
+                            .map(|o| o.id())
+                    })
                     .collect()
             })
             .unwrap_or_default();
@@ -1181,7 +1321,7 @@ impl RepubApp {
     fn copy_selected_objects(&mut self) {
         self.clipboard.objects.clear();
         self.clipboard.original_positions.clear();
-        
+
         // Selected objects (group members too) in stacking order
         for obj in self.state.selected_objects() {
             self.clipboard.objects.push(obj.clone());
@@ -1196,15 +1336,15 @@ impl RepubApp {
         if self.clipboard.objects.is_empty() {
             return;
         }
-        
+
         self.state.record_undo("Paste");
         let current_page = self.state.current_page;
         let offset = if in_place { 0.0 } else { 20.0 }; // 20pt offset for regular paste
-        
+
         // Clear selection and prepare new IDs
         self.state.selection.clear();
         let mut new_ids = Vec::new();
-        
+
         {
             if let Some(page) = self.state.current_page_mut() {
                 for (i, obj) in self.clipboard.objects.iter().enumerate() {
@@ -1218,19 +1358,19 @@ impl RepubApp {
                         tf.is_continuation = false;
                         tf.overflow = Default::default();
                     }
-                    
+
                     // Apply offset for regular paste
                     if !in_place {
                         let pos = new_obj.position();
                         new_obj.set_position(Point::new(pos.x + offset, pos.y + offset));
                     }
-                    
+
                     page.add_shape(new_obj);
                     new_ids.push(new_id);
                 }
             }
         }
-        
+
         // Select the newly pasted objects
         self.state.selection = new_ids;
         self.state.mark_dirty();
@@ -1248,12 +1388,12 @@ impl RepubApp {
         if self.state.selection.is_empty() {
             return;
         }
-        
+
         // Recorded only if something moves (e.g. not for an object already in front)
         self.state.begin_edit();
         let selected_ids = self.state.selection.clone();
         let current_page = self.state.current_page;
-        
+
         {
             if let Some(page) = self.state.current_page_mut() {
                 for layer in page.layers_mut() {
@@ -1276,7 +1416,7 @@ impl RepubApp {
                 }
             }
         }
-        
+
         self.state.end_edit("Arrange");
     }
 
@@ -1287,13 +1427,19 @@ impl RepubApp {
         if objects.is_empty() {
             return;
         }
-        let page_rect = self.state.current_page().map(|p| repub_geometry::Rect::new(0.0, 0.0, p.size.width, p.size.height));
+        let page_rect = self
+            .state
+            .current_page()
+            .map(|p| repub_geometry::Rect::new(0.0, 0.0, p.size.width, p.size.height));
         let margins_rect = self.state.current_page().map(|p| p.content_rect());
         let target = match self.state.align_target {
             crate::state::AlignTarget::Page => page_rect,
             crate::state::AlignTarget::Margins => margins_rect,
             crate::state::AlignTarget::Auto if objects.len() == 1 => page_rect,
-            crate::state::AlignTarget::Auto => objects.iter().map(|o| o.bounds()).reduce(|a, b| a.union(&b)),
+            crate::state::AlignTarget::Auto => objects
+                .iter()
+                .map(|o| o.bounds())
+                .reduce(|a, b| a.union(&b)),
         };
         let Some(target) = target else { return };
         // Recorded only if something moves (e.g. not for an object already in front)
@@ -1301,16 +1447,24 @@ impl RepubApp {
         let ids = self.state.selection.clone();
         if let Some(page) = self.state.current_page_mut() {
             for id in ids {
-                let Some(obj) = page.get_shape_mut(id) else { continue };
+                let Some(obj) = page.get_shape_mut(id) else {
+                    continue;
+                };
                 let b = obj.bounds();
                 let (mut x, mut y) = (b.origin.x, b.origin.y);
                 match action {
                     AppAction::AlignLeft => x = target.origin.x,
-                    AppAction::AlignCenter => x = target.origin.x + (target.size.width - b.size.width) / 2.0,
+                    AppAction::AlignCenter => {
+                        x = target.origin.x + (target.size.width - b.size.width) / 2.0
+                    }
                     AppAction::AlignRight => x = target.origin.x + target.size.width - b.size.width,
                     AppAction::AlignTop => y = target.origin.y,
-                    AppAction::AlignMiddle => y = target.origin.y + (target.size.height - b.size.height) / 2.0,
-                    AppAction::AlignBottom => y = target.origin.y + target.size.height - b.size.height,
+                    AppAction::AlignMiddle => {
+                        y = target.origin.y + (target.size.height - b.size.height) / 2.0
+                    }
+                    AppAction::AlignBottom => {
+                        y = target.origin.y + target.size.height - b.size.height
+                    }
                     _ => {}
                 }
                 obj.set_position(Point::new(x, y));
@@ -1319,19 +1473,32 @@ impl RepubApp {
         self.state.end_edit("Align");
     }
 
-
     /// Space three or more selected objects so the gaps between them are equal, keeping the
     /// outermost two where they are.
     fn distribute_selected_objects(&mut self, horizontal: bool) {
-        let mut items: Vec<(repub_model::ObjectId, repub_geometry::Rect)> = self.state.selected_objects().iter().map(|o| (o.id(), o.bounds())).collect();
+        let mut items: Vec<(repub_model::ObjectId, repub_geometry::Rect)> = self
+            .state
+            .selected_objects()
+            .iter()
+            .map(|o| (o.id(), o.bounds()))
+            .collect();
         if items.len() < 3 {
             return;
         }
-        let (start, size): (fn(&repub_geometry::Rect) -> f64, fn(&repub_geometry::Rect) -> f64) =
-            if horizontal { (|r| r.origin.x, |r| r.size.width) } else { (|r| r.origin.y, |r| r.size.height) };
+        let (start, size): (
+            fn(&repub_geometry::Rect) -> f64,
+            fn(&repub_geometry::Rect) -> f64,
+        ) = if horizontal {
+            (|r| r.origin.x, |r| r.size.width)
+        } else {
+            (|r| r.origin.y, |r| r.size.height)
+        };
         items.sort_by(|a, b| start(&a.1).total_cmp(&start(&b.1)));
         let first = start(&items[0].1);
-        let last = items.iter().map(|(_, r)| start(r) + size(r)).fold(f64::MIN, f64::max);
+        let last = items
+            .iter()
+            .map(|(_, r)| start(r) + size(r))
+            .fold(f64::MIN, f64::max);
         let total: f64 = items.iter().map(|(_, r)| size(r)).sum();
         let gap = (last - first - total) / (items.len() - 1) as f64;
         self.state.begin_edit();
@@ -1339,22 +1506,37 @@ impl RepubApp {
         if let Some(page) = self.state.current_page_mut() {
             for (id, rect) in &items {
                 if let Some(obj) = page.get_shape_mut(*id) {
-                    let pos = if horizontal { Point::new(at, rect.origin.y) } else { Point::new(rect.origin.x, at) };
+                    let pos = if horizontal {
+                        Point::new(at, rect.origin.y)
+                    } else {
+                        Point::new(rect.origin.x, at)
+                    };
                     obj.set_position(pos);
                 }
                 at += size(rect) + gap;
             }
         }
-        self.state.end_edit(if horizontal { "Distribute Horizontally" } else { "Distribute Vertically" });
+        self.state.end_edit(if horizontal {
+            "Distribute Horizontally"
+        } else {
+            "Distribute Vertically"
+        });
     }
 
     /// Add WordArt in the middle of the page (inside the margins), select it and open it for editing.
     fn insert_wordart(&mut self, preset: repub_model::shape::WordArtPreset) {
         use repub_model::shape::{TextEffectData, TextTransform};
-        let Some(page) = self.state.current_page() else { return };
+        let Some(page) = self.state.current_page() else {
+            return;
+        };
         let area = page.content_rect();
         let (width, height) = (area.width().min(288.0), area.height().min(96.0));
-        let bounds = repub_geometry::Rect::new(area.x() + (area.width() - width) / 2.0, area.y() + (area.height() - height) / 2.0, width, height);
+        let bounds = repub_geometry::Rect::new(
+            area.x() + (area.width() - width) / 2.0,
+            area.y() + (area.height() - height) / 2.0,
+            width,
+            height,
+        );
         let mut data = TextEffectData::new("Your Text Here");
         data.style.font.weight = repub_model::styles::FontWeight::Bold;
         data.style.font_size = 48.0;
@@ -1362,10 +1544,16 @@ impl RepubApp {
             data.transform = TextTransform::Preset(preset);
         }
         let mut shape = Shape::new(bounds, ShapeKind::TextEffect(data));
-        shape.fill = repub_model::styles::Fill::Solid(repub_color::Color::from_rgb8(0x44, 0x72, 0xC4));
-        shape.line = Some(repub_model::styles::Stroke::new(repub_color::Color::from_rgb8(0x2F, 0x52, 0x96), 1.0));
+        shape.fill =
+            repub_model::styles::Fill::Solid(repub_color::Color::from_rgb8(0x44, 0x72, 0xC4));
+        shape.line = Some(repub_model::styles::Stroke::new(
+            repub_color::Color::from_rgb8(0x2F, 0x52, 0x96),
+            1.0,
+        ));
         self.state.record_undo("Insert WordArt");
-        let Some(page) = self.state.current_page_mut() else { return };
+        let Some(page) = self.state.current_page_mut() else {
+            return;
+        };
         let id = page.add_shape(shape);
         self.state.selection = vec![id];
         self.state.mark_dirty();
@@ -1375,7 +1563,6 @@ impl RepubApp {
     /// Insert a field at the caret, else at the end of the selected text frame, else in a
     /// small text frame near the bottom of the page.
     fn insert_field(&mut self, field: repub_model::text::Field, now: f64) {
-
         if !self.state.has_document() {
             return;
         }
@@ -1396,9 +1583,15 @@ impl RepubApp {
 
         if let Some(id) = selected_text {
             if let Some(page) = self.state.current_page_mut() {
-                if let Some(Shape { kind: ShapeKind::TextFrame(tf), .. }) = page.get_shape_mut(id) {
+                if let Some(Shape {
+                    kind: ShapeKind::TextFrame(tf),
+                    ..
+                }) = page.get_shape_mut(id)
+                {
                     if tf.content.paragraphs.is_empty() {
-                        tf.content.paragraphs.push(repub_model::text::Paragraph::new());
+                        tf.content
+                            .paragraphs
+                            .push(repub_model::text::Paragraph::new());
                     }
                     if let Some(para) = tf.content.paragraphs.last_mut() {
                         para.add_field(field.clone());
@@ -1415,7 +1608,9 @@ impl RepubApp {
             let y = size.height - height - 36.0;
             let bounds = repub_geometry::Rect::new(x, y, width, height);
             let mut shape = Shape::text_frame(bounds);
-            let ShapeKind::TextFrame(tf) = &mut shape.kind else { unreachable!() };
+            let ShapeKind::TextFrame(tf) = &mut shape.kind else {
+                unreachable!()
+            };
             let mut para = repub_model::text::Paragraph::new();
             para.style.alignment = repub_model::styles::TextAlignment::Center;
             para.add_field(field.clone());
@@ -1439,13 +1634,24 @@ impl RepubApp {
             return;
         }
         crate::text_edit::end(&mut self.state);
-        let current = self.state.document.as_ref().and_then(|d| d.page(self.state.current_page)).and_then(|p| p.master_page);
-        let first = self.state.document.as_ref().and_then(|d| d.master_pages().first().map(|m| m.id));
+        let current = self
+            .state
+            .document
+            .as_ref()
+            .and_then(|d| d.page(self.state.current_page))
+            .and_then(|p| p.master_page);
+        let first = self
+            .state
+            .document
+            .as_ref()
+            .and_then(|d| d.master_pages().first().map(|m| m.id));
         let id = match master_id.or(current).or(first) {
             Some(id) => id,
             None => {
                 self.state.record_undo("New Master Page");
-                let Some(doc) = self.state.document.as_mut() else { return };
+                let Some(doc) = self.state.document.as_mut() else {
+                    return;
+                };
                 let id = doc.add_master_page("Master Page A");
                 for page in doc.pages_mut() {
                     if page.master_page.is_none() {
@@ -1489,7 +1695,12 @@ impl RepubApp {
         crate::text_edit::end(&mut self.state);
         self.state.record_undo("New Master Page");
         let name = {
-            let count = self.state.document.as_ref().map(|d| d.master_pages().len()).unwrap_or(0);
+            let count = self
+                .state
+                .document
+                .as_ref()
+                .map(|d| d.master_pages().len())
+                .unwrap_or(0);
             format!("Master Page {}", (b'A' + (count % 26) as u8) as char)
         };
         let new_id = match self.state.document.as_mut() {
@@ -1505,7 +1716,6 @@ impl RepubApp {
         crate::text_edit::end(&mut self.state);
         self.state.end_master_edit();
     }
-
 
     /// Route an editing command to the canvas text being edited.
     /// Returns true if the command was handled as a text command.
@@ -1524,7 +1734,9 @@ impl RepubApp {
                 }
             }
             AppAction::Paste | AppAction::PasteInPlace => {
-                let text = self.system_clipboard_text().unwrap_or_else(|| self.state.text_clipboard.clone());
+                let text = self
+                    .system_clipboard_text()
+                    .unwrap_or_else(|| self.state.text_clipboard.clone());
                 text_edit::type_text(&mut self.state, &text, now);
             }
             AppAction::SelectAll => text_edit::select_all(&mut self.state, now),
@@ -1546,7 +1758,12 @@ impl RepubApp {
     }
 
     /// Replace the current document with a new blank one.
-    fn create_document(&mut self, page_size: repub_model::PageSize, orientation: repub_model::PageOrientation, pages: u32) {
+    fn create_document(
+        &mut self,
+        page_size: repub_model::PageSize,
+        orientation: repub_model::PageOrientation,
+        pages: u32,
+    ) {
         let mut doc = Document::new(page_size, orientation);
         for _ in 1..pages {
             doc.add_page();
@@ -1574,12 +1791,16 @@ impl RepubApp {
     }
 
     fn backstage_document_info(&self) -> DocumentInfo {
-        let name = self.state.document_path
+        let name = self
+            .state
+            .document_path
             .as_ref()
             .and_then(|p| p.file_name())
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "Untitled".to_owned());
-        let page_size = self.state.document
+        let page_size = self
+            .state
+            .document
             .as_ref()
             .and_then(|d| d.pages().first().map(|p| (p.size.width, p.size.height)))
             .unwrap_or((0.0, 0.0));
@@ -1595,8 +1816,15 @@ impl RepubApp {
     fn handle_start_screen_action(&mut self, action: StartScreenAction, ctx: &egui::Context) {
         self.start_screen.close_backstage();
         match action {
-            StartScreenAction::CreateBlank { page_size, orientation } => {
-                if self.confirm_discard(DiscardOp::New { page_size, orientation, pages: 1 }) {
+            StartScreenAction::CreateBlank {
+                page_size,
+                orientation,
+            } => {
+                if self.confirm_discard(DiscardOp::New {
+                    page_size,
+                    orientation,
+                    pages: 1,
+                }) {
                     self.create_document(page_size, orientation, 1);
                 }
             }
@@ -1655,21 +1883,29 @@ impl RepubApp {
             return;
         }
         let Some(path) = rfd::FileDialog::new()
-            .add_filter("Pictures", &["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff"])
+            .add_filter(
+                "Pictures",
+                &["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff"],
+            )
             .add_filter("All Files", &["*"])
             .pick_file()
         else {
             return;
         };
         if let Err(e) = self.place_picture(&path) {
-            self.error_alert.open("Couldn't Insert Picture", format!("Repub couldn't read \"{}\".\n\n{e}", path.display()));
+            self.error_alert.open(
+                "Couldn't Insert Picture",
+                format!("Repub couldn't read \"{}\".\n\n{e}", path.display()),
+            );
         }
     }
 
     /// Place the picture at `path` on the current page (see [`Self::insert_picture`]).
     pub fn place_picture(&mut self, path: &Path) -> Result<(), String> {
         let (px_w, px_h) = image::image_dimensions(path).map_err(|e| e.to_string())?;
-        let Some(page) = self.state.current_page() else { return Err("No page".into()) };
+        let Some(page) = self.state.current_page() else {
+            return Err("No page".into());
+        };
         let area = page.content_rect();
         let (mut w, mut h) = (px_w as f64 * 0.75, px_h as f64 * 0.75);
         let fit = (area.size.width / w).min(area.size.height / h).min(1.0);
@@ -1701,7 +1937,9 @@ impl RepubApp {
     /// never wider than the margins. Selected, one undo step.
     pub fn insert_table(&mut self, rows: u32, cols: u32) {
         let (rows, cols) = (rows.max(1), cols.max(1));
-        let Some(area) = self.state.current_page().map(|p| p.content_rect()) else { return };
+        let Some(area) = self.state.current_page().map(|p| p.content_rect()) else {
+            return;
+        };
         let width = (cols as f64 * 72.0).min(area.size.width);
         let height = (rows as f64 * 24.0).min(area.size.height);
         let bounds = repub_geometry::Rect::new(
@@ -1725,7 +1963,9 @@ impl RepubApp {
     /// in the system's viewer (Preview on macOS), whose Print command handles
     /// printers, copies and page ranges.
     fn print(&mut self) {
-        let Some(doc) = self.state.document.as_ref() else { return };
+        let Some(doc) = self.state.document.as_ref() else {
+            return;
+        };
         let stem = self
             .state
             .document_path
@@ -1737,29 +1977,55 @@ impl RepubApp {
         let fonts = match repub_fonts::SystemFontProvider::new() {
             Ok(fonts) => fonts,
             Err(e) => {
-                self.error_alert.open("Couldn't Print", format!("Repub couldn't prepare the publication for printing.\n\n{e}"));
+                self.error_alert.open(
+                    "Couldn't Print",
+                    format!("Repub couldn't prepare the publication for printing.\n\n{e}"),
+                );
                 return;
             }
         };
-        if let Err(e) = repub_format::export_pdf(doc, &path, &repub_format::PdfOptions::default(), &fonts) {
-            self.error_alert.open("Couldn't Print", format!("Repub couldn't prepare the publication for printing.\n\n{e}"));
+        if let Err(e) =
+            repub_format::export_pdf(doc, &path, &repub_format::PdfOptions::default(), &fonts)
+        {
+            self.error_alert.open(
+                "Couldn't Print",
+                format!("Repub couldn't prepare the publication for printing.\n\n{e}"),
+            );
             return;
         }
         if let Err(e) = open_in_system_viewer(&path) {
-            self.error_alert.open("Couldn't Print", format!("The PDF for printing is at \"{}\", but it couldn't be opened.\n\n{e}", path.display()));
+            self.error_alert.open(
+                "Couldn't Print",
+                format!(
+                    "The PDF for printing is at \"{}\", but it couldn't be opened.\n\n{e}",
+                    path.display()
+                ),
+            );
         }
     }
 
     /// Run a table row/column command (see [`TableEdit`]) as one undo step;
     /// editing carries on in the same cell (or its nearest neighbour).
     fn edit_table(&mut self, op: TableEdit, now: f64) {
-        let Some(table_shape) = self.state.selected_objects().first().copied() else { return };
-        let ShapeKind::Table(table) = &table_shape.kind else { return };
+        let Some(table_shape) = self.state.selected_objects().first().copied() else {
+            return;
+        };
+        let ShapeKind::Table(table) = &table_shape.kind else {
+            return;
+        };
         if !op.enabled(&self.state) {
             return;
         }
-        let (id, rows, cols) = (table_shape.common.id, table.rows as usize, table.cols as usize);
-        let editing = self.state.text_edit.clone().filter(|e| e.frame == id && e.cell.is_some());
+        let (id, rows, cols) = (
+            table_shape.common.id,
+            table.rows as usize,
+            table.cols as usize,
+        );
+        let editing = self
+            .state
+            .text_edit
+            .clone()
+            .filter(|e| e.frame == id && e.cell.is_some());
         let (row, col) = editing.as_ref().and_then(|e| e.cell).unwrap_or(match op {
             TableEdit::RowAbove | TableEdit::ColumnLeft => (0, 0),
             _ => (rows - 1, cols - 1),
@@ -1776,7 +2042,14 @@ impl RepubApp {
         }
         self.state.record_undo(op.label());
         let mut cell = (row, col);
-        if let Some(Shape { kind: ShapeKind::Table(t), .. }) = self.state.current_page_mut().and_then(|p| p.get_shape_mut(id)) {
+        if let Some(Shape {
+            kind: ShapeKind::Table(t),
+            ..
+        }) = self
+            .state
+            .current_page_mut()
+            .and_then(|p| p.get_shape_mut(id))
+        {
             match op {
                 TableEdit::RowAbove => {
                     t.insert_row_at(row as u32);
@@ -1801,7 +2074,9 @@ impl RepubApp {
         }
         self.state.mark_dirty();
         if let Some(edit) = editing {
-            let caret = (cell == (row, col) || matches!(op, TableEdit::RowAbove | TableEdit::ColumnLeft)).then_some(edit.caret);
+            let caret = (cell == (row, col)
+                || matches!(op, TableEdit::RowAbove | TableEdit::ColumnLeft))
+            .then_some(edit.caret);
             crate::text_edit::begin_cell(&mut self.state, id, cell.0, cell.1, caret, now);
         }
     }
@@ -1812,15 +2087,29 @@ impl RepubApp {
         match destination(link) {
             Destination::Address(address) => {
                 if let Err(e) = open_address(&address) {
-                    self.error_alert.open("Couldn't Open Link", format!("\"{address}\" couldn't be opened.\n\n{e}"));
+                    self.error_alert.open(
+                        "Couldn't Open Link",
+                        format!("\"{address}\" couldn't be opened.\n\n{e}"),
+                    );
                 }
             }
-            Destination::Page(index) if index < self.state.page_count() => self.state.set_page(index),
+            Destination::Page(index) if index < self.state.page_count() => {
+                self.state.set_page(index)
+            }
             Destination::Page(index) => {
-                self.error_alert.open("Couldn't Follow Link", format!("The link goes to page {}, which isn't in this publication.", index + 1));
+                self.error_alert.open(
+                    "Couldn't Follow Link",
+                    format!(
+                        "The link goes to page {}, which isn't in this publication.",
+                        index + 1
+                    ),
+                );
             }
             Destination::Unusable(target) => {
-                self.error_alert.open("Couldn't Open Link", format!("\"{target}\" isn't a web or email address Repub can open."));
+                self.error_alert.open(
+                    "Couldn't Open Link",
+                    format!("\"{target}\" isn't a web or email address Repub can open."),
+                );
             }
         }
     }
@@ -1845,14 +2134,19 @@ impl RepubApp {
         }
         self.pending_discard = Some(op);
         let name = self.state.window_title();
-        let name = name.trim_start_matches("* ").trim_end_matches(" - Repub").to_owned();
+        let name = name
+            .trim_start_matches("* ")
+            .trim_end_matches(" - Repub")
+            .to_owned();
         self.save_prompt.open(name);
         false
     }
 
     /// Act on the save prompt's answer, finishing or dropping the held operation.
     fn answer_save_prompt(&mut self, choice: SaveChoice, ctx: &egui::Context) {
-        let Some(op) = self.pending_discard.take() else { return };
+        let Some(op) = self.pending_discard.take() else {
+            return;
+        };
         match choice {
             SaveChoice::Cancel => return,
             SaveChoice::Save => {
@@ -1872,7 +2166,11 @@ impl RepubApp {
             }
             DiscardOp::Open(Some(path)) => self.open_path(path),
             DiscardOp::Open(None) => self.open_document(),
-            DiscardOp::New { page_size, orientation, pages } => self.create_document(page_size, orientation, pages),
+            DiscardOp::New {
+                page_size,
+                orientation,
+                pages,
+            } => self.create_document(page_size, orientation, pages),
             DiscardOp::Template(doc) => self.install_new_document(*doc),
         }
     }
@@ -1895,7 +2193,9 @@ impl RepubApp {
 
     /// Toggle point-editing for the single selected shape.
     fn toggle_edit_shape_points(&mut self) {
-        let Some(&id) = self.state.selection.first() else { return };
+        let Some(&id) = self.state.selection.first() else {
+            return;
+        };
         if self.state.selection.len() != 1 {
             return;
         }
@@ -1907,7 +2207,12 @@ impl RepubApp {
         if !is_shape {
             return;
         }
-        if self.state.edit_points.as_ref().is_some_and(|s| s.shape_id == id) {
+        if self
+            .state
+            .edit_points
+            .as_ref()
+            .is_some_and(|s| s.shape_id == id)
+        {
             self.state.edit_points = None;
         } else {
             self.state.text_edit = None;
@@ -1933,14 +2238,21 @@ impl RepubApp {
             return;
         };
         let Some(path) = rfd::FileDialog::new()
-            .add_filter("Images", &["png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp"])
+            .add_filter(
+                "Images",
+                &["png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp"],
+            )
             .pick_file()
         else {
             return;
         };
         self.state.record_undo("Change Picture");
         if let Some(page) = self.state.current_page_mut() {
-            if let Some(Shape { kind: ShapeKind::Picture(img), .. }) = page.get_shape_mut(id) {
+            if let Some(Shape {
+                kind: ShapeKind::Picture(img),
+                ..
+            }) = page.get_shape_mut(id)
+            {
                 img.source = ImageSource::File(path.to_string_lossy().into_owned());
             }
         }
@@ -1991,8 +2303,14 @@ impl RepubApp {
             }
             Err(e) => {
                 log::error!("Failed to open document {}: {}", path.display(), e);
-                let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-                self.error_alert.open("Couldn't Open File", format!("Repub couldn't open \"{name}\".\n\n{e}"));
+                let name = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                self.error_alert.open(
+                    "Couldn't Open File",
+                    format!("Repub couldn't open \"{name}\".\n\n{e}"),
+                );
             }
         }
     }
@@ -2001,7 +2319,7 @@ impl RepubApp {
     fn is_ole_file(path: &Path) -> bool {
         // OLE magic bytes: D0 CF 11 E0 A1 B1 1A E1
         const OLE_MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
-        
+
         if let Ok(mut file) = std::fs::File::open(path) {
             use std::io::Read;
             let mut magic = [0u8; 8];
@@ -2016,7 +2334,11 @@ impl RepubApp {
         // Save writes Repub's own format, so a document opened from another
         // format (e.g. a Publisher .pub) is never overwritten in place: Save asks
         // for a new name, as Save As does.
-        let native_path = self.state.document_path.clone().filter(|p| is_native_document(p));
+        let native_path = self
+            .state
+            .document_path
+            .clone()
+            .filter(|p| is_native_document(p));
         let path = if save_as || native_path.is_none() {
             let stem = self
                 .state
@@ -2050,7 +2372,10 @@ impl RepubApp {
                     Ok(fonts) => fonts,
                     Err(e) => {
                         log::error!("Failed to initialise fonts for save: {}", e);
-                        self.error_alert.open("Couldn't Save", format!("Repub couldn't save to \"{}\".\n\n{e}", path.display()));
+                        self.error_alert.open(
+                            "Couldn't Save",
+                            format!("Repub couldn't save to \"{}\".\n\n{e}", path.display()),
+                        );
                         return;
                     }
                 };
@@ -2063,7 +2388,10 @@ impl RepubApp {
                     }
                     Err(e) => {
                         log::error!("Failed to save document: {}", e);
-                        self.error_alert.open("Couldn't Save", format!("Repub couldn't save to \"{}\".\n\n{e}", path.display()));
+                        self.error_alert.open(
+                            "Couldn't Save",
+                            format!("Repub couldn't save to \"{}\".\n\n{e}", path.display()),
+                        );
                     }
                 }
             }
@@ -2075,7 +2403,7 @@ impl RepubApp {
 
         // Check if any text field has focus - if so, skip most shortcuts
         // to allow normal text editing (cut/copy/paste in text fields)
-        let widget_focused = ctx.memory(|m| m.focused().is_some()) 
+        let widget_focused = ctx.memory(|m| m.focused().is_some())
             && ctx.input(|i| !i.modifiers.command || i.key_pressed(egui::Key::A));
         // Editing text on the canvas: keys belong to the text (the canvas handles them),
         // so only file and zoom shortcuts stay active here.
@@ -2086,7 +2414,7 @@ impl RepubApp {
             // Use command_only() which is Cmd on macOS, Ctrl on other platforms
             let cmd = i.modifiers.command;
             let cmd_shift = cmd && i.modifiers.shift;
-            
+
             if i.key_pressed(egui::Key::F7) {
                 actions.push(AppAction::CheckSpelling);
             }
@@ -2115,7 +2443,11 @@ impl RepubApp {
                 actions.push(AppAction::Find);
             }
             if cmd && !text_edit_focused && i.key_pressed(egui::Key::G) {
-                actions.push(if i.modifiers.shift { AppAction::Ungroup } else { AppAction::Group });
+                actions.push(if i.modifiers.shift {
+                    AppAction::Ungroup
+                } else {
+                    AppAction::Group
+                });
             }
             // Cmd+H hides the app on macOS, so Replace has no shortcut there
             if cmd && i.key_pressed(egui::Key::H) && !cfg!(target_os = "macos") {
@@ -2179,9 +2511,16 @@ impl RepubApp {
             if !text_edit_focused && cmd && i.key_pressed(egui::Key::D) {
                 actions.push(AppAction::Duplicate);
             }
-            if !text_edit_focused && (i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) {
+            if !text_edit_focused
+                && (i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace))
+            {
                 // While editing points, Delete removes the selected point, not the shape
-                if self.state.edit_points.as_ref().is_some_and(|s| s.selected.is_some()) {
+                if self
+                    .state
+                    .edit_points
+                    .as_ref()
+                    .is_some_and(|s| s.selected.is_some())
+                {
                     actions.push(AppAction::EditPoint(crate::edit_points::PointOp::Delete));
                 } else {
                     actions.push(AppAction::Delete);
@@ -2190,7 +2529,7 @@ impl RepubApp {
             if !text_edit_focused && cmd && i.key_pressed(egui::Key::A) {
                 actions.push(AppAction::SelectAll);
             }
-            
+
             // Object ordering shortcuts (when objects selected)
             // Cmd+Shift+]: Bring to Front
             // Cmd+Shift+[: Send to Back
@@ -2275,7 +2614,7 @@ impl RepubApp {
                 let step = if i.modifiers.shift { 10.0 } else { 1.0 };
                 let mut delta_x = 0.0;
                 let mut delta_y = 0.0;
-                
+
                 if i.key_pressed(egui::Key::ArrowUp) {
                     delta_y = -step;
                 }
@@ -2288,7 +2627,7 @@ impl RepubApp {
                 if i.key_pressed(egui::Key::ArrowRight) {
                     delta_x = step;
                 }
-                
+
                 if delta_x != 0.0 || delta_y != 0.0 {
                     self.move_selected_objects(delta_x, delta_y);
                 }
@@ -2297,12 +2636,12 @@ impl RepubApp {
 
         actions
     }
-    
+
     /// Handle events from native menu bar.
     #[cfg(not(target_arch = "wasm32"))]
     fn handle_native_menu_events(&mut self, ctx: &egui::Context) {
         use crate::native_menu::MenuId;
-        
+
         // Take the receiver temporarily to process events
         if let Some(rx) = self.native_menu_rx.take() {
             while let Ok(event) = rx.try_recv() {
@@ -2349,7 +2688,9 @@ impl RepubApp {
                         MenuId::PasteInPlace => Some(AppAction::PasteInPlace),
                         MenuId::Delete => Some(AppAction::Delete),
                         MenuId::AddPageAbove => Some(AppAction::InsertPageAt(self.context_page)),
-                        MenuId::AddPageBelow => Some(AppAction::InsertPageAt(self.context_page + 1)),
+                        MenuId::AddPageBelow => {
+                            Some(AppAction::InsertPageAt(self.context_page + 1))
+                        }
                         MenuId::DuplicatePage => Some(AppAction::DuplicatePage(self.context_page)),
                         MenuId::InsertSpread => Some(AppAction::InsertSpread(self.context_page)),
                         MenuId::DeletePage => Some(AppAction::DeletePage(self.context_page)),
@@ -2358,7 +2699,7 @@ impl RepubApp {
                         MenuId::ChangePicture => Some(AppAction::ChangePicture),
                         MenuId::WrapText => Some(AppAction::ShowTextWrap),
                     };
-                    
+
                     if let Some(action) = action {
                         self.process_action(action, ctx);
                     }
@@ -2367,7 +2708,7 @@ impl RepubApp {
             // Put the receiver back
             self.native_menu_rx = Some(rx);
         }
-        
+
         // Request repaint to ensure UI updates after menu action
         ctx.request_repaint();
     }
@@ -2435,7 +2776,14 @@ impl RepubApp {
             ];
             if self.view_checks != Some(checks) {
                 if let Some(menu) = &self.native_menu {
-                    let ids = ["toggle_rulers", "toggle_grid", "toggle_guides", "cmd.toggle_pages", "cmd.toggle_selection", "cmd.toggle_spread"];
+                    let ids = [
+                        "toggle_rulers",
+                        "toggle_grid",
+                        "toggle_guides",
+                        "cmd.toggle_pages",
+                        "cmd.toggle_selection",
+                        "cmd.toggle_spread",
+                    ];
                     let pairs: Vec<(&str, bool)> = ids.into_iter().zip(checks).collect();
                     crate::native_menu::sync_checks(menu, &pairs);
                 }
@@ -2474,7 +2822,9 @@ impl RepubApp {
                 .frame(egui::Frame::none().fill(crate::theme::colors::title_bar()))
                 .exact_height(crate::theme::metrics::TITLE_BAR_HEIGHT)
                 .show_separator_line(false)
-                .show(ctx, |ui| crate::panels::title_bar::show(ui, &self.state, inset))
+                .show(ctx, |ui| {
+                    crate::panels::title_bar::show(ui, &self.state, inset)
+                })
                 .inner;
             for action in title_actions {
                 self.process_action(action, ctx);
@@ -2512,19 +2862,23 @@ impl RepubApp {
                     .iter()
                     .map(|o| o.bounds())
                     .reduce(|a, b| a.union(&b));
-                StatusBar::show_full(ui, StatusBarInfo {
-                    pages_on_view: self.state.visible_pages(),
-                    total_pages: self.state.page_count(),
-                    zoom: self.state.zoom,
-                    two_page_spread: self.state.two_page_spread,
-                    position: selection
-                        .map(|r| (r.origin.x, r.origin.y))
-                        .or(self.state.pointer_doc.map(|p| (p.x, p.y))),
-                    selection_size: selection.map(|r| (r.size.width, r.size.height)),
-                    units: self.state.units,
-                })
-            }).inner;
-        
+                StatusBar::show_full(
+                    ui,
+                    StatusBarInfo {
+                        pages_on_view: self.state.visible_pages(),
+                        total_pages: self.state.page_count(),
+                        zoom: self.state.zoom,
+                        two_page_spread: self.state.two_page_spread,
+                        position: selection
+                            .map(|r| (r.origin.x, r.origin.y))
+                            .or(self.state.pointer_doc.map(|p| (p.x, p.y))),
+                        selection_size: selection.map(|r| (r.size.width, r.size.height)),
+                        units: self.state.units,
+                    },
+                )
+            })
+            .inner;
+
         // Handle status bar actions
         if let Some(action) = status_bar_action {
             match action {
@@ -2536,7 +2890,9 @@ impl RepubApp {
                         self.state.set_zoom_centered(zoom);
                     }
                 }
-                StatusBarAction::TogglePagesPane => self.process_action(AppAction::TogglePagesPane, ctx),
+                StatusBarAction::TogglePagesPane => {
+                    self.process_action(AppAction::TogglePagesPane, ctx)
+                }
                 StatusBarAction::SetTwoPageSpread(on) => {
                     if self.state.two_page_spread != on {
                         self.process_action(AppAction::ToggleTwoPageSpread, ctx);
@@ -2565,17 +2921,41 @@ impl RepubApp {
                 .resizable(false)
                 .show(ctx, |ui| {
                     let strip = ui.max_rect();
-                    let response = ui.interact(strip, ui.id().with("expand_pages"), egui::Sense::click());
+                    let response =
+                        ui.interact(strip, ui.id().with("expand_pages"), egui::Sense::click());
                     if response.hovered() {
-                        ui.painter().rect_filled(strip, 0.0, crate::theme::colors::hover());
+                        ui.painter()
+                            .rect_filled(strip, 0.0, crate::theme::colors::hover());
                     }
-                    let chevron = egui::Rect::from_center_size(egui::pos2(strip.center().x, strip.top() + 16.0), egui::Vec2::splat(12.0));
-                    crate::icons::Icon::ChevronRight.paint(ui, chevron, crate::theme::colors::text_secondary());
-                    let galley = ui.painter().layout_no_wrap("Pages".to_owned(), egui::FontId::proportional(14.0), crate::theme::colors::accent());
+                    let chevron = egui::Rect::from_center_size(
+                        egui::pos2(strip.center().x, strip.top() + 16.0),
+                        egui::Vec2::splat(12.0),
+                    );
+                    crate::icons::Icon::ChevronRight.paint(
+                        ui,
+                        chevron,
+                        crate::theme::colors::text_secondary(),
+                    );
+                    let galley = ui.painter().layout_no_wrap(
+                        "Pages".to_owned(),
+                        egui::FontId::proportional(14.0),
+                        crate::theme::colors::accent(),
+                    );
                     // Rotating +90° swings the text to the left of its anchor
-                    let anchor = egui::pos2(strip.center().x + galley.size().y / 2.0, strip.top() + 34.0);
-                    ui.painter().add(egui::epaint::TextShape::new(anchor, galley, crate::theme::colors::accent()).with_angle(std::f32::consts::FRAC_PI_2));
-                    if response.on_hover_text("Expand the Page Navigation pane").clicked() {
+                    let anchor =
+                        egui::pos2(strip.center().x + galley.size().y / 2.0, strip.top() + 34.0);
+                    ui.painter().add(
+                        egui::epaint::TextShape::new(
+                            anchor,
+                            galley,
+                            crate::theme::colors::accent(),
+                        )
+                        .with_angle(std::f32::consts::FRAC_PI_2),
+                    );
+                    if response
+                        .on_hover_text("Expand the Page Navigation pane")
+                        .clicked()
+                    {
                         self.process_action(AppAction::TogglePagesPane, ctx);
                     }
                 });
@@ -2587,32 +2967,35 @@ impl RepubApp {
                 .frame(crate::theme::side_panel_frame())
                 .default_width(220.0)
                 .resizable(true)
-                .show(ctx, |ui| crate::panels::selection::show(ui, &mut self.state));
+                .show(ctx, |ui| {
+                    crate::panels::selection::show(ui, &mut self.state)
+                });
         }
 
         // Central canvas with rulers, or the start screen when no document is open
         let canvas_action = if self.state.has_document() {
             egui::CentralPanel::default()
                 .frame(crate::theme::canvas_frame())
-                .show(ctx, |ui| {
-                    self.show_canvas_with_rulers(ui)
-                }).inner
+                .show(ctx, |ui| self.show_canvas_with_rulers(ui))
+                .inner
         } else {
             let start_action = egui::CentralPanel::default()
                 .frame(egui::Frame::none().fill(crate::theme::colors::backstage_body()))
                 .show(ctx, |ui| {
-                    self.start_screen.show_start(ui, &self.settings.recent_files)
-                }).inner;
+                    self.start_screen
+                        .show_start(ui, &self.settings.recent_files)
+                })
+                .inner;
             if let Some(action) = start_action {
                 self.handle_start_screen_action(action, ctx);
             }
             None
         };
-        
+
         if let Some(action) = canvas_action {
             self.process_action(action, ctx);
         }
-        
+
         // Process native context menu requests (macOS)
         #[cfg(target_os = "macos")]
         {
@@ -2625,12 +3008,20 @@ impl RepubApp {
                 clipboard_empty: self.clipboard.objects.is_empty(),
                 selection_count: self.state.selection.len(),
                 page_count: self.state.page_count(),
-                group_selected: self.state.selected_objects().iter().any(|o| matches!(o.kind, ShapeKind::Group(_))),
+                group_selected: self
+                    .state
+                    .selected_objects()
+                    .iter()
+                    .any(|o| matches!(o.kind, ShapeKind::Group(_))),
                 single_text: matches!(self.state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::TextFrame(_) | ShapeKind::Table(_))),
                 single_picture: matches!(self.state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::Picture(_))),
                 two_page_spread: self.state.two_page_spread,
                 single_table: matches!(self.state.selected_objects()[..], [o] if matches!(o.kind, ShapeKind::Table(_))),
-                in_cell: self.state.text_edit.as_ref().is_some_and(|e| e.cell.is_some()),
+                in_cell: self
+                    .state
+                    .text_edit
+                    .as_ref()
+                    .is_some_and(|e| e.cell.is_some()),
             };
             if let Some(menus) = self.native_context_menus.as_mut() {
                 menus.update(&menu_state);
@@ -2649,7 +3040,11 @@ impl RepubApp {
 
         // Dialogs
         if let Some(result) = self.new_doc_dialog.show(ctx) {
-            let op = DiscardOp::New { page_size: result.page_size, orientation: result.orientation, pages: result.pages };
+            let op = DiscardOp::New {
+                page_size: result.page_size,
+                orientation: result.orientation,
+                pages: result.pages,
+            };
             if self.confirm_discard(op) {
                 self.create_document(result.page_size, result.orientation, result.pages);
             }
@@ -2670,21 +3065,27 @@ impl RepubApp {
         // Backstage (File tab) over the whole window
         if self.state.has_document() && self.start_screen.is_backstage_open() {
             let info = self.backstage_document_info();
-            if let Some(action) = self.start_screen.show_backstage(ctx, &self.settings.recent_files, info) {
+            if let Some(action) =
+                self.start_screen
+                    .show_backstage(ctx, &self.settings.recent_files, info)
+            {
                 self.handle_start_screen_action(action, ctx);
             }
         }
 
-        if let Some(options) = self.export_dialog.show(ctx, self.state.page_count(), self.state.current_page) {
+        if let Some(options) =
+            self.export_dialog
+                .show(ctx, self.state.page_count(), self.state.current_page)
+        {
             // Handle export
             self.export_with_options(options);
         }
 
         self.about_dialog.show(ctx);
-        
+
         // Page properties dialog
         self.page_properties_dialog.show(ctx, &mut self.state);
-        
+
         // Insert table dialog
         if let Some((rows, cols)) = self.insert_table_dialog.show(ctx) {
             self.insert_table(rows, cols);
@@ -2703,7 +3104,8 @@ impl RepubApp {
         self.font_dialog.show(ctx, &mut self.state);
         self.paragraph_dialog.show(ctx, &mut self.state);
         if let Some(index) = self.state.page_properties_requested.take() {
-            self.page_properties_dialog.open_for_index(&self.state, index);
+            self.page_properties_dialog
+                .open_for_index(&self.state, index);
         }
         if std::mem::take(&mut self.state.edit_wordart_requested) {
             self.wordart_dialog.open_for_selection(&self.state);
@@ -2736,7 +3138,11 @@ impl RepubApp {
 
         let show_rulers = self.state.show_rulers && self.state.has_document();
         let ruler_size = if show_rulers { Ruler::SIZE } else { 0.0 };
-        let bar_size = if self.state.has_document() { SCROLLBAR_SIZE } else { 0.0 };
+        let bar_size = if self.state.has_document() {
+            SCROLLBAR_SIZE
+        } else {
+            0.0
+        };
 
         // Apply a pending whole-page fit now that the viewport size is known,
         // before rulers and canvas read the zoom for this frame
@@ -2745,7 +3151,8 @@ impl RepubApp {
         if self.state.fit_page_pending && self.state.has_document() {
             let viewport = ui.available_rect_before_wrap().size();
             let inset = ruler_size + bar_size;
-            self.state.zoom_to_fit(viewport.x - inset, viewport.y - inset);
+            self.state
+                .zoom_to_fit(viewport.x - inset, viewport.y - inset);
             self.state.pan_offset = Point::new(0.0, 0.0);
             if self.last_fit_viewport == Some(viewport) {
                 self.state.fit_page_pending = false;
@@ -2770,8 +3177,14 @@ impl RepubApp {
             full.max - egui::vec2(bar_size, bar_size),
         );
         let corner_rect = egui::Rect::from_min_size(full.min, egui::Vec2::splat(ruler_size));
-        let h_ruler_rect = egui::Rect::from_x_y_ranges(canvas_rect.left()..=full.right(), full.top()..=canvas_rect.top());
-        let v_ruler_rect = egui::Rect::from_x_y_ranges(full.left()..=canvas_rect.left(), canvas_rect.top()..=full.bottom());
+        let h_ruler_rect = egui::Rect::from_x_y_ranges(
+            canvas_rect.left()..=full.right(),
+            full.top()..=canvas_rect.top(),
+        );
+        let v_ruler_rect = egui::Rect::from_x_y_ranges(
+            full.left()..=canvas_rect.left(),
+            canvas_rect.top()..=full.bottom(),
+        );
         let page_button_h = SCROLLBAR_SIZE + 2.0;
         let v_bar_rect = egui::Rect::from_x_y_ranges(
             canvas_rect.right()..=full.right(),
@@ -2782,14 +3195,24 @@ impl RepubApp {
             v_bar_rect.bottom()..=v_bar_rect.bottom() + page_button_h,
         );
         let next_rect = prev_rect.translate(egui::vec2(0.0, page_button_h));
-        let h_bar_rect = egui::Rect::from_x_y_ranges(canvas_rect.left()..=canvas_rect.right(), canvas_rect.bottom()..=full.bottom());
+        let h_bar_rect = egui::Rect::from_x_y_ranges(
+            canvas_rect.left()..=canvas_rect.right(),
+            canvas_rect.bottom()..=full.bottom(),
+        );
         let bar_corner = egui::Rect::from_min_max(canvas_rect.max, full.max);
 
         // Page placement must match Canvas::show (rulers measure from the current
         // page, which may be either side of a two-page spread)
         let layout = PageLayout::compute(canvas_rect, &self.state);
-        let page_rect = layout.rect_of(self.state.current_page).unwrap_or(egui::Rect::NOTHING);
-        let (page_x, page_y, page_w, page_h) = (page_rect.left(), page_rect.top(), page_rect.width(), page_rect.height());
+        let page_rect = layout
+            .rect_of(self.state.current_page)
+            .unwrap_or(egui::Rect::NOTHING);
+        let (page_x, page_y, page_w, page_h) = (
+            page_rect.left(),
+            page_rect.top(),
+            page_rect.width(),
+            page_rect.height(),
+        );
         let view_size = layout.bounds().map_or(egui::Vec2::ZERO, |b| b.size());
 
         // Ruler mouse indicator only while the pointer is over the workspace
@@ -2804,7 +3227,11 @@ impl RepubApp {
             // Corner square where the rulers meet
             let painter = ui.painter_at(corner_rect);
             painter.rect_filled(corner_rect, 0.0, crate::theme::colors::ruler_bg());
-            painter.rect_stroke(corner_rect.shrink(0.5), 0.0, egui::Stroke::new(1.0, crate::theme::colors::ruler_border()));
+            painter.rect_stroke(
+                corner_rect.shrink(0.5),
+                0.0,
+                egui::Stroke::new(1.0, crate::theme::colors::ruler_border()),
+            );
 
             let zoom = self.state.zoom;
             let (h_response, h_interaction) = ui
@@ -2832,8 +3259,18 @@ impl RepubApp {
 
             // Dragging off a ruler creates a guide
             for (interaction, response, orientation, extent) in [
-                (h_interaction, h_response, GuideOrientation::Horizontal, page_h),
-                (v_interaction, v_response, GuideOrientation::Vertical, page_w),
+                (
+                    h_interaction,
+                    h_response,
+                    GuideOrientation::Horizontal,
+                    page_h,
+                ),
+                (
+                    v_interaction,
+                    v_response,
+                    GuideOrientation::Vertical,
+                    page_w,
+                ),
             ] {
                 match interaction {
                     Some(RulerInteraction::CreateGuide(pos)) => {
@@ -2852,7 +3289,9 @@ impl RepubApp {
                         }
                     }
                     None => {
-                        if !response.dragged() && self.canvas.guide_state.creating_guide == Some(orientation) {
+                        if !response.dragged()
+                            && self.canvas.guide_state.creating_guide == Some(orientation)
+                        {
                             self.canvas.guide_state.creating_guide = None;
                             self.canvas.guide_state.preview_position = None;
                         }
@@ -2862,9 +3301,24 @@ impl RepubApp {
         }
 
         // Scroll bars (extent = page plus one viewport of margin on each side)
-        workspace_scrollbar(ui, v_bar_rect, true, view_size.y, canvas_rect.height(), &mut self.state.pan_offset.y);
-        workspace_scrollbar(ui, h_bar_rect, false, view_size.x, canvas_rect.width(), &mut self.state.pan_offset.x);
-        ui.painter().rect_filled(bar_corner, 0.0, crate::theme::colors::scrollbar_track());
+        workspace_scrollbar(
+            ui,
+            v_bar_rect,
+            true,
+            view_size.y,
+            canvas_rect.height(),
+            &mut self.state.pan_offset.y,
+        );
+        workspace_scrollbar(
+            ui,
+            h_bar_rect,
+            false,
+            view_size.x,
+            canvas_rect.width(),
+            &mut self.state.pan_offset.x,
+        );
+        ui.painter()
+            .rect_filled(bar_corner, 0.0, crate::theme::colors::scrollbar_track());
 
         // Previous/next page, or previous/next spread in two-page view
         let on_view = self.state.visible_pages();
@@ -2889,8 +3343,17 @@ impl RepubApp {
         let mut action = action;
         let mut banners: Vec<(String, &str, &str, AppAction)> = Vec::new();
         if let Some(edit) = &self.state.master_edit {
-            let name = edit.page.name.clone().unwrap_or_else(|| "Master Page".to_owned());
-            banners.push((format!("Editing {name}"), "Changes appear on every page that uses this master.", "Close Master Page", AppAction::ExitMasterPageEdit));
+            let name = edit
+                .page
+                .name
+                .clone()
+                .unwrap_or_else(|| "Master Page".to_owned());
+            banners.push((
+                format!("Editing {name}"),
+                "Changes appear on every page that uses this master.",
+                "Close Master Page",
+                AppAction::ExitMasterPageEdit,
+            ));
         }
         if self.state.link_source.is_some() {
             banners.push((
@@ -2901,24 +3364,50 @@ impl RepubApp {
             ));
         }
         if self.state.is_format_painter_active() {
-            banners.push(("Format Painter".to_owned(), "Click an object to give it the copied formatting. Esc cancels.", "Cancel", AppAction::CancelMode));
+            banners.push((
+                "Format Painter".to_owned(),
+                "Click an object to give it the copied formatting. Esc cancels.",
+                "Cancel",
+                AppAction::CancelMode,
+            ));
         }
         for (i, (title, detail, button, on_click)) in banners.into_iter().enumerate() {
-            let bar = egui::Rect::from_min_size(canvas_rect.min + egui::vec2(0.0, 30.0 * i as f32), egui::vec2(canvas_rect.width(), 30.0));
-            ui.painter().rect_filled(bar, 0.0, crate::theme::colors::accent_light());
-            ui.painter().hline(bar.x_range(), bar.bottom(), egui::Stroke::new(1.0, crate::theme::colors::accent()));
-            ui.allocate_new_ui(egui::UiBuilder::new().max_rect(bar.shrink2(egui::vec2(10.0, 3.0))), |ui| {
-                // The button first (from the right), so long text truncates instead of hiding it
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(button).clicked() {
-                        action = Some(on_click);
-                    }
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(title).strong().color(crate::theme::colors::text_primary()));
-                        ui.add(egui::Label::new(egui::RichText::new(detail).color(crate::theme::colors::text_secondary())).truncate());
+            let bar = egui::Rect::from_min_size(
+                canvas_rect.min + egui::vec2(0.0, 30.0 * i as f32),
+                egui::vec2(canvas_rect.width(), 30.0),
+            );
+            ui.painter()
+                .rect_filled(bar, 0.0, crate::theme::colors::accent_light());
+            ui.painter().hline(
+                bar.x_range(),
+                bar.bottom(),
+                egui::Stroke::new(1.0, crate::theme::colors::accent()),
+            );
+            ui.allocate_new_ui(
+                egui::UiBuilder::new().max_rect(bar.shrink2(egui::vec2(10.0, 3.0))),
+                |ui| {
+                    // The button first (from the right), so long text truncates instead of hiding it
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button(button).clicked() {
+                            action = Some(on_click);
+                        }
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.label(
+                                egui::RichText::new(title)
+                                    .strong()
+                                    .color(crate::theme::colors::text_primary()),
+                            );
+                            ui.add(
+                                egui::Label::new(
+                                    egui::RichText::new(detail)
+                                        .color(crate::theme::colors::text_secondary()),
+                                )
+                                .truncate(),
+                            );
+                        });
                     });
-                });
-            });
+                },
+            );
         }
 
         // Keep panning within the scrollable extent, as Publisher does
@@ -2939,9 +3428,14 @@ impl RepubApp {
     fn export_with_options(&mut self, options: crate::dialogs::export::ExportOptions) {
         use crate::dialogs::export::ExportFormat;
 
-        let Some(doc) = self.state.document.as_ref() else { return };
+        let Some(doc) = self.state.document.as_ref() else {
+            return;
+        };
         if options.pages.is_empty() {
-            self.error_alert.open("Nothing to Export", "The page range doesn't include any pages of this publication.");
+            self.error_alert.open(
+                "Nothing to Export",
+                "The page range doesn't include any pages of this publication.",
+            );
             return;
         }
         let (filter, ext) = (options.format.label(), options.format.extension());
@@ -2952,13 +3446,20 @@ impl RepubApp {
             .and_then(|p| p.file_stem())
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Untitled".to_owned());
-        let Some(path) = rfd::FileDialog::new().add_filter(filter, &[ext]).set_file_name(format!("{stem}.{ext}")).save_file() else {
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter(filter, &[ext])
+            .set_file_name(format!("{stem}.{ext}"))
+            .save_file()
+        else {
             return;
         };
 
         if let Err(e) = export_pages(doc, &options, &path) {
             log::error!("Export failed: {e}");
-            self.error_alert.open("Couldn't Export", format!("Repub couldn't export to \"{}\".\n\n{e}", path.display()));
+            self.error_alert.open(
+                "Couldn't Export",
+                format!("Repub couldn't export to \"{}\".\n\n{e}", path.display()),
+            );
         }
     }
 }
@@ -2990,7 +3491,11 @@ fn is_native_document(path: &Path) -> bool {
 /// Export `options.pages` of `doc` to `path`. PDF writes one file; SVG and the
 /// image formats write one file per page, numbered `name-1.ext`, `name-2.ext`
 /// when there is more than one.
-fn export_pages(doc: &Document, options: &crate::dialogs::export::ExportOptions, path: &Path) -> Result<(), String> {
+fn export_pages(
+    doc: &Document,
+    options: &crate::dialogs::export::ExportOptions,
+    path: &Path,
+) -> Result<(), String> {
     use crate::dialogs::export::ExportFormat;
     use repub_format::{
         export_image, export_pdf, export_svg, ExportFormat as ImageFormat_, PdfOptions,
@@ -3004,8 +3509,14 @@ fn export_pages(doc: &Document, options: &crate::dialogs::export::ExportOptions,
         if options.pages.len() == 1 {
             return path.to_path_buf();
         }
-        let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-        let ext = path.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default();
+        let stem = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let ext = path
+            .extension()
+            .map(|e| e.to_string_lossy().into_owned())
+            .unwrap_or_default();
         path.with_file_name(format!("{stem}-{}.{ext}", index + 1))
     };
 
@@ -3022,12 +3533,18 @@ fn export_pages(doc: &Document, options: &crate::dialogs::export::ExportOptions,
         subset
     };
     match options.format {
-        ExportFormat::Pdf => export_pdf(&subset(), path, &PdfOptions::default(), &fonts).map_err(|e| e.to_string()),
-        ExportFormat::Html => repub_format::export_html(&subset(), path, &repub_format::HtmlOptions::default()).map_err(|e| e.to_string()),
+        ExportFormat::Pdf => {
+            export_pdf(&subset(), path, &PdfOptions::default(), &fonts).map_err(|e| e.to_string())
+        }
+        ExportFormat::Html => {
+            repub_format::export_html(&subset(), path, &repub_format::HtmlOptions::default())
+                .map_err(|e| e.to_string())
+        }
         ExportFormat::Svg => {
             let svg_opts = SvgOptions::default();
             for &page in &options.pages {
-                export_svg(doc, page, &file_for(page), &svg_opts, &fonts).map_err(|e| e.to_string())?;
+                export_svg(doc, page, &file_for(page), &svg_opts, &fonts)
+                    .map_err(|e| e.to_string())?;
             }
             Ok(())
         }
@@ -3037,9 +3554,15 @@ fn export_pages(doc: &Document, options: &crate::dialogs::export::ExportOptions,
                 ExportFormat::Tiff => ImageFormat_::Tiff,
                 _ => ImageFormat_::Png,
             };
-            let image_opts = RasterExportOptions { format, dpi: options.dpi as f64, quality: options.quality, ..Default::default() };
+            let image_opts = RasterExportOptions {
+                format,
+                dpi: options.dpi as f64,
+                quality: options.quality,
+                ..Default::default()
+            };
             for &page in &options.pages {
-                export_image(doc, page, &file_for(page), &image_opts, &fonts).map_err(|e| e.to_string())?;
+                export_image(doc, page, &file_for(page), &image_opts, &fonts)
+                    .map_err(|e| e.to_string())?;
             }
             Ok(())
         }
@@ -3048,12 +3571,21 @@ fn export_pages(doc: &Document, options: &crate::dialogs::export::ExportOptions,
 
 /// The current time as Unix seconds.
 fn unix_now() -> Option<i64> {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_secs() as i64)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs() as i64)
 }
 
 /// Whether the shape's own fill is drawn (auto shapes, text boxes, pictures, WordArt).
 fn has_fill(shape: &Shape) -> bool {
-    matches!(shape.kind, ShapeKind::AutoShape(_) | ShapeKind::TextFrame(_) | ShapeKind::Picture(_) | ShapeKind::TextEffect(_))
+    matches!(
+        shape.kind,
+        ShapeKind::AutoShape(_)
+            | ShapeKind::TextFrame(_)
+            | ShapeKind::Picture(_)
+            | ShapeKind::TextEffect(_)
+    )
 }
 
 /// Whether the shape has an outline to set (everything with a fill, and lines).
@@ -3067,14 +3599,22 @@ mod export_tests {
     use crate::dialogs::export::{ExportFormat, ExportOptions};
 
     fn three_pages() -> Document {
-        let mut doc = Document::new(repub_model::PageSize::Letter, repub_model::PageOrientation::Portrait);
+        let mut doc = Document::new(
+            repub_model::PageSize::Letter,
+            repub_model::PageOrientation::Portrait,
+        );
         doc.add_page();
         doc.add_page();
         doc
     }
 
     fn options(format: ExportFormat, pages: Vec<usize>) -> ExportOptions {
-        ExportOptions { format, dpi: 36, pages, quality: 90 }
+        ExportOptions {
+            format,
+            dpi: 36,
+            pages,
+            quality: 90,
+        }
     }
 
     fn out_dir(name: &str) -> PathBuf {
@@ -3096,11 +3636,21 @@ mod export_tests {
     #[test]
     fn several_pages_are_numbered_by_page() {
         let dir = out_dir("multi");
-        export_pages(&three_pages(), &options(ExportFormat::Jpeg, vec![0, 2]), &dir.join("doc.jpg")).unwrap();
+        export_pages(
+            &three_pages(),
+            &options(ExportFormat::Jpeg, vec![0, 2]),
+            &dir.join("doc.jpg"),
+        )
+        .unwrap();
         assert!(dir.join("doc-1.jpg").exists());
         assert!(dir.join("doc-3.jpg").exists());
         assert!(!dir.join("doc-2.jpg").exists());
-        export_pages(&three_pages(), &options(ExportFormat::Svg, vec![1, 2]), &dir.join("doc.svg")).unwrap();
+        export_pages(
+            &three_pages(),
+            &options(ExportFormat::Svg, vec![1, 2]),
+            &dir.join("doc.svg"),
+        )
+        .unwrap();
         assert!(dir.join("doc-2.svg").exists() && dir.join("doc-3.svg").exists());
     }
 
@@ -3109,7 +3659,8 @@ mod export_tests {
         let dir = out_dir("formats");
         for format in ExportFormat::ALL {
             let path = dir.join(format!("doc.{}", format.extension()));
-            export_pages(&three_pages(), &options(format, vec![0]), &path).unwrap_or_else(|e| panic!("{}: {e}", format.label()));
+            export_pages(&three_pages(), &options(format, vec![0]), &path)
+                .unwrap_or_else(|e| panic!("{}: {e}", format.label()));
             assert!(path.exists(), "{}", format.label());
         }
     }
@@ -3118,7 +3669,12 @@ mod export_tests {
     fn pdf_holds_only_the_chosen_pages() {
         let dir = out_dir("pdf");
         let (all, one) = (dir.join("all.pdf"), dir.join("one.pdf"));
-        export_pages(&three_pages(), &options(ExportFormat::Pdf, vec![0, 1, 2]), &all).unwrap();
+        export_pages(
+            &three_pages(),
+            &options(ExportFormat::Pdf, vec![0, 1, 2]),
+            &all,
+        )
+        .unwrap();
         export_pages(&three_pages(), &options(ExportFormat::Pdf, vec![1]), &one).unwrap();
         let pdf = |p: &Path| String::from_utf8_lossy(&std::fs::read(p).unwrap()).into_owned();
         assert!(pdf(&all).contains("/Count 3"));

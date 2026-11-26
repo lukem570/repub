@@ -62,18 +62,38 @@ pub struct Settings {
 /// Current pane layout defaults version.
 const LAYOUT_VERSION: u32 = 1;
 
-fn default_max_recent() -> usize { 10 }
-fn default_page_size() -> String { "letter".to_string() }
-fn default_orientation() -> String { "portrait".to_string() }
-fn default_true() -> bool { true }
-fn default_zoom() -> f32 { 1.0 }
-fn default_window_width() -> f32 { 1280.0 }
-fn default_window_height() -> f32 { 800.0 }
-fn default_panel_width() -> f32 { 200.0 }
+fn default_max_recent() -> usize {
+    10
+}
+fn default_page_size() -> String {
+    "letter".to_string()
+}
+fn default_orientation() -> String {
+    "portrait".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+fn default_zoom() -> f32 {
+    1.0
+}
+fn default_window_width() -> f32 {
+    1280.0
+}
+fn default_window_height() -> f32 {
+    800.0
+}
+fn default_panel_width() -> f32 {
+    200.0
+}
 /// Publisher's Page Navigation pane is about 100-120 pt wide.
-fn default_pages_pane_width() -> f32 { 120.0 }
+fn default_pages_pane_width() -> f32 {
+    120.0
+}
 /// Publisher has no permanent properties pane; ours is opt-in via View > Format Pane.
-fn default_units() -> String { "in".to_owned() }
+fn default_units() -> String {
+    "in".to_owned()
+}
 
 impl Default for Settings {
     fn default() -> Self {
@@ -132,7 +152,10 @@ impl Settings {
 
     /// Default settings that are never read from or written to disk.
     pub fn in_memory() -> Self {
-        Self { persist: false, ..Self::default() }
+        Self {
+            persist: false,
+            ..Self::default()
+        }
     }
 
     /// Save settings to the config file (no-op for in-memory settings).
@@ -187,12 +210,12 @@ mod tests {
     fn test_add_recent_file() {
         let mut settings = Settings::default();
         settings.max_recent_files = 3;
-        
+
         settings.add_recent_file(PathBuf::from("/file1.repub"));
         settings.add_recent_file(PathBuf::from("/file2.repub"));
         settings.add_recent_file(PathBuf::from("/file3.repub"));
         settings.add_recent_file(PathBuf::from("/file4.repub"));
-        
+
         assert_eq!(settings.recent_files.len(), 3);
         assert_eq!(settings.recent_files[0], PathBuf::from("/file4.repub"));
     }

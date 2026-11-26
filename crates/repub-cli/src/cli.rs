@@ -27,7 +27,12 @@ pub struct GlobalOptions {
     /// Output format
     // Distinct id: subcommands have a positional named `output` (the file path),
     // and a shared id makes clap panic on downcast.
-    #[arg(id = "output_format", long = "output", global = true, default_value = "text")]
+    #[arg(
+        id = "output_format",
+        long = "output",
+        global = true,
+        default_value = "text"
+    )]
     pub output: OutputFormat,
 
     /// Enable verbose output

@@ -91,7 +91,10 @@ mod tests {
         let buf = image::RgbaImage::from_pixel(2, 1, image::Rgba([255, 0, 0, 255]));
         let mut bytes: Vec<u8> = Vec::new();
         image::DynamicImage::ImageRgba8(buf)
-            .write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)
+            .write_to(
+                &mut std::io::Cursor::new(&mut bytes),
+                image::ImageFormat::Png,
+            )
             .unwrap();
         let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
         let decoded = decode(&ImageRef::Embedded {

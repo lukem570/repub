@@ -20,9 +20,10 @@
 
 use repub_model::geometry::{AutoShape, ShapeGeometry};
 use repub_model::shape::{
-    GroupData, ImageFit as NewImageFit, ImageSource as NewImageSource, LineData,
-    PictureData, ShapeCommon, ShapeKind, TableData, TextEffectData, TextFrameData, TextTransform as NewTextTransform,
-    WordArtAlign as NewWordArtAlign, WordArtPreset as NewWordArtPreset,
+    GroupData, ImageFit as NewImageFit, ImageSource as NewImageSource, LineData, PictureData,
+    ShapeCommon, ShapeKind, TableData, TextEffectData, TextFrameData,
+    TextTransform as NewTextTransform, WordArtAlign as NewWordArtAlign,
+    WordArtPreset as NewWordArtPreset,
 };
 use repub_model::styles::{
     Bevel, DropShadow, Effects, Fill, Glow, Reflection, SoftEdges, Stroke, TextWrap,
@@ -193,7 +194,13 @@ impl From<ShapeType> for ShapeGeometry {
             ShapeType::Rectangle { corner_radius } => ShapeGeometry::Rectangle { corner_radius },
             ShapeType::Ellipse => ShapeGeometry::Ellipse,
             ShapeType::Polygon { sides } => ShapeGeometry::Polygon { sides },
-            ShapeType::Star { points, inner_ratio } => ShapeGeometry::Star { points, inner_ratio },
+            ShapeType::Star {
+                points,
+                inner_ratio,
+            } => ShapeGeometry::Star {
+                points,
+                inner_ratio,
+            },
             ShapeType::Path(p) => ShapeGeometry::Path(p),
         }
     }
@@ -205,7 +212,13 @@ impl From<ShapeGeometry> for ShapeType {
             ShapeGeometry::Rectangle { corner_radius } => ShapeType::Rectangle { corner_radius },
             ShapeGeometry::Ellipse => ShapeType::Ellipse,
             ShapeGeometry::Polygon { sides } => ShapeType::Polygon { sides },
-            ShapeGeometry::Star { points, inner_ratio } => ShapeType::Star { points, inner_ratio },
+            ShapeGeometry::Star {
+                points,
+                inner_ratio,
+            } => ShapeType::Star {
+                points,
+                inner_ratio,
+            },
             ShapeGeometry::Path(p) => ShapeType::Path(p),
         }
     }
@@ -361,7 +374,10 @@ pub enum TextTransform {
     None,
     Preset(WordArtPreset),
     Path(Path),
-    Warp { top: Vec<Point>, bottom: Vec<Point> },
+    Warp {
+        top: Vec<Point>,
+        bottom: Vec<Point>,
+    },
 }
 
 /// A WordArt text effect (old `objects::WordArt`); maps to a text-effect shape.
@@ -596,7 +612,11 @@ impl Object {
     }
 }
 
-fn base_shape(common: &ObjectCommon, style: &ShapeStyle, kind: ShapeKind) -> repub_model::shape::Shape {
+fn base_shape(
+    common: &ObjectCommon,
+    style: &ShapeStyle,
+    kind: ShapeKind,
+) -> repub_model::shape::Shape {
     let mut shape = repub_model::shape::Shape::new(common.bounds, kind);
     common.apply_to(&mut shape.common);
     shape.fill = style.fill.clone();
@@ -731,7 +751,11 @@ impl TextOnPath {
         data.path_align = self.align;
         data.path_spacing = self.spacing;
         data.path_flip = self.flip;
-        base_shape(&self.common, &ShapeStyle::new(), ShapeKind::TextEffect(data))
+        base_shape(
+            &self.common,
+            &ShapeStyle::new(),
+            ShapeKind::TextEffect(data),
+        )
     }
 }
 

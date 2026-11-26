@@ -920,9 +920,9 @@ impl<'a> TextLayouter<'a> {
 
         // Create run for the line (strip column break char if present)
         let display_text = line_text.replace(COLUMN_BREAK_CHAR, "");
-        let width = self
-            .font_provider
-            .measure_text(display_text.trim_end(), &font, style.font_size);
+        let width =
+            self.font_provider
+                .measure_text(display_text.trim_end(), &font, style.font_size);
         let run = LayoutRun::new(display_text, indent, width, style);
         line.add_run(run);
 
@@ -960,8 +960,11 @@ impl<'a> TextLayouter<'a> {
         }
 
         // Collect all lines from all columns
-        let all_lines: Vec<LayoutLine> =
-            layout.columns.iter().flat_map(|c| c.lines.clone()).collect();
+        let all_lines: Vec<LayoutLine> = layout
+            .columns
+            .iter()
+            .flat_map(|c| c.lines.clone())
+            .collect();
 
         if all_lines.is_empty() {
             return;
@@ -1506,7 +1509,11 @@ mod tests {
     #[test]
     fn test_find_next_tab_stop() {
         let layouter = TextLayouter::new(&MockFontProvider);
-        let tab_stops = vec![TabStop::left(72.0), TabStop::left(144.0), TabStop::left(216.0)];
+        let tab_stops = vec![
+            TabStop::left(72.0),
+            TabStop::left(144.0),
+            TabStop::left(216.0),
+        ];
 
         assert_eq!(layouter.find_next_tab_stop(0.0, &tab_stops, 36.0), 72.0);
         assert_eq!(layouter.find_next_tab_stop(73.0, &tab_stops, 36.0), 144.0);
@@ -1628,7 +1635,12 @@ mod tests {
         let mut line = LayoutLine::new(20.0, 0);
         line.width = 100.0;
         line.is_last_line = true;
-        let run = LayoutRun::new("Last line".to_string(), 0.0, 100.0, CharacterStyle::default());
+        let run = LayoutRun::new(
+            "Last line".to_string(),
+            0.0,
+            100.0,
+            CharacterStyle::default(),
+        );
         line.runs.push(run);
         column.lines.push(line);
         layout.columns.push(column);
@@ -1696,7 +1708,8 @@ mod tests {
         let measure = |s: &str| s.chars().count() as f64 * 10.0;
         let options = TruncationOptions::ellipsis_end();
 
-        let (result, truncated) = layouter.truncate_with_ellipsis("Hello", 100.0, &options, measure);
+        let (result, truncated) =
+            layouter.truncate_with_ellipsis("Hello", 100.0, &options, measure);
 
         assert_eq!(result, "Hello");
         assert!(!truncated);
@@ -1946,7 +1959,12 @@ mod tests {
 
         let c0 = layout.caret_rect(0, 0).expect("caret at start");
         let c3 = layout.caret_rect(0, 3).expect("caret at offset 3");
-        assert!(c3.origin.x > c0.origin.x, "{} !> {}", c3.origin.x, c0.origin.x);
+        assert!(
+            c3.origin.x > c0.origin.x,
+            "{} !> {}",
+            c3.origin.x,
+            c0.origin.x
+        );
         assert!((c0.origin.y - c3.origin.y).abs() < 0.01, "same line");
         assert!(c0.height() > 0.0);
     }

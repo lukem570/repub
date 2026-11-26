@@ -31,12 +31,9 @@ pub fn read_resource(session: &Session, uri: &str) -> McpResult<ResourceContent>
             let doc = session.document()?;
             // The model document is serialization-free; serialize it through the
             // native-format DTO layer (pretty JSON).
-            let bytes = repub_format_native::save_bytes(
-                doc,
-                &repub_format_native::SaveOptions::default(),
-            )?;
-            let json = String::from_utf8(bytes)
-                .map_err(|e| McpError::Internal(e.to_string()))?;
+            let bytes =
+                repub_format_native::save_bytes(doc, &repub_format_native::SaveOptions::default())?;
+            let json = String::from_utf8(bytes).map_err(|e| McpError::Internal(e.to_string()))?;
 
             Ok(ResourceContent {
                 uri: uri.to_string(),
@@ -48,16 +45,21 @@ pub fn read_resource(session: &Session, uri: &str) -> McpResult<ResourceContent>
 
         "repub://document/info" => {
             let doc = session.document()?;
-            
-            let pages: Vec<Value> = doc.pages().iter().enumerate().map(|(i, page)| {
-                let obj_count: usize = page.layers().iter().map(|l| l.shapes().len()).sum();
-                json!({
-                    "index": i,
-                    "width": page.size.width,
-                    "height": page.size.height,
-                    "objects": obj_count
+
+            let pages: Vec<Value> = doc
+                .pages()
+                .iter()
+                .enumerate()
+                .map(|(i, page)| {
+                    let obj_count: usize = page.layers().iter().map(|l| l.shapes().len()).sum();
+                    json!({
+                        "index": i,
+                        "width": page.size.width,
+                        "height": page.size.height,
+                        "objects": obj_count
+                    })
                 })
-            }).collect();
+                .collect();
 
             let info = json!({
                 "pages": pages.len(),
@@ -81,7 +83,7 @@ pub fn read_resource(session: &Session, uri: &str) -> McpResult<ResourceContent>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{Document, PageSize, PageOrientation};
+    use repub_model::{Document, PageOrientation, PageSize};
 
     #[test]
     fn test_list_resources() {

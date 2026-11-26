@@ -69,9 +69,9 @@ impl RasterExportOptions {
         let mut opts = RenderOptions::at_dpi(self.dpi);
         opts.scale = self.scale;
         opts.antialias = self.antialias;
-        opts.background = self.background.map(|[r, g, b, a]| {
-            repub_color::Color::from_rgba8(r, g, b, a)
-        });
+        opts.background = self
+            .background
+            .map(|[r, g, b, a]| repub_color::Color::from_rgba8(r, g, b, a));
         opts
     }
 }
@@ -116,7 +116,8 @@ pub fn export_png(
         format: options.format,
         quality: options.quality,
     };
-    export_to_file(&pixmap, path, &export_opts).map_err(|e| RasterExportError::Encode(e.to_string()))
+    export_to_file(&pixmap, path, &export_opts)
+        .map_err(|e| RasterExportError::Encode(e.to_string()))
 }
 
 /// Render page `page` of `doc` to an image file, inferring the format from

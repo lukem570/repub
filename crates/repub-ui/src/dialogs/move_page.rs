@@ -53,7 +53,9 @@ impl MovePageDialog {
                         .speed(1.0)
                         .range(1..=self.page_count.max(1)),
                 );
-                self.to = one_based.saturating_sub(1).min(self.page_count.saturating_sub(1));
+                self.to = one_based
+                    .saturating_sub(1)
+                    .min(self.page_count.saturating_sub(1));
 
                 ui.add_space(12.0);
                 ui.horizontal(|ui| {
@@ -62,7 +64,10 @@ impl MovePageDialog {
                         result = Some(false);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+                        if ui
+                            .add(egui::Button::new("OK").fill(colors::accent()))
+                            .clicked()
+                        {
                             state.record_undo("Move Page");
                             if let Some(doc) = state.document.as_mut() {
                                 doc.move_page(self.from, self.to);

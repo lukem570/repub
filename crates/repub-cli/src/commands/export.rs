@@ -139,8 +139,9 @@ pub fn run(args: ExportArgs, opts: &GlobalOptions) -> Result<()> {
 
             if page_indices.len() == 1 {
                 // Single page
-                export_svg(&doc, page_indices[0], &args.output, &svg_opts, &fonts)
-                    .with_context(|| format!("Failed to export SVG to {}", args.output.display()))?;
+                export_svg(&doc, page_indices[0], &args.output, &svg_opts, &fonts).with_context(
+                    || format!("Failed to export SVG to {}", args.output.display()),
+                )?;
                 output::success(format!("Exported SVG to {}", args.output.display()), opts);
             } else {
                 // Multiple pages - add page number to filename
@@ -148,12 +149,12 @@ pub fn run(args: ExportArgs, opts: &GlobalOptions) -> Result<()> {
                     let path = add_page_suffix(&args.output, page_idx + 1);
                     export_svg(&doc, page_idx, &path, &svg_opts, &fonts)
                         .with_context(|| format!("Failed to export SVG to {}", path.display()))?;
-                    output::verbose(format!("Exported page {} to {}", page_idx + 1, path.display()), opts);
+                    output::verbose(
+                        format!("Exported page {} to {}", page_idx + 1, path.display()),
+                        opts,
+                    );
                 }
-                output::success(
-                    format!("Exported {} SVG files", page_indices.len()),
-                    opts,
-                );
+                output::success(format!("Exported {} SVG files", page_indices.len()), opts);
             }
         }
 
@@ -172,19 +173,21 @@ pub fn run(args: ExportArgs, opts: &GlobalOptions) -> Result<()> {
 
             if page_indices.len() == 1 {
                 export_image(&doc, page_indices[0], &args.output, &raster_opts, &fonts)
-                    .with_context(|| format!("Failed to export image to {}", args.output.display()))?;
+                    .with_context(|| {
+                        format!("Failed to export image to {}", args.output.display())
+                    })?;
                 output::success(format!("Exported image to {}", args.output.display()), opts);
             } else {
                 for &page_idx in &page_indices {
                     let path = add_page_suffix(&args.output, page_idx + 1);
                     export_image(&doc, page_idx, &path, &raster_opts, &fonts)
                         .with_context(|| format!("Failed to export image to {}", path.display()))?;
-                    output::verbose(format!("Exported page {} to {}", page_idx + 1, path.display()), opts);
+                    output::verbose(
+                        format!("Exported page {} to {}", page_idx + 1, path.display()),
+                        opts,
+                    );
                 }
-                output::success(
-                    format!("Exported {} image files", page_indices.len()),
-                    opts,
-                );
+                output::success(format!("Exported {} image files", page_indices.len()), opts);
             }
         }
     }
@@ -219,7 +222,11 @@ fn parse_page_range(range: &str, total_pages: usize) -> Result<Vec<usize>> {
                 anyhow::bail!("Invalid range: start > end");
             }
             if end > total_pages {
-                anyhow::bail!("Page {} does not exist (document has {} pages)", end, total_pages);
+                anyhow::bail!(
+                    "Page {} does not exist (document has {} pages)",
+                    end,
+                    total_pages
+                );
             }
 
             for p in start..=end {
@@ -231,7 +238,11 @@ fn parse_page_range(range: &str, total_pages: usize) -> Result<Vec<usize>> {
                 anyhow::bail!("Page numbers start at 1");
             }
             if p > total_pages {
-                anyhow::bail!("Page {} does not exist (document has {} pages)", p, total_pages);
+                anyhow::bail!(
+                    "Page {} does not exist (document has {} pages)",
+                    p,
+                    total_pages
+                );
             }
             pages.push(p - 1);
         }

@@ -47,8 +47,8 @@ impl From<ShellArg> for Shell {
 pub fn run(args: CompletionsArgs) -> Result<()> {
     let mut cmd = Cli::command();
     let shell: Shell = args.shell.into();
-    
+
     generate(shell, &mut cmd, "repub-cli", &mut io::stdout());
-    
+
     Ok(())
 }

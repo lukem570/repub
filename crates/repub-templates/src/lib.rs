@@ -48,5 +48,7 @@ mod template;
 pub use builtin::*;
 pub use error::{TemplateError, TemplateResult};
 pub use library::{TemplateCategory, TemplateLibrary};
-pub use placeholder::{ImageValue, Placeholder, PlaceholderType, PlaceholderValue, PlaceholderValues};
+pub use placeholder::{
+    ImageValue, Placeholder, PlaceholderType, PlaceholderValue, PlaceholderValues,
+};
 pub use template::{Template, TemplateMetadata};

@@ -2,7 +2,9 @@
 
 use egui::Ui;
 use repub_color::Color;
-use repub_model::styles::{BaselineShift, CharacterStyle, FontStyle, FontWeight, StrikethroughStyle, UnderlineStyle};
+use repub_model::styles::{
+    BaselineShift, CharacterStyle, FontStyle, FontWeight, StrikethroughStyle, UnderlineStyle,
+};
 
 use super::controls::{choice, color_edit, number_row, ok_cancel, row};
 use crate::state::AppState;
@@ -36,8 +38,16 @@ impl Face {
             Self::Bold => (true, false),
             Self::BoldItalic => (true, true),
         };
-        style.font.weight = if bold { FontWeight::Bold } else { FontWeight::Normal };
-        style.font.style = if italic { FontStyle::Italic } else { FontStyle::Normal };
+        style.font.weight = if bold {
+            FontWeight::Bold
+        } else {
+            FontWeight::Normal
+        };
+        style.font.style = if italic {
+            FontStyle::Italic
+        } else {
+            FontStyle::Normal
+        };
     }
 }
 
@@ -58,7 +68,9 @@ impl FontDialog {
 
     /// Open on the text being edited or the selected text boxes.
     pub fn open_for(&mut self, state: &AppState) {
-        let Some((style, mixed)) = text_format::character_snapshot(state) else { return };
+        let Some((style, mixed)) = text_format::character_snapshot(state) else {
+            return;
+        };
         self.initial = style.clone();
         self.work = style;
         self.mixed = mixed;
@@ -71,14 +83,24 @@ impl FontDialog {
             return;
         }
         let mut result = None;
-        egui::Window::new("Font").collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.set_min_width(400.0);
-            if self.mixed {
-                ui.label(egui::RichText::new("The selection mixes styles; only what you change is applied.").weak().small());
-            }
-            self.fields(ui);
-            result = ok_cancel(ui);
-        });
+        egui::Window::new("Font")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.set_min_width(400.0);
+                if self.mixed {
+                    ui.label(
+                        egui::RichText::new(
+                            "The selection mixes styles; only what you change is applied.",
+                        )
+                        .weak()
+                        .small(),
+                    );
+                }
+                self.fields(ui);
+                result = ok_cancel(ui);
+            });
         match result {
             Some(true) => {
                 let patch = self.patch();
@@ -101,14 +123,24 @@ impl FontDialog {
             "font_face",
             "Font style",
             &mut face,
-            &[(Face::Regular, "Regular"), (Face::Italic, "Italic"), (Face::Bold, "Bold"), (Face::BoldItalic, "Bold italic")],
+            &[
+                (Face::Regular, "Regular"),
+                (Face::Italic, "Italic"),
+                (Face::Bold, "Bold"),
+                (Face::BoldItalic, "Bold italic"),
+            ],
         ) {
             face.set(style);
             self.face = Some(face);
         }
         number_row(ui, "Size", &mut style.font_size, 1.0..=1638.0, 0.5, " pt");
         row(ui, "Font color", |ui| color_edit(ui, &mut style.color));
-        optional_color(ui, "Highlight", &mut style.background_color, Color::from_rgb8(255, 255, 0));
+        optional_color(
+            ui,
+            "Highlight",
+            &mut style.background_color,
+            Color::from_rgb8(255, 255, 0),
+        );
         ui.add_space(6.0);
         choice(
             ui,
@@ -125,23 +157,43 @@ impl FontDialog {
             ],
         );
         if style.underline != UnderlineStyle::None {
-            optional_color(ui, "Underline color", &mut style.underline_color, style.color);
+            optional_color(
+                ui,
+                "Underline color",
+                &mut style.underline_color,
+                style.color,
+            );
         }
         choice(
             ui,
             "font_strike",
             "Strikethrough",
             &mut style.strikethrough,
-            &[(StrikethroughStyle::None, "None"), (StrikethroughStyle::Single, "Single"), (StrikethroughStyle::Double, "Double")],
+            &[
+                (StrikethroughStyle::None, "None"),
+                (StrikethroughStyle::Single, "Single"),
+                (StrikethroughStyle::Double, "Double"),
+            ],
         );
         choice(
             ui,
             "font_position",
             "Position",
             &mut style.baseline_shift,
-            &[(BaselineShift::Normal, "Normal"), (BaselineShift::Superscript, "Superscript"), (BaselineShift::Subscript, "Subscript")],
+            &[
+                (BaselineShift::Normal, "Normal"),
+                (BaselineShift::Superscript, "Superscript"),
+                (BaselineShift::Subscript, "Subscript"),
+            ],
         );
-        number_row(ui, "Letter spacing", &mut style.letter_spacing, -10.0..=100.0, 0.1, " pt");
+        number_row(
+            ui,
+            "Letter spacing",
+            &mut style.letter_spacing,
+            -10.0..=100.0,
+            0.1,
+            " pt",
+        );
         row(ui, "Capitals", |ui| {
             ui.checkbox(&mut style.all_caps, "All caps");
             ui.checkbox(&mut style.small_caps, "Small caps");
@@ -186,24 +238,37 @@ fn optional_color(ui: &mut Ui, label: &str, slot: &mut Option<Color>, default: C
 /// The family: a field with the installed families to pick from.
 pub(crate) fn family_box(ui: &mut Ui, family: &mut String) {
     let filter_id = egui::Id::new("font_dialog_filter");
-    egui::ComboBox::from_id_salt("font_dialog_family").width(220.0).height(320.0).selected_text(family.clone()).show_ui(ui, |ui| {
-        let Some(registry) = crate::sdf_text::fonts::try_registry() else {
-            ui.label("Finding fonts…");
-            ui.ctx().request_repaint_after(std::time::Duration::from_millis(200));
-            return;
-        };
-        let mut filter: String = ui.data_mut(|d| d.get_temp(filter_id).unwrap_or_default());
-        ui.add(egui::TextEdit::singleline(&mut filter).hint_text("Search fonts").desired_width(200.0));
-        ui.data_mut(|d| d.insert_temp(filter_id, filter.clone()));
-        let needle = filter.to_lowercase();
-        for name in registry.family_names().into_iter().filter(|f| f.to_lowercase().contains(&needle)) {
-            if ui.selectable_label(*family == name, &name).clicked() {
-                *family = name;
-                ui.data_mut(|d| d.remove::<String>(filter_id));
-                ui.close_menu();
+    egui::ComboBox::from_id_salt("font_dialog_family")
+        .width(220.0)
+        .height(320.0)
+        .selected_text(family.clone())
+        .show_ui(ui, |ui| {
+            let Some(registry) = crate::sdf_text::fonts::try_registry() else {
+                ui.label("Finding fonts…");
+                ui.ctx()
+                    .request_repaint_after(std::time::Duration::from_millis(200));
+                return;
+            };
+            let mut filter: String = ui.data_mut(|d| d.get_temp(filter_id).unwrap_or_default());
+            ui.add(
+                egui::TextEdit::singleline(&mut filter)
+                    .hint_text("Search fonts")
+                    .desired_width(200.0),
+            );
+            ui.data_mut(|d| d.insert_temp(filter_id, filter.clone()));
+            let needle = filter.to_lowercase();
+            for name in registry
+                .family_names()
+                .into_iter()
+                .filter(|f| f.to_lowercase().contains(&needle))
+            {
+                if ui.selectable_label(*family == name, &name).clicked() {
+                    *family = name;
+                    ui.data_mut(|d| d.remove::<String>(filter_id));
+                    ui.close_menu();
+                }
             }
-        }
-    });
+        });
 }
 
 #[cfg(test)]

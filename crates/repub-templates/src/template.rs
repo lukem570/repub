@@ -131,10 +131,13 @@ impl Template {
         let mut doc = self.document.clone();
 
         for placeholder in &self.placeholders {
-            let value: Option<PlaceholderValue> = values
-                .get(&placeholder.id)
-                .cloned()
-                .or_else(|| placeholder.default_value.as_ref().map(|s| PlaceholderValue::Text(s.clone())));
+            let value: Option<PlaceholderValue> =
+                values.get(&placeholder.id).cloned().or_else(|| {
+                    placeholder
+                        .default_value
+                        .as_ref()
+                        .map(|s| PlaceholderValue::Text(s.clone()))
+                });
 
             if let Some(value) = value {
                 Self::apply_placeholder_to_doc(&mut doc, placeholder, &value)?;
@@ -145,7 +148,11 @@ impl Template {
     }
 
     /// Apply a single placeholder value.
-    fn apply_placeholder_to_doc(doc: &mut Document, placeholder: &Placeholder, value: &PlaceholderValue) -> TemplateResult<()> {
+    fn apply_placeholder_to_doc(
+        doc: &mut Document,
+        placeholder: &Placeholder,
+        value: &PlaceholderValue,
+    ) -> TemplateResult<()> {
         let kind = doc
             .find_shape_mut(placeholder.object_id)
             .map(|(_, shape)| &mut shape.kind)
@@ -225,10 +232,17 @@ mod tests {
         let name_id = name_frame.common.id;
         doc.pages_mut()[0].add_shape(name_frame);
 
-        let mut template = Template::new("test-template", "Test Template", TemplateCategory::Business, doc);
+        let mut template = Template::new(
+            "test-template",
+            "Test Template",
+            TemplateCategory::Business,
+            doc,
+        );
 
         template.add_placeholder(
-            Placeholder::text("name", "Full Name", name_id).with_default("John Doe").required(),
+            Placeholder::text("name", "Full Name", name_id)
+                .with_default("John Doe")
+                .required(),
         );
 
         template

@@ -149,24 +149,27 @@ fn add_page(args: AddPageArgs, opts: &GlobalOptions) -> Result<()> {
 
     if let Some(pos) = args.position {
         if pos == 0 || pos > page_count + 1 {
-            anyhow::bail!(
-                "Invalid position: {}. Must be 1-{}",
-                pos,
-                page_count + 1
-            );
+            anyhow::bail!("Invalid position: {}. Must be 1-{}", pos, page_count + 1);
         }
         doc.insert_page(pos - 1);
         output::verbose(format!("Inserted page at position {}", pos), opts);
     } else {
         doc.add_page();
-        output::verbose(format!("Added page at end (position {})", page_count + 1), opts);
+        output::verbose(
+            format!("Added page at end (position {})", page_count + 1),
+            opts,
+        );
     }
 
     native::save(&doc, &args.document, &SaveOptions::default())
         .with_context(|| format!("Failed to save: {}", args.document.display()))?;
 
     output::success(
-        format!("Added page to {} (now {} pages)", args.document.display(), doc.pages().len()),
+        format!(
+            "Added page to {} (now {} pages)",
+            args.document.display(),
+            doc.pages().len()
+        ),
         opts,
     );
 
@@ -212,7 +215,10 @@ fn add_shape(args: AddShapeArgs, opts: &GlobalOptions) -> Result<()> {
     }
 
     output::verbose(
-        format!("Adding {:?} at ({}, {}) size {}x{}", args.shape_type, args.x, args.y, args.width, args.height),
+        format!(
+            "Adding {:?} at ({}, {}) size {}x{}",
+            args.shape_type, args.x, args.y, args.width, args.height
+        ),
         opts,
     );
 
@@ -222,7 +228,12 @@ fn add_shape(args: AddShapeArgs, opts: &GlobalOptions) -> Result<()> {
         .with_context(|| format!("Failed to save: {}", args.document.display()))?;
 
     output::success(
-        format!("Added {:?} to page {} of {}", args.shape_type, args.page, args.document.display()),
+        format!(
+            "Added {:?} to page {} of {}",
+            args.shape_type,
+            args.page,
+            args.document.display()
+        ),
         opts,
     );
 
@@ -257,7 +268,10 @@ fn add_text(args: AddTextArgs, opts: &GlobalOptions) -> Result<()> {
     }
 
     output::verbose(
-        format!("Adding text frame at ({}, {}) size {}x{}", args.x, args.y, args.width, args.height),
+        format!(
+            "Adding text frame at ({}, {}) size {}x{}",
+            args.x, args.y, args.width, args.height
+        ),
         opts,
     );
 
@@ -267,7 +281,11 @@ fn add_text(args: AddTextArgs, opts: &GlobalOptions) -> Result<()> {
         .with_context(|| format!("Failed to save: {}", args.document.display()))?;
 
     output::success(
-        format!("Added text frame to page {} of {}", args.page, args.document.display()),
+        format!(
+            "Added text frame to page {} of {}",
+            args.page,
+            args.document.display()
+        ),
         opts,
     );
 
@@ -282,12 +300,9 @@ fn parse_hex_color(hex: &str) -> Result<Color> {
         anyhow::bail!("Invalid hex color: {}. Expected 6 hex digits.", hex);
     }
 
-    let r = u8::from_str_radix(&hex[0..2], 16)
-        .context("Invalid red component")?;
-    let g = u8::from_str_radix(&hex[2..4], 16)
-        .context("Invalid green component")?;
-    let b = u8::from_str_radix(&hex[4..6], 16)
-        .context("Invalid blue component")?;
+    let r = u8::from_str_radix(&hex[0..2], 16).context("Invalid red component")?;
+    let g = u8::from_str_radix(&hex[2..4], 16).context("Invalid green component")?;
+    let b = u8::from_str_radix(&hex[4..6], 16).context("Invalid blue component")?;
 
     Ok(Color::from_rgb8(r, g, b))
 }

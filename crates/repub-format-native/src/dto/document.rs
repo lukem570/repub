@@ -7,9 +7,7 @@
 //! [`Layer::add_shape`], and friends).
 
 use repub_geometry::Unit;
-use repub_model::document::{
-    DocumentMetadata, DocumentSettings, Guide, Margins, MasterPage, Page,
-};
+use repub_model::document::{DocumentMetadata, DocumentSettings, Guide, Margins, MasterPage, Page};
 use repub_model::id::{LayerId, MasterPageId, PageId};
 use repub_model::layer::Layer;
 use repub_model::{Document, PageOrientation, PageSize};

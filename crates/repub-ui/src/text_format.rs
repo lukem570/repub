@@ -12,10 +12,13 @@
 //! Every change is one undo step, and editing continues with the same selection.
 
 use repub_color::Color;
-use repub_model::ObjectId;
 use repub_model::shape::ShapeKind;
-use repub_model::styles::{BaselineShift, CharacterStyle, FontStretch, FontStyle, FontWeight, LineSpacing, ListStyle, NumberFormat, ParagraphStyle, StrikethroughStyle, TextAlignment, UnderlineStyle};
+use repub_model::styles::{
+    BaselineShift, CharacterStyle, FontStretch, FontStyle, FontWeight, LineSpacing, ListStyle,
+    NumberFormat, ParagraphStyle, StrikethroughStyle, TextAlignment, UnderlineStyle,
+};
 use repub_model::text::{InlineElement, StyledText};
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::text_edit::{self, element_len, para_len, split_run_at, TextPos};
@@ -53,11 +56,41 @@ impl Toggle {
 
     fn set(self, style: &mut CharacterStyle, on: bool) {
         match self {
-            Toggle::Bold => style.font.weight = if on { FontWeight::Bold } else { FontWeight::Normal },
-            Toggle::Italic => style.font.style = if on { FontStyle::Italic } else { FontStyle::Normal },
-            Toggle::Underline => style.underline = if on { UnderlineStyle::Single } else { UnderlineStyle::None },
-            Toggle::Superscript => style.baseline_shift = if on { BaselineShift::Superscript } else { BaselineShift::Normal },
-            Toggle::Subscript => style.baseline_shift = if on { BaselineShift::Subscript } else { BaselineShift::Normal },
+            Toggle::Bold => {
+                style.font.weight = if on {
+                    FontWeight::Bold
+                } else {
+                    FontWeight::Normal
+                }
+            }
+            Toggle::Italic => {
+                style.font.style = if on {
+                    FontStyle::Italic
+                } else {
+                    FontStyle::Normal
+                }
+            }
+            Toggle::Underline => {
+                style.underline = if on {
+                    UnderlineStyle::Single
+                } else {
+                    UnderlineStyle::None
+                }
+            }
+            Toggle::Superscript => {
+                style.baseline_shift = if on {
+                    BaselineShift::Superscript
+                } else {
+                    BaselineShift::Normal
+                }
+            }
+            Toggle::Subscript => {
+                style.baseline_shift = if on {
+                    BaselineShift::Subscript
+                } else {
+                    BaselineShift::Normal
+                }
+            }
         }
     }
 }
@@ -202,13 +235,24 @@ impl ParaPatch {
 }
 
 /// Publisher's font size list, used by Grow/Shrink Font.
-pub const FONT_SIZES: [f64; 16] = [8.0, 9.0, 10.0, 11.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 36.0, 48.0, 72.0];
+pub const FONT_SIZES: [f64; 16] = [
+    8.0, 9.0, 10.0, 11.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 36.0, 48.0, 72.0,
+];
 
 fn step_size(size: f64, up: bool) -> f64 {
     if up {
-        FONT_SIZES.iter().copied().find(|&s| s > size + 0.01).unwrap_or((size + 10.0).min(1638.0))
+        FONT_SIZES
+            .iter()
+            .copied()
+            .find(|&s| s > size + 0.01)
+            .unwrap_or((size + 10.0).min(1638.0))
     } else {
-        FONT_SIZES.iter().rev().copied().find(|&s| s < size - 0.01).unwrap_or((size - 1.0).max(1.0))
+        FONT_SIZES
+            .iter()
+            .rev()
+            .copied()
+            .find(|&s| s < size - 0.01)
+            .unwrap_or((size - 1.0).max(1.0))
     }
 }
 
@@ -238,7 +282,12 @@ impl CharChange {
 enum Target {
     /// Part of the text being edited (start <= end): a text box, or a cell
     /// of a table.
-    Range { frame: ObjectId, cell: Option<(usize, usize)>, start: TextPos, end: TextPos },
+    Range {
+        frame: ObjectId,
+        cell: Option<(usize, usize)>,
+        start: TextPos,
+        end: TextPos,
+    },
     /// Whole text boxes and tables (every cell).
     Frames(Vec<ObjectId>),
 }
@@ -247,14 +296,24 @@ fn target(state: &AppState) -> Option<Target> {
     if let Some(edit) = &state.text_edit {
         let (start, end) = (edit.caret.min(edit.anchor), edit.caret.max(edit.anchor));
         if start != end {
-            return Some(Target::Range { frame: edit.frame, cell: edit.cell, start, end });
+            return Some(Target::Range {
+                frame: edit.frame,
+                cell: edit.cell,
+                start,
+                end,
+            });
         }
         // No selection: the word at the caret
         let text = text_of(state, edit.frame)?;
         let (a, b) = text_edit::word_at(text, edit.caret);
         let word = text_edit::text_between(text, a, b);
         if !word.trim().is_empty() {
-            return Some(Target::Range { frame: edit.frame, cell: edit.cell, start: a, end: b });
+            return Some(Target::Range {
+                frame: edit.frame,
+                cell: edit.cell,
+                start: a,
+                end: b,
+            });
         }
         return None;
     }
@@ -276,13 +335,21 @@ fn text_of(state: &AppState, id: ObjectId) -> Option<&StyledText> {
 fn para_span(text: &StyledText, para: usize, a: TextPos, b: TextPos) -> (usize, usize) {
     let len = text.paragraphs.get(para).map_or(0, para_len);
     let start = if para == a.para { a.offset.min(len) } else { 0 };
-    let end = if para == b.para { b.offset.min(len) } else { len };
+    let end = if para == b.para {
+        b.offset.min(len)
+    } else {
+        len
+    };
     (start, end)
 }
 
 /// Run `f` on the style of every character in `[a, b)` (whole text when `None`),
 /// splitting runs at the ends so nothing outside changes.
-fn style_range(text: &mut StyledText, range: Option<(TextPos, TextPos)>, f: &mut dyn FnMut(&mut CharacterStyle)) {
+fn style_range(
+    text: &mut StyledText,
+    range: Option<(TextPos, TextPos)>,
+    f: &mut dyn FnMut(&mut CharacterStyle),
+) {
     let Some((a, b)) = range else {
         for p in &mut text.paragraphs {
             f(&mut p.style.default_char_style);
@@ -351,12 +418,32 @@ fn styles_in(text: &StyledText, range: Option<(TextPos, TextPos)>) -> Vec<Charac
 /// Change the text in the target as one undo step. While editing, the session
 /// is closed and reopened around the change with the same selection, so the
 /// typing before it stays its own undo step.
-fn edit_target(state: &mut AppState, label: &str, coalesce: bool, f: impl Fn(&mut StyledText, Option<(TextPos, TextPos)>)) -> bool {
-    let record = |state: &mut AppState| if coalesce { state.record_undo_coalesced(label) } else { state.record_undo(label) };
-    let Some(target) = target(state) else { return false };
+fn edit_target(
+    state: &mut AppState,
+    label: &str,
+    coalesce: bool,
+    f: impl Fn(&mut StyledText, Option<(TextPos, TextPos)>),
+) -> bool {
+    let record = |state: &mut AppState| {
+        if coalesce {
+            state.record_undo_coalesced(label)
+        } else {
+            state.record_undo(label)
+        }
+    };
+    let Some(target) = target(state) else {
+        return false;
+    };
     match target {
-        Target::Range { frame, cell, start, end } => {
-            let Some(edit) = state.text_edit.clone() else { return false };
+        Target::Range {
+            frame,
+            cell,
+            start,
+            end,
+        } => {
+            let Some(edit) = state.text_edit.clone() else {
+                return false;
+            };
             text_edit::end(state);
             record(state);
             text_edit::for_each_text_mut(state, frame, cell, |text| f(text, Some((start, end))));
@@ -377,14 +464,18 @@ fn edit_target(state: &mut AppState, label: &str, coalesce: bool, f: impl Fn(&mu
 /// Apply a character change to the target. Returns false when there is no target.
 pub fn apply(state: &mut AppState, change: CharChange) -> bool {
     let label = change.label();
-    edit_target(state, label, false, |text, range| style_range(text, range, &mut |s| change.apply(s)))
+    edit_target(state, label, false, |text, range| {
+        style_range(text, range, &mut |s| change.apply(s))
+    })
 }
 
 /// Like [`apply`], for continuous edits (dragging a size, picking a colour):
 /// repeated changes within a second are one undo step.
 pub fn apply_continuous(state: &mut AppState, change: CharChange) -> bool {
     let label = change.label();
-    edit_target(state, label, true, |text, range| style_range(text, range, &mut |s| change.apply(s)))
+    edit_target(state, label, true, |text, range| {
+        style_range(text, range, &mut |s| change.apply(s))
+    })
 }
 
 /// Toggle bold/italic/underline: off if the whole target has it, else on.
@@ -402,15 +493,30 @@ pub fn is_on(state: &AppState, toggle: Toggle) -> bool {
 /// Character styles across the target (for showing current values).
 pub fn target_styles(state: &AppState) -> Vec<CharacterStyle> {
     match target(state) {
-        Some(Target::Range { frame, cell, start, end }) => text_edit::texts_in(state, frame, cell).into_iter().flat_map(|t| styles_in(t, Some((start, end)))).collect(),
-        Some(Target::Frames(ids)) => ids.iter().flat_map(|&id| text_edit::texts_in(state, id, None)).flat_map(|t| styles_in(t, None)).collect(),
+        Some(Target::Range {
+            frame,
+            cell,
+            start,
+            end,
+        }) => text_edit::texts_in(state, frame, cell)
+            .into_iter()
+            .flat_map(|t| styles_in(t, Some((start, end))))
+            .collect(),
+        Some(Target::Frames(ids)) => ids
+            .iter()
+            .flat_map(|&id| text_edit::texts_in(state, id, None))
+            .flat_map(|t| styles_in(t, None))
+            .collect(),
         None => {
             // Caret between words: the style that typing would continue
             let edit = state.text_edit.as_ref();
             edit.and_then(|e| text_of(state, e.frame).map(|t| (t, e.caret)))
                 .map(|(t, caret)| {
                     let before = TextPos::new(caret.para, caret.offset.saturating_sub(1));
-                    styles_in(t, Some((before, TextPos::new(caret.para, caret.offset.max(1)))))
+                    styles_in(
+                        t,
+                        Some((before, TextPos::new(caret.para, caret.offset.max(1)))),
+                    )
                 })
                 .unwrap_or_default()
         }
@@ -421,19 +527,29 @@ pub fn target_styles(state: &AppState) -> Vec<CharacterStyle> {
 pub fn current_family(state: &AppState) -> Option<String> {
     let styles = target_styles(state);
     let first = styles.first()?.font.family.clone();
-    styles.iter().all(|s| s.font.family == first).then_some(first)
+    styles
+        .iter()
+        .all(|s| s.font.family == first)
+        .then_some(first)
 }
 
 /// The font size shared by the whole target, if it is uniform.
 pub fn current_size(state: &AppState) -> Option<f64> {
     let styles = target_styles(state);
     let first = styles.first()?.font_size;
-    styles.iter().all(|s| (s.font_size - first).abs() < 0.01).then_some(first)
+    styles
+        .iter()
+        .all(|s| (s.font_size - first).abs() < 0.01)
+        .then_some(first)
 }
 
 /// Paragraphs that paragraph formatting acts on: `(object, cell, paragraph
 /// range)`. A whole table is every paragraph of every cell.
-type ParagraphTarget = (ObjectId, Option<(usize, usize)>, std::ops::RangeInclusive<usize>);
+type ParagraphTarget = (
+    ObjectId,
+    Option<(usize, usize)>,
+    std::ops::RangeInclusive<usize>,
+);
 
 fn target_paragraphs(state: &AppState) -> Vec<ParagraphTarget> {
     if let Some(edit) = &state.text_edit {
@@ -444,7 +560,11 @@ fn target_paragraphs(state: &AppState) -> Vec<ParagraphTarget> {
         .selected_objects()
         .iter()
         .filter_map(|o| match &o.kind {
-            ShapeKind::TextFrame(tf) => Some((o.common.id, None, 0..=tf.content.paragraphs.len().saturating_sub(1))),
+            ShapeKind::TextFrame(tf) => Some((
+                o.common.id,
+                None,
+                0..=tf.content.paragraphs.len().saturating_sub(1),
+            )),
             ShapeKind::Table(_) => Some((o.common.id, None, 0..=usize::MAX)),
             _ => None,
         })
@@ -452,8 +572,14 @@ fn target_paragraphs(state: &AppState) -> Vec<ParagraphTarget> {
 }
 
 /// The paragraphs of `paragraphs` whose index is in `range`.
-fn in_range<'a, T: 'a>(paragraphs: impl Iterator<Item = T> + 'a, range: &'a std::ops::RangeInclusive<usize>) -> impl Iterator<Item = T> + 'a {
-    paragraphs.enumerate().filter(move |(i, _)| range.contains(i)).map(|(_, p)| p)
+fn in_range<'a, T: 'a>(
+    paragraphs: impl Iterator<Item = T> + 'a,
+    range: &'a std::ops::RangeInclusive<usize>,
+) -> impl Iterator<Item = T> + 'a {
+    paragraphs
+        .enumerate()
+        .filter(move |(i, _)| range.contains(i))
+        .map(|(_, p)| p)
 }
 
 /// Styles of the target paragraphs, in order.
@@ -461,7 +587,13 @@ fn target_paragraph_styles(state: &AppState) -> Vec<&ParagraphStyle> {
     let mut out = Vec::new();
     for (id, cell, paras) in target_paragraphs(state) {
         for text in text_edit::texts_in(state, id, cell) {
-            out.extend(text.paragraphs.iter().enumerate().filter(|(i, _)| paras.contains(i)).map(|(_, p)| &p.style));
+            out.extend(
+                text.paragraphs
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| paras.contains(i))
+                    .map(|(_, p)| &p.style),
+            );
         }
     }
     out
@@ -547,7 +679,9 @@ fn list_kind(style: &ListStyle) -> Option<ListKind> {
 
 /// The list kind shared by all target paragraphs, if they agree.
 pub fn current_list(state: &AppState) -> Option<ListKind> {
-    let mut kinds = target_paragraph_styles(state).into_iter().map(|p| list_kind(&p.list_style));
+    let mut kinds = target_paragraph_styles(state)
+        .into_iter()
+        .map(|p| list_kind(&p.list_style));
     let first = kinds.next()?;
     kinds.all(|k| k == first).then_some(first).flatten()
 }
@@ -558,8 +692,15 @@ pub fn toggle_list(state: &mut AppState, kind: ListKind) -> bool {
     let on = current_list(state) != Some(kind);
     let style = match (on, kind) {
         (false, _) => ListStyle::None,
-        (true, ListKind::Bullets) => ListStyle::Bullet { character: '•', indent: 18.0 },
-        (true, ListKind::Numbering) => ListStyle::Numbered { format: NumberFormat::Arabic, start: 1, indent: 18.0 },
+        (true, ListKind::Bullets) => ListStyle::Bullet {
+            character: '•',
+            indent: 18.0,
+        },
+        (true, ListKind::Numbering) => ListStyle::Numbered {
+            format: NumberFormat::Arabic,
+            start: 1,
+            indent: 18.0,
+        },
     };
     let label = match kind {
         ListKind::Bullets => "Bullets",
@@ -573,13 +714,21 @@ pub const INDENT_STEP: f64 = 18.0;
 
 /// Move the target paragraphs' left indent one step in or out (never negative).
 pub fn change_indent(state: &mut AppState, increase: bool) -> bool {
-    edit_paragraphs(state, if increase { "Increase Indent" } else { "Decrease Indent" }, |p| {
-        p.left_indent = if increase {
-            (p.left_indent / INDENT_STEP).floor() * INDENT_STEP + INDENT_STEP
+    edit_paragraphs(
+        state,
+        if increase {
+            "Increase Indent"
         } else {
-            ((p.left_indent / INDENT_STEP).ceil() * INDENT_STEP - INDENT_STEP).max(0.0)
-        };
-    })
+            "Decrease Indent"
+        },
+        |p| {
+            p.left_indent = if increase {
+                (p.left_indent / INDENT_STEP).floor() * INDENT_STEP + INDENT_STEP
+            } else {
+                ((p.left_indent / INDENT_STEP).ceil() * INDENT_STEP - INDENT_STEP).max(0.0)
+            };
+        },
+    )
 }
 
 /// Set line spacing as a multiple of single spacing.
@@ -645,7 +794,9 @@ mod tests {
             .elements
             .iter()
             .filter_map(|e| match e {
-                InlineElement::Text(r) if !r.text.is_empty() => Some((r.text.clone(), r.style.font.weight == FontWeight::Bold)),
+                InlineElement::Text(r) if !r.text.is_empty() => {
+                    Some((r.text.clone(), r.style.font.weight == FontWeight::Bold))
+                }
                 _ => None,
             })
             .collect()
@@ -653,25 +804,54 @@ mod tests {
 
     #[test]
     fn range_styling_splits_runs_and_leaves_the_rest() {
-        let mut text = StyledText { paragraphs: vec![Paragraph::plain("Hello brave world")] };
-        style_range(&mut text, Some((TextPos::new(0, 6), TextPos::new(0, 11))), &mut |s| Toggle::Bold.set(s, true));
+        let mut text = StyledText {
+            paragraphs: vec![Paragraph::plain("Hello brave world")],
+        };
+        style_range(
+            &mut text,
+            Some((TextPos::new(0, 6), TextPos::new(0, 11))),
+            &mut |s| Toggle::Bold.set(s, true),
+        );
         assert_eq!(
             bold_of(&text),
-            vec![("Hello ".into(), false), ("brave".into(), true), (" world".into(), false)]
+            vec![
+                ("Hello ".into(), false),
+                ("brave".into(), true),
+                (" world".into(), false)
+            ]
         );
     }
 
     #[test]
     fn range_across_paragraphs() {
-        let mut text = StyledText { paragraphs: vec![Paragraph::plain("One two"), Paragraph::plain("Three four")] };
-        style_range(&mut text, Some((TextPos::new(0, 4), TextPos::new(1, 5))), &mut |s| s.font_size = 30.0);
-        let sizes = |p: &Paragraph| p.elements.iter().filter_map(|e| match e {
-            InlineElement::Text(r) if !r.text.is_empty() => Some((r.text.clone(), r.style.font_size)),
-            _ => None,
-        }).collect::<Vec<_>>();
+        let mut text = StyledText {
+            paragraphs: vec![Paragraph::plain("One two"), Paragraph::plain("Three four")],
+        };
+        style_range(
+            &mut text,
+            Some((TextPos::new(0, 4), TextPos::new(1, 5))),
+            &mut |s| s.font_size = 30.0,
+        );
+        let sizes = |p: &Paragraph| {
+            p.elements
+                .iter()
+                .filter_map(|e| match e {
+                    InlineElement::Text(r) if !r.text.is_empty() => {
+                        Some((r.text.clone(), r.style.font_size))
+                    }
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
         let default = CharacterStyle::default().font_size;
-        assert_eq!(sizes(&text.paragraphs[0]), vec![("One ".into(), default), ("two".into(), 30.0)]);
-        assert_eq!(sizes(&text.paragraphs[1]), vec![("Three".into(), 30.0), (" four".into(), default)]);
+        assert_eq!(
+            sizes(&text.paragraphs[0]),
+            vec![("One ".into(), default), ("two".into(), 30.0)]
+        );
+        assert_eq!(
+            sizes(&text.paragraphs[1]),
+            vec![("Three".into(), 30.0), (" four".into(), default)]
+        );
     }
 
     #[test]
@@ -680,8 +860,11 @@ mod tests {
         let mut bold = CharacterStyle::default();
         bold.font.weight = FontWeight::Bold;
         p.elements.push(InlineElement::Text(TextRun::new("plain ")));
-        p.elements.push(InlineElement::Text(TextRun::styled("bold", bold)));
-        let text = StyledText { paragraphs: vec![p] };
+        p.elements
+            .push(InlineElement::Text(TextRun::styled("bold", bold)));
+        let text = StyledText {
+            paragraphs: vec![p],
+        };
         let styles = styles_in(&text, Some((TextPos::new(0, 6), TextPos::new(0, 10))));
         assert!(styles.iter().all(|s| s.font.weight == FontWeight::Bold));
         assert_eq!(styles_in(&text, None).len(), 2);

@@ -1,8 +1,8 @@
 //! Text Wrap dialog for configuring how text flows around objects.
 
 use egui::{Color32, DragValue, Vec2};
-use repub_model::ObjectId;
 use repub_model::styles::{TextWrap, TextWrapSide, TextWrapStyle};
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::theme::{colors, fonts, section_header};
@@ -117,7 +117,12 @@ impl TextWrapDialog {
                         ui.horizontal(|ui| {
                             ui.add_space(12.0);
                             ui.add_sized(Vec2::new(60.0, 20.0), egui::Label::new(label));
-                            ui.add(DragValue::new(value).speed(0.5).suffix(" pt").range(0.0..=100.0));
+                            ui.add(
+                                DragValue::new(value)
+                                    .speed(0.5)
+                                    .suffix(" pt")
+                                    .range(0.0..=100.0),
+                            );
                         });
                     }
                 }
@@ -133,7 +138,10 @@ impl TextWrapDialog {
                         result = Some(false);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+                        if ui
+                            .add(egui::Button::new("OK").fill(colors::accent()))
+                            .clicked()
+                        {
                             if let Some(obj_id) = self.object_id {
                                 self.apply_changes(state, obj_id);
                             }
@@ -147,7 +155,12 @@ impl TextWrapDialog {
         result
     }
 
-    fn wrap_style_button(&self, ui: &mut egui::Ui, style: TextWrapStyle, selected: bool) -> egui::Response {
+    fn wrap_style_button(
+        &self,
+        ui: &mut egui::Ui,
+        style: TextWrapStyle,
+        selected: bool,
+    ) -> egui::Response {
         let size = Vec2::new(50.0, 50.0);
         let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
@@ -162,19 +175,33 @@ impl TextWrapDialog {
             };
             painter.rect_filled(rect, 4.0, bg_color);
 
-            let border_color = if selected { colors::accent_hover() } else { colors::border() };
+            let border_color = if selected {
+                colors::accent_hover()
+            } else {
+                colors::border()
+            };
             painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, border_color));
 
             // Draw wrap style icon
             let icon_rect = rect.shrink(8.0);
-            let text_color = if selected { Color32::WHITE } else { colors::text_primary() };
+            let text_color = if selected {
+                Color32::WHITE
+            } else {
+                colors::text_primary()
+            };
             self.draw_wrap_style_icon(painter, icon_rect, style, text_color);
         }
 
         response.on_hover_text(style.name())
     }
 
-    fn draw_wrap_style_icon(&self, painter: &egui::Painter, rect: egui::Rect, style: TextWrapStyle, color: Color32) {
+    fn draw_wrap_style_icon(
+        &self,
+        painter: &egui::Painter,
+        rect: egui::Rect,
+        style: TextWrapStyle,
+        color: Color32,
+    ) {
         let center = rect.center();
         let obj_rect = egui::Rect::from_center_size(center, Vec2::splat(12.0));
         painter.rect_filled(obj_rect, 2.0, color);
@@ -187,30 +214,62 @@ impl TextWrapDialog {
             TextWrapStyle::None => {
                 for i in 0..4 {
                     let y = rect.top() + 4.0 + (i as f32) * line_spacing;
-                    painter.hline(rect.x_range(), y, egui::Stroke::new(line_height, line_color));
+                    painter.hline(
+                        rect.x_range(),
+                        y,
+                        egui::Stroke::new(line_height, line_color),
+                    );
                 }
             }
             TextWrapStyle::Square | TextWrapStyle::Tight => {
                 for i in 0..4 {
                     let y = rect.top() + 4.0 + (i as f32) * line_spacing;
                     if y > obj_rect.top() - 2.0 && y < obj_rect.bottom() + 2.0 {
-                        painter.hline(rect.left()..=obj_rect.left() - 2.0, y, egui::Stroke::new(line_height, line_color));
-                        painter.hline(obj_rect.right() + 2.0..=rect.right(), y, egui::Stroke::new(line_height, line_color));
+                        painter.hline(
+                            rect.left()..=obj_rect.left() - 2.0,
+                            y,
+                            egui::Stroke::new(line_height, line_color),
+                        );
+                        painter.hline(
+                            obj_rect.right() + 2.0..=rect.right(),
+                            y,
+                            egui::Stroke::new(line_height, line_color),
+                        );
                     } else {
-                        painter.hline(rect.x_range(), y, egui::Stroke::new(line_height, line_color));
+                        painter.hline(
+                            rect.x_range(),
+                            y,
+                            egui::Stroke::new(line_height, line_color),
+                        );
                     }
                 }
             }
             TextWrapStyle::Through => {
                 for i in 0..4 {
                     let y = rect.top() + 4.0 + (i as f32) * line_spacing;
-                    painter.hline(rect.x_range(), y, egui::Stroke::new(line_height, line_color));
+                    painter.hline(
+                        rect.x_range(),
+                        y,
+                        egui::Stroke::new(line_height, line_color),
+                    );
                 }
             }
             TextWrapStyle::TopAndBottom => {
-                painter.hline(rect.x_range(), rect.top() + 2.0, egui::Stroke::new(line_height, line_color));
-                painter.hline(rect.x_range(), rect.top() + 6.0, egui::Stroke::new(line_height, line_color));
-                painter.hline(rect.x_range(), rect.bottom() - 4.0, egui::Stroke::new(line_height, line_color));
+                painter.hline(
+                    rect.x_range(),
+                    rect.top() + 2.0,
+                    egui::Stroke::new(line_height, line_color),
+                );
+                painter.hline(
+                    rect.x_range(),
+                    rect.top() + 6.0,
+                    egui::Stroke::new(line_height, line_color),
+                );
+                painter.hline(
+                    rect.x_range(),
+                    rect.bottom() - 4.0,
+                    egui::Stroke::new(line_height, line_color),
+                );
             }
         }
     }

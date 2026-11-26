@@ -57,7 +57,10 @@ mod tests {
         let opts = RasterExportOptions::png(72.0);
         let bytes = export_image_bytes(&doc, 0, &opts, &fonts).unwrap();
         // PNG magic.
-        assert_eq!(&bytes[0..8], &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &bytes[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
         assert!(bytes.len() > 100);
     }
 
@@ -81,7 +84,10 @@ mod tests {
         let path = std::env::temp_dir().join("repub_raster_test.png");
         export_png(&doc, 0, &path, &RasterExportOptions::png(72.0), &fonts).unwrap();
         let data = std::fs::read(&path).unwrap();
-        assert_eq!(&data[0..8], &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &data[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
         let _ = std::fs::remove_file(&path);
     }
 

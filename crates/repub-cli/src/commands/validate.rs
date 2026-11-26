@@ -145,8 +145,14 @@ pub fn run(args: ValidateArgs, opts: &GlobalOptions) -> Result<()> {
     }
 
     // Calculate summary
-    let errors = issues.iter().filter(|i| matches!(i.severity, Severity::Error)).count();
-    let warnings = issues.iter().filter(|i| matches!(i.severity, Severity::Warning)).count();
+    let errors = issues
+        .iter()
+        .filter(|i| matches!(i.severity, Severity::Error))
+        .count();
+    let warnings = issues
+        .iter()
+        .filter(|i| matches!(i.severity, Severity::Warning))
+        .count();
 
     let result = ValidationResult {
         valid: errors == 0,
@@ -160,7 +166,10 @@ pub fn run(args: ValidateArgs, opts: &GlobalOptions) -> Result<()> {
     if result.valid {
         output::success("Document is valid", opts);
     } else {
-        output::warn(format!("Found {} error(s) and {} warning(s)", errors, warnings), opts);
+        output::warn(
+            format!("Found {} error(s) and {} warning(s)", errors, warnings),
+            opts,
+        );
     }
 
     // Fix mode
@@ -171,12 +180,7 @@ pub fn run(args: ValidateArgs, opts: &GlobalOptions) -> Result<()> {
     Ok(())
 }
 
-fn validate_object(
-    obj: &Shape,
-    issues: &mut Vec<ValidationIssue>,
-    page: usize,
-    layer: &str,
-) {
+fn validate_object(obj: &Shape, issues: &mut Vec<ValidationIssue>, page: usize, layer: &str) {
     let location = Some(format!("Page {}, Layer '{}'", page, layer));
     let bounds = &obj.common.bounds;
 

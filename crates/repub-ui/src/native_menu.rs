@@ -5,7 +5,8 @@
 
 use muda::{
     accelerator::{Accelerator, Code, Modifiers},
-    CheckMenuItem, ContextMenu, Menu, MenuEvent, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu,
+    CheckMenuItem, ContextMenu, Menu, MenuEvent, MenuItem, MenuItemKind, PredefinedMenuItem,
+    Submenu,
 };
 use std::sync::mpsc;
 
@@ -18,7 +19,7 @@ pub enum MenuId {
     Save,
     SaveAs,
     Export,
-    
+
     // Edit
     Undo,
     Redo,
@@ -27,7 +28,7 @@ pub enum MenuId {
     Paste,
     Duplicate,
     SelectAll,
-    
+
     // View
     ZoomIn,
     ZoomOut,
@@ -36,7 +37,7 @@ pub enum MenuId {
     ToggleRulers,
     ToggleGrid,
     ToggleGuides,
-    
+
     // Insert
     InsertText,
     InsertImage,
@@ -44,7 +45,7 @@ pub enum MenuId {
     InsertEllipse,
     InsertLine,
     AddPage,
-    
+
     // Arrange
     BringToFront,
     BringForward,
@@ -52,7 +53,7 @@ pub enum MenuId {
     SendToBack,
     Group,
     Ungroup,
-    
+
     // Help
     About,
 
@@ -241,13 +242,13 @@ fn cmd() -> Modifiers {
 /// Create the native menu bar.
 pub fn create_menu() -> (Menu, mpsc::Receiver<MenuEvent>) {
     let menu = Menu::new();
-    
+
     // Set up menu event channel
     let (tx, rx) = mpsc::channel();
     MenuEvent::set_event_handler(Some(move |event| {
         let _ = tx.send(event);
     }));
-    
+
     // === App menu (macOS only, but muda handles this) ===
     let app_menu = Submenu::new("Repub", true);
     app_menu.append(&PredefinedMenuItem::about(None, None)).ok();
@@ -260,131 +261,272 @@ pub fn create_menu() -> (Menu, mpsc::Receiver<MenuEvent>) {
     app_menu.append(&PredefinedMenuItem::separator()).ok();
     // Our own Quit (not the predefined one, which terminates immediately) so
     // unsaved changes are offered for saving first
-    let quit_item = MenuItem::with_id("quit", "Quit Repub", true, Some(Accelerator::new(cmd(), Code::KeyQ)));
+    let quit_item = MenuItem::with_id(
+        "quit",
+        "Quit Repub",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyQ)),
+    );
     app_menu.append(&quit_item).ok();
     menu.append(&app_menu).ok();
-    
+
     // === File menu ===
     let file_menu = Submenu::new("File", true);
-    
-    let new_item = MenuItem::with_id("new", "New...", true, Some(Accelerator::new(cmd(), Code::KeyN)));
-    let open_item = MenuItem::with_id("open", "Open...", true, Some(Accelerator::new(cmd(), Code::KeyO)));
-    let save_item = MenuItem::with_id("save", "Save", true, Some(Accelerator::new(cmd(), Code::KeyS)));
-    let save_as_item = MenuItem::with_id("save_as", "Save As...", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyS)));
+
+    let new_item = MenuItem::with_id(
+        "new",
+        "New...",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyN)),
+    );
+    let open_item = MenuItem::with_id(
+        "open",
+        "Open...",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyO)),
+    );
+    let save_item = MenuItem::with_id(
+        "save",
+        "Save",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyS)),
+    );
+    let save_as_item = MenuItem::with_id(
+        "save_as",
+        "Save As...",
+        true,
+        Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyS)),
+    );
     // No shortcut: Cmd+E is Center (text alignment), as in Publisher
     let export_item = MenuItem::with_id("export", "Export...", true, None);
-    let print_item = MenuItem::with_id("print", "Print...", true, Some(Accelerator::new(cmd(), Code::KeyP)));
-    
+    let print_item = MenuItem::with_id(
+        "print",
+        "Print...",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyP)),
+    );
+
     file_menu.append(&new_item).ok();
-    file_menu.append(&MenuItem::with_id("cmd.new_from_template", "New from Template…", true, None)).ok();
+    file_menu
+        .append(&MenuItem::with_id(
+            "cmd.new_from_template",
+            "New from Template…",
+            true,
+            None,
+        ))
+        .ok();
     file_menu.append(&open_item).ok();
     file_menu.append(&PredefinedMenuItem::separator()).ok();
     file_menu.append(&save_item).ok();
     file_menu.append(&save_as_item).ok();
     file_menu.append(&PredefinedMenuItem::separator()).ok();
-    file_menu.append(&MenuItem::with_id("cmd.document_properties", "Document Properties…", true, None)).ok();
+    file_menu
+        .append(&MenuItem::with_id(
+            "cmd.document_properties",
+            "Document Properties…",
+            true,
+            None,
+        ))
+        .ok();
     file_menu.append(&PredefinedMenuItem::separator()).ok();
     file_menu.append(&export_item).ok();
     file_menu.append(&print_item).ok();
     file_menu.append(&PredefinedMenuItem::separator()).ok();
-    file_menu.append(&PredefinedMenuItem::close_window(None)).ok();
+    file_menu
+        .append(&PredefinedMenuItem::close_window(None))
+        .ok();
     menu.append(&file_menu).ok();
-    
+
     // === Edit menu ===
     let edit_menu = Submenu::new("Edit", true);
-    
+
     // Use custom menu items for undo/redo so we receive the events
     // (PredefinedMenuItem::undo/redo are handled by the system for text fields only)
-    let undo_item = MenuItem::with_id("undo", "Undo", true, Some(Accelerator::new(cmd(), Code::KeyZ)));
-    let redo_item = MenuItem::with_id("redo", "Redo", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyZ)));
+    let undo_item = MenuItem::with_id(
+        "undo",
+        "Undo",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyZ)),
+    );
+    let redo_item = MenuItem::with_id(
+        "redo",
+        "Redo",
+        true,
+        Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyZ)),
+    );
     edit_menu.append(&undo_item).ok();
     edit_menu.append(&redo_item).ok();
     edit_menu.append(&PredefinedMenuItem::separator()).ok();
-    
+
     // Use custom menu items for cut/copy/paste so we can handle them for canvas objects
-    let cut_item = MenuItem::with_id("cut", "Cut", true, Some(Accelerator::new(cmd(), Code::KeyX)));
-    let copy_item = MenuItem::with_id("copy", "Copy", true, Some(Accelerator::new(cmd(), Code::KeyC)));
-    let paste_item = MenuItem::with_id("paste", "Paste", true, Some(Accelerator::new(cmd(), Code::KeyV)));
+    let cut_item = MenuItem::with_id(
+        "cut",
+        "Cut",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyX)),
+    );
+    let copy_item = MenuItem::with_id(
+        "copy",
+        "Copy",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyC)),
+    );
+    let paste_item = MenuItem::with_id(
+        "paste",
+        "Paste",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyV)),
+    );
     edit_menu.append(&cut_item).ok();
     edit_menu.append(&copy_item).ok();
     edit_menu.append(&paste_item).ok();
-    
-    let duplicate_item = MenuItem::with_id("duplicate", "Duplicate", true, Some(Accelerator::new(cmd(), Code::KeyD)));
+
+    let duplicate_item = MenuItem::with_id(
+        "duplicate",
+        "Duplicate",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyD)),
+    );
     edit_menu.append(&duplicate_item).ok();
-    
+
     edit_menu.append(&PredefinedMenuItem::separator()).ok();
-    let select_all_item = MenuItem::with_id("select_all", "Select All", true, Some(Accelerator::new(cmd(), Code::KeyA)));
+    let select_all_item = MenuItem::with_id(
+        "select_all",
+        "Select All",
+        true,
+        Some(Accelerator::new(cmd(), Code::KeyA)),
+    );
     edit_menu.append(&select_all_item).ok();
     menu.append(&edit_menu).ok();
-    
+
     // === View menu ===
     let view_menu = Submenu::new("View", true);
-    
-    let zoom_in = MenuItem::with_id("zoom_in", "Zoom In", true, Some(Accelerator::new(cmd(), Code::Equal)));
-    let zoom_out = MenuItem::with_id("zoom_out", "Zoom Out", true, Some(Accelerator::new(cmd(), Code::Minus)));
-    let zoom_actual = MenuItem::with_id("zoom_actual", "Actual Size", true, Some(Accelerator::new(cmd(), Code::Digit1)));
-    let zoom_fit = MenuItem::with_id("zoom_fit", "Fit to Window", true, Some(Accelerator::new(cmd(), Code::Digit0)));
-    
+
+    let zoom_in = MenuItem::with_id(
+        "zoom_in",
+        "Zoom In",
+        true,
+        Some(Accelerator::new(cmd(), Code::Equal)),
+    );
+    let zoom_out = MenuItem::with_id(
+        "zoom_out",
+        "Zoom Out",
+        true,
+        Some(Accelerator::new(cmd(), Code::Minus)),
+    );
+    let zoom_actual = MenuItem::with_id(
+        "zoom_actual",
+        "Actual Size",
+        true,
+        Some(Accelerator::new(cmd(), Code::Digit1)),
+    );
+    let zoom_fit = MenuItem::with_id(
+        "zoom_fit",
+        "Fit to Window",
+        true,
+        Some(Accelerator::new(cmd(), Code::Digit0)),
+    );
+
     view_menu.append(&zoom_in).ok();
     view_menu.append(&zoom_out).ok();
     view_menu.append(&zoom_actual).ok();
     view_menu.append(&zoom_fit).ok();
     view_menu.append(&PredefinedMenuItem::separator()).ok();
-    
+
     // Ticks follow the app state (`sync_view_checks`)
     let toggle_rulers = CheckMenuItem::with_id("toggle_rulers", "Show Rulers", true, true, None);
     let toggle_grid = CheckMenuItem::with_id("toggle_grid", "Show Grid", true, false, None);
     let toggle_guides = CheckMenuItem::with_id("toggle_guides", "Show Guides", true, true, None);
-    
+
     view_menu.append(&toggle_rulers).ok();
     view_menu.append(&toggle_grid).ok();
     view_menu.append(&toggle_guides).ok();
     view_menu.append(&PredefinedMenuItem::separator()).ok();
-    for (id, label) in [("cmd.toggle_pages", "Page Navigation"), ("cmd.toggle_selection", "Selection Pane")] {
-        view_menu.append(&CheckMenuItem::with_id(id, label, true, false, None)).ok();
+    for (id, label) in [
+        ("cmd.toggle_pages", "Page Navigation"),
+        ("cmd.toggle_selection", "Selection Pane"),
+    ] {
+        view_menu
+            .append(&CheckMenuItem::with_id(id, label, true, false, None))
+            .ok();
     }
     view_menu.append(&PredefinedMenuItem::separator()).ok();
-    view_menu.append(&CheckMenuItem::with_id("cmd.toggle_spread", "Two-Page Spread", true, false, None)).ok();
+    view_menu
+        .append(&CheckMenuItem::with_id(
+            "cmd.toggle_spread",
+            "Two-Page Spread",
+            true,
+            false,
+            None,
+        ))
+        .ok();
     view_menu.append(&PredefinedMenuItem::separator()).ok();
     view_menu.append(&PredefinedMenuItem::fullscreen(None)).ok();
     menu.append(&view_menu).ok();
-    
+
     // === Insert menu ===
     let insert_menu = Submenu::new("Insert", true);
-    
+
     // Publisher's names
     let insert_text = MenuItem::with_id("insert_text", "Text Box", true, None);
     let insert_image = MenuItem::with_id("insert_image", "Picture…", true, None);
-    
+
     insert_menu.append(&insert_text).ok();
     insert_menu.append(&insert_image).ok();
-    insert_menu.append(&MenuItem::with_id("cmd.insert_table", "Table", true, None)).ok();
+    insert_menu
+        .append(&MenuItem::with_id("cmd.insert_table", "Table", true, None))
+        .ok();
     insert_menu.append(&PredefinedMenuItem::separator()).ok();
-    
+
     // Shape submenu
     let shape_menu = Submenu::new("Shape", true);
     let insert_rect = MenuItem::with_id("insert_rectangle", "Rectangle", true, None);
     let insert_ellipse = MenuItem::with_id("insert_ellipse", "Oval", true, None);
     let insert_line = MenuItem::with_id("insert_line", "Line", true, None);
-    
+
     shape_menu.append(&insert_rect).ok();
     shape_menu.append(&insert_ellipse).ok();
     shape_menu.append(&insert_line).ok();
-    shape_menu.append(&MenuItem::with_id("cmd.insert_polygon", "Polygon", true, None)).ok();
-    shape_menu.append(&MenuItem::with_id("cmd.insert_star", "Star", true, None)).ok();
+    shape_menu
+        .append(&MenuItem::with_id(
+            "cmd.insert_polygon",
+            "Polygon",
+            true,
+            None,
+        ))
+        .ok();
+    shape_menu
+        .append(&MenuItem::with_id("cmd.insert_star", "Star", true, None))
+        .ok();
     insert_menu.append(&shape_menu).ok();
-    
+
     insert_menu.append(&PredefinedMenuItem::separator()).ok();
     let add_page = MenuItem::with_id("add_page", "New Page", true, None);
     insert_menu.append(&add_page).ok();
-    insert_menu.append(&MenuItem::with_id("cmd.insert_page_number", "Page Number", true, None)).ok();
+    insert_menu
+        .append(&MenuItem::with_id(
+            "cmd.insert_page_number",
+            "Page Number",
+            true,
+            None,
+        ))
+        .ok();
     insert_menu.append(&PredefinedMenuItem::separator()).ok();
-    insert_menu.append(&MenuItem::with_id("cmd.insert_hyperlink", "Hyperlink…", true, Some(Accelerator::new(cmd(), Code::KeyK)))).ok();
+    insert_menu
+        .append(&MenuItem::with_id(
+            "cmd.insert_hyperlink",
+            "Hyperlink…",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyK)),
+        ))
+        .ok();
     menu.append(&insert_menu).ok();
 
     // === Format menu === (shortcuts as on the keyboard; on macOS the menu takes the key)
     let format_menu = Submenu::new("Format", true);
-    let item = |id: &str, label: &str, key: Option<(Modifiers, Code)>| MenuItem::with_id(id, label, true, key.map(|(m, c)| Accelerator::new(m, c)));
+    let item = |id: &str, label: &str, key: Option<(Modifiers, Code)>| {
+        MenuItem::with_id(id, label, true, key.map(|(m, c)| Accelerator::new(m, c)))
+    };
     let cmd_m = cmd();
     type Entry<'a> = Option<(&'a str, &'a str, Option<(Modifiers, Code)>)>;
     let entries: [Entry; 33] = [
@@ -396,15 +538,35 @@ pub fn create_menu() -> (Menu, mpsc::Receiver<MenuEvent>) {
         Some(("cmd.underline", "Underline", Some((cmd_m, Code::KeyU)))),
         Some(("cmd.superscript", "Superscript", None)),
         Some(("cmd.subscript", "Subscript", None)),
-        Some(("cmd.grow_font", "Grow Font", Some((cmd_m | Modifiers::SHIFT, Code::Period)))),
-        Some(("cmd.shrink_font", "Shrink Font", Some((cmd_m | Modifiers::SHIFT, Code::Comma)))),
+        Some((
+            "cmd.grow_font",
+            "Grow Font",
+            Some((cmd_m | Modifiers::SHIFT, Code::Period)),
+        )),
+        Some((
+            "cmd.shrink_font",
+            "Shrink Font",
+            Some((cmd_m | Modifiers::SHIFT, Code::Comma)),
+        )),
         None,
-        Some(("cmd.align_left", "Align Text Left", Some((cmd_m, Code::KeyL)))),
+        Some((
+            "cmd.align_left",
+            "Align Text Left",
+            Some((cmd_m, Code::KeyL)),
+        )),
         Some(("cmd.align_center", "Center", Some((cmd_m, Code::KeyE)))),
-        Some(("cmd.align_right", "Align Text Right", Some((cmd_m, Code::KeyR)))),
+        Some((
+            "cmd.align_right",
+            "Align Text Right",
+            Some((cmd_m, Code::KeyR)),
+        )),
         Some(("cmd.align_justify", "Justify", Some((cmd_m, Code::KeyJ)))),
         None,
-        Some(("cmd.bullets", "Bullets", Some((cmd_m | Modifiers::SHIFT, Code::KeyL)))),
+        Some((
+            "cmd.bullets",
+            "Bullets",
+            Some((cmd_m | Modifiers::SHIFT, Code::KeyL)),
+        )),
         Some(("cmd.numbering", "Numbering", None)),
         Some(("cmd.indent_more", "Increase Indent", None)),
         Some(("cmd.indent_less", "Decrease Indent", None)),
@@ -429,22 +591,62 @@ pub fn create_menu() -> (Menu, mpsc::Receiver<MenuEvent>) {
         };
     }
     menu.append(&format_menu).ok();
-    
+
     // === Arrange menu ===
     let arrange_menu = Submenu::new("Arrange", true);
-    
-    let bring_front = MenuItem::with_id("bring_to_front", "Bring to Front", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::BracketRight)));
-    let bring_forward = MenuItem::with_id("bring_forward", "Bring Forward", true, Some(Accelerator::new(cmd(), Code::BracketRight)));
-    let send_backward = MenuItem::with_id("send_backward", "Send Backward", true, Some(Accelerator::new(cmd(), Code::BracketLeft)));
-    let send_back = MenuItem::with_id("send_to_back", "Send to Back", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::BracketLeft)));
-    
+
+    let bring_front = MenuItem::with_id(
+        "bring_to_front",
+        "Bring to Front",
+        true,
+        Some(Accelerator::new(
+            cmd() | Modifiers::SHIFT,
+            Code::BracketRight,
+        )),
+    );
+    let bring_forward = MenuItem::with_id(
+        "bring_forward",
+        "Bring Forward",
+        true,
+        Some(Accelerator::new(cmd(), Code::BracketRight)),
+    );
+    let send_backward = MenuItem::with_id(
+        "send_backward",
+        "Send Backward",
+        true,
+        Some(Accelerator::new(cmd(), Code::BracketLeft)),
+    );
+    let send_back = MenuItem::with_id(
+        "send_to_back",
+        "Send to Back",
+        true,
+        Some(Accelerator::new(
+            cmd() | Modifiers::SHIFT,
+            Code::BracketLeft,
+        )),
+    );
+
     arrange_menu.append(&bring_front).ok();
     arrange_menu.append(&bring_forward).ok();
     arrange_menu.append(&send_backward).ok();
     arrange_menu.append(&send_back).ok();
     arrange_menu.append(&PredefinedMenuItem::separator()).ok();
-    arrange_menu.append(&MenuItem::with_id("group", "Group", true, Some(Accelerator::new(cmd(), Code::KeyG)))).ok();
-    arrange_menu.append(&MenuItem::with_id("ungroup", "Ungroup", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyG)))).ok();
+    arrange_menu
+        .append(&MenuItem::with_id(
+            "group",
+            "Group",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyG)),
+        ))
+        .ok();
+    arrange_menu
+        .append(&MenuItem::with_id(
+            "ungroup",
+            "Ungroup",
+            true,
+            Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyG)),
+        ))
+        .ok();
     arrange_menu.append(&PredefinedMenuItem::separator()).ok();
     let align_menu = Submenu::new("Align", true);
     for (id, label) in [
@@ -455,30 +657,41 @@ pub fn create_menu() -> (Menu, mpsc::Receiver<MenuEvent>) {
         ("cmd.obj_align_middle", "Align Middle"),
         ("cmd.obj_align_bottom", "Align Bottom"),
     ] {
-        align_menu.append(&MenuItem::with_id(id, label, true, None)).ok();
+        align_menu
+            .append(&MenuItem::with_id(id, label, true, None))
+            .ok();
     }
     arrange_menu.append(&align_menu).ok();
     let rotate_menu = Submenu::new("Rotate", true);
-    for (id, label) in [("cmd.rotate_right", "Rotate Right 90°"), ("cmd.rotate_left", "Rotate Left 90°"), ("cmd.flip_v", "Flip Vertical"), ("cmd.flip_h", "Flip Horizontal")] {
-        rotate_menu.append(&MenuItem::with_id(id, label, true, None)).ok();
+    for (id, label) in [
+        ("cmd.rotate_right", "Rotate Right 90°"),
+        ("cmd.rotate_left", "Rotate Left 90°"),
+        ("cmd.flip_v", "Flip Vertical"),
+        ("cmd.flip_h", "Flip Horizontal"),
+    ] {
+        rotate_menu
+            .append(&MenuItem::with_id(id, label, true, None))
+            .ok();
     }
     arrange_menu.append(&rotate_menu).ok();
     menu.append(&arrange_menu).ok();
-    
+
     // === Window menu ===
     let window_menu = Submenu::new("Window", true);
     window_menu.append(&PredefinedMenuItem::minimize(None)).ok();
     window_menu.append(&PredefinedMenuItem::maximize(None)).ok();
     window_menu.append(&PredefinedMenuItem::separator()).ok();
-    window_menu.append(&PredefinedMenuItem::fullscreen(None)).ok();
+    window_menu
+        .append(&PredefinedMenuItem::fullscreen(None))
+        .ok();
     menu.append(&window_menu).ok();
-    
+
     // === Help menu ===
     let help_menu = Submenu::new("Help", true);
     let about = MenuItem::with_id("about", "About Repub", true, None);
     help_menu.append(&about).ok();
     menu.append(&help_menu).ok();
-    
+
     (menu, rx)
 }
 
@@ -500,7 +713,9 @@ pub fn force_light_appearance() {
     use objc2_app_kit::{NSApp, NSAppearance, NSAppearanceNameAqua};
     use objc2_foundation::MainThreadMarker;
 
-    let Some(mtm) = MainThreadMarker::new() else { return };
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
     let app = NSApp(mtm);
     // SAFETY: NSAppearanceNameAqua is a valid, static AppKit appearance name.
     #[allow(unsafe_code)]
@@ -512,7 +727,6 @@ pub fn force_light_appearance() {
 
 #[cfg(not(target_os = "macos"))]
 pub fn force_light_appearance() {}
-
 
 /// Context menu types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -555,11 +769,36 @@ pub struct CanvasContextMenu {
 impl CanvasContextMenu {
     fn new() -> Self {
         let menu = Menu::new();
-        let paste = MenuItem::with_id("paste", "Paste", true, Some(Accelerator::new(cmd(), Code::KeyV)));
-        let paste_in_place = MenuItem::with_id("paste_in_place", "Paste in Place", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyV)));
-        let select_all = MenuItem::with_id("select_all", "Select All", true, Some(Accelerator::new(cmd(), Code::KeyA)));
-        let zoom_fit = MenuItem::with_id("zoom_fit", "Whole Page", true, Some(Accelerator::new(cmd(), Code::Digit0)));
-        let zoom_actual = MenuItem::with_id("zoom_actual", "Actual Size", true, Some(Accelerator::new(cmd(), Code::Digit1)));
+        let paste = MenuItem::with_id(
+            "paste",
+            "Paste",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyV)),
+        );
+        let paste_in_place = MenuItem::with_id(
+            "paste_in_place",
+            "Paste in Place",
+            true,
+            Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyV)),
+        );
+        let select_all = MenuItem::with_id(
+            "select_all",
+            "Select All",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyA)),
+        );
+        let zoom_fit = MenuItem::with_id(
+            "zoom_fit",
+            "Whole Page",
+            true,
+            Some(Accelerator::new(cmd(), Code::Digit0)),
+        );
+        let zoom_actual = MenuItem::with_id(
+            "zoom_actual",
+            "Actual Size",
+            true,
+            Some(Accelerator::new(cmd(), Code::Digit1)),
+        );
         menu.append(&paste).ok();
         menu.append(&paste_in_place).ok();
         menu.append(&PredefinedMenuItem::separator()).ok();
@@ -567,7 +806,11 @@ impl CanvasContextMenu {
         menu.append(&PredefinedMenuItem::separator()).ok();
         menu.append(&zoom_fit).ok();
         menu.append(&zoom_actual).ok();
-        Self { menu, paste, paste_in_place }
+        Self {
+            menu,
+            paste,
+            paste_in_place,
+        }
     }
 
     fn update(&self, state: &ContextMenuState) {
@@ -596,10 +839,30 @@ pub struct ObjectContextMenu {
 impl ObjectContextMenu {
     fn new() -> Self {
         let menu = Menu::new();
-        let cut = MenuItem::with_id("cut", "Cut", true, Some(Accelerator::new(cmd(), Code::KeyX)));
-        let copy = MenuItem::with_id("copy", "Copy", true, Some(Accelerator::new(cmd(), Code::KeyC)));
-        let paste = MenuItem::with_id("paste", "Paste", true, Some(Accelerator::new(cmd(), Code::KeyV)));
-        let duplicate = MenuItem::with_id("duplicate", "Duplicate", true, Some(Accelerator::new(cmd(), Code::KeyD)));
+        let cut = MenuItem::with_id(
+            "cut",
+            "Cut",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyX)),
+        );
+        let copy = MenuItem::with_id(
+            "copy",
+            "Copy",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyC)),
+        );
+        let paste = MenuItem::with_id(
+            "paste",
+            "Paste",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyV)),
+        );
+        let duplicate = MenuItem::with_id(
+            "duplicate",
+            "Duplicate",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyD)),
+        );
         let delete = MenuItem::with_id("delete", "Delete", true, None);
         // Object-specific commands first, as in Publisher
         let edit_text = MenuItem::with_id("edit_text", "Edit Text", true, None);
@@ -608,15 +871,29 @@ impl ObjectContextMenu {
         menu.append(&change_picture).ok();
         // Table: at the cell right-clicked
         let table_insert = Submenu::new("Insert", true);
-        for (id, label) in [("table_row_above", "Insert Row Above"), ("table_row_below", "Insert Row Below"), ("table_col_left", "Insert Column Left"), ("table_col_right", "Insert Column Right")] {
-            table_insert.append(&MenuItem::with_id(id, label, true, None)).ok();
+        for (id, label) in [
+            ("table_row_above", "Insert Row Above"),
+            ("table_row_below", "Insert Row Below"),
+            ("table_col_left", "Insert Column Left"),
+            ("table_col_right", "Insert Column Right"),
+        ] {
+            table_insert
+                .append(&MenuItem::with_id(id, label, true, None))
+                .ok();
         }
         let table_delete = Submenu::new("Delete", true);
         let table_delete_row = MenuItem::with_id("table_delete_row", "Delete Row", true, None);
         let table_delete_col = MenuItem::with_id("table_delete_col", "Delete Column", true, None);
         table_delete.append(&table_delete_row).ok();
         table_delete.append(&table_delete_col).ok();
-        table_delete.append(&MenuItem::with_id("table_delete", "Delete Table", true, None)).ok();
+        table_delete
+            .append(&MenuItem::with_id(
+                "table_delete",
+                "Delete Table",
+                true,
+                None,
+            ))
+            .ok();
         menu.append(&PredefinedMenuItem::separator()).ok();
         menu.append(&cut).ok();
         menu.append(&copy).ok();
@@ -627,20 +904,77 @@ impl ObjectContextMenu {
         menu.append(&PredefinedMenuItem::separator()).ok();
 
         let arrange_menu = Submenu::new("Arrange", true);
-        arrange_menu.append(&MenuItem::with_id("bring_to_front", "Bring to Front", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::BracketRight)))).ok();
-        arrange_menu.append(&MenuItem::with_id("bring_forward", "Bring Forward", true, Some(Accelerator::new(cmd(), Code::BracketRight)))).ok();
-        arrange_menu.append(&MenuItem::with_id("send_backward", "Send Backward", true, Some(Accelerator::new(cmd(), Code::BracketLeft)))).ok();
-        arrange_menu.append(&MenuItem::with_id("send_to_back", "Send to Back", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::BracketLeft)))).ok();
+        arrange_menu
+            .append(&MenuItem::with_id(
+                "bring_to_front",
+                "Bring to Front",
+                true,
+                Some(Accelerator::new(
+                    cmd() | Modifiers::SHIFT,
+                    Code::BracketRight,
+                )),
+            ))
+            .ok();
+        arrange_menu
+            .append(&MenuItem::with_id(
+                "bring_forward",
+                "Bring Forward",
+                true,
+                Some(Accelerator::new(cmd(), Code::BracketRight)),
+            ))
+            .ok();
+        arrange_menu
+            .append(&MenuItem::with_id(
+                "send_backward",
+                "Send Backward",
+                true,
+                Some(Accelerator::new(cmd(), Code::BracketLeft)),
+            ))
+            .ok();
+        arrange_menu
+            .append(&MenuItem::with_id(
+                "send_to_back",
+                "Send to Back",
+                true,
+                Some(Accelerator::new(
+                    cmd() | Modifiers::SHIFT,
+                    Code::BracketLeft,
+                )),
+            ))
+            .ok();
         menu.append(&arrange_menu).ok();
         menu.append(&PredefinedMenuItem::separator()).ok();
-        let group = MenuItem::with_id("group", "Group", true, Some(Accelerator::new(cmd(), Code::KeyG)));
-        let ungroup = MenuItem::with_id("ungroup", "Ungroup", true, Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyG)));
+        let group = MenuItem::with_id(
+            "group",
+            "Group",
+            true,
+            Some(Accelerator::new(cmd(), Code::KeyG)),
+        );
+        let ungroup = MenuItem::with_id(
+            "ungroup",
+            "Ungroup",
+            true,
+            Some(Accelerator::new(cmd() | Modifiers::SHIFT, Code::KeyG)),
+        );
         menu.append(&group).ok();
         menu.append(&ungroup).ok();
         menu.append(&PredefinedMenuItem::separator()).ok();
         let wrap_text = MenuItem::with_id("wrap_text", "Wrap Text…", true, None);
         menu.append(&wrap_text).ok();
-        Self { menu, paste, group, ungroup, edit_text, change_picture, wrap_text, table_insert, table_delete, table_delete_row, table_delete_col, table_shown: std::cell::Cell::new(false) }
+        Self {
+            menu,
+            paste,
+            group,
+            ungroup,
+            edit_text,
+            change_picture,
+            wrap_text,
+            table_insert,
+            table_delete,
+            table_delete_row,
+            table_delete_col,
+            table_shown: std::cell::Cell::new(false),
+        }
     }
 
     fn update(&self, state: &ContextMenuState) {
@@ -677,15 +1011,37 @@ impl PageContextMenu {
     fn new() -> Self {
         let menu = Menu::new();
         let delete = MenuItem::with_id("delete_page", "Delete Page", true, None);
-        menu.append(&MenuItem::with_id("add_page_above", "Insert Page Before", true, None)).ok();
-        menu.append(&MenuItem::with_id("add_page_below", "Insert Page After", true, None)).ok();
+        menu.append(&MenuItem::with_id(
+            "add_page_above",
+            "Insert Page Before",
+            true,
+            None,
+        ))
+        .ok();
+        menu.append(&MenuItem::with_id(
+            "add_page_below",
+            "Insert Page After",
+            true,
+            None,
+        ))
+        .ok();
         let insert_spread = MenuItem::with_id("insert_spread", "Insert Spread", true, None);
         menu.append(&insert_spread).ok();
         menu.append(&PredefinedMenuItem::separator()).ok();
-        menu.append(&MenuItem::with_id("duplicate_page", "Duplicate Page", true, None)).ok();
+        menu.append(&MenuItem::with_id(
+            "duplicate_page",
+            "Duplicate Page",
+            true,
+            None,
+        ))
+        .ok();
         menu.append(&PredefinedMenuItem::separator()).ok();
         menu.append(&delete).ok();
-        Self { menu, delete, insert_spread }
+        Self {
+            menu,
+            delete,
+            insert_spread,
+        }
     }
 
     fn update(&self, state: &ContextMenuState) {
@@ -701,52 +1057,52 @@ impl PageContextMenu {
 #[allow(unsafe_code)]
 pub fn show_context_menu(menu: &Menu, view_x: f64, view_y: f64) -> bool {
     use muda::dpi::LogicalPosition;
-    
+
     // On macOS, we need to get the NSView from the key window
     // This uses objc2 to access the current key window's content view
     unsafe {
         use objc2_app_kit::NSApp;
         use objc2_foundation::MainThreadMarker;
-        
+
         let mtm = match MainThreadMarker::new() {
             Some(m) => m,
             None => return false,
         };
-        
+
         let app = NSApp(mtm);
         let key_window = match app.keyWindow() {
             Some(w) => w,
             None => return false,
         };
-        
+
         let content_view = match key_window.contentView() {
             Some(v) => v,
             None => return false,
         };
-        
+
         // Get the content view frame height
         let view_frame = content_view.frame();
         let view_height = view_frame.size.height;
-        
+
         // egui Y=0 is at top, but muda expects coordinates that it will flip
         // using (view_height - y). Since egui already gives us top-origin coords,
         // we need to pre-flip so that muda's flip gives us the correct result.
-        // 
+        //
         // If egui says y=100 (100 from top), we want the menu at 100 from top.
         // muda will do: view_height - y, so we pass: view_height - 100
         // Then muda does: view_height - (view_height - 100) = 100 from bottom
         // which in NSView coords (bottom-origin) is 100 from bottom = correct!
         let flipped_y = view_height - view_y;
-        
+
         let position = LogicalPosition::new(view_x, flipped_y);
-        
+
         // Get raw pointer to NSView - muda expects *const c_void
         let ns_view_ptr: *const objc2_app_kit::NSView = &*content_view;
         let ns_view = ns_view_ptr as *const std::ffi::c_void;
-        
+
         menu.show_context_menu_for_nsview(ns_view, Some(position.into()));
     }
-    
+
     true
 }
 
@@ -780,12 +1136,17 @@ impl NativeContextMenus {
         self.object_menu.update(state);
         self.page_menu.update(state);
     }
-    
+
     /// Request to show a context menu at the next opportunity
-    pub fn request_context_menu(&mut self, menu_type: ContextMenuType, screen_x: f64, screen_y: f64) {
+    pub fn request_context_menu(
+        &mut self,
+        menu_type: ContextMenuType,
+        screen_x: f64,
+        screen_y: f64,
+    ) {
         self.pending_context_menu = Some((menu_type, screen_x, screen_y));
     }
-    
+
     /// Process pending context menu (call from main update loop)
     pub fn process_pending(&mut self) -> bool {
         if let Some((menu_type, x, y)) = self.pending_context_menu.take() {
@@ -828,7 +1189,9 @@ mod tests {
         assert!(ids.len() > 60, "found the ids: {}", ids.len());
         let dead: Vec<_> = ids
             .iter()
-            .filter(|id| command_action(id).is_none() && MenuId::from_id(&muda::MenuId::new(**id)).is_none())
+            .filter(|id| {
+                command_action(id).is_none() && MenuId::from_id(&muda::MenuId::new(**id)).is_none()
+            })
             .collect();
         assert!(dead.is_empty(), "menu items that do nothing: {dead:?}");
     }

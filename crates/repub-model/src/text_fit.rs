@@ -87,7 +87,8 @@ where
             if base_height <= frame_height {
                 TextFitResult::no_change(base_height, frame_height)
             } else {
-                let scale = find_fit_scale(frame_height, config.min_scale, 1.0, config, &measure_height);
+                let scale =
+                    find_fit_scale(frame_height, config.min_scale, 1.0, config, &measure_height);
                 TextFitResult {
                     scale,
                     overflows: false,
@@ -101,7 +102,8 @@ where
             if base_height >= frame_height {
                 TextFitResult::no_change(base_height, frame_height)
             } else {
-                let scale = find_fit_scale(frame_height, 1.0, config.max_scale, config, &measure_height);
+                let scale =
+                    find_fit_scale(frame_height, 1.0, config.max_scale, config, &measure_height);
                 let final_height = measure_height(scale);
                 TextFitResult {
                     scale,
@@ -113,7 +115,13 @@ where
         }
 
         TextFitMode::BestFit => {
-            let scale = find_fit_scale(frame_height, config.min_scale, config.max_scale, config, &measure_height);
+            let scale = find_fit_scale(
+                frame_height,
+                config.min_scale,
+                config.max_scale,
+                config,
+                &measure_height,
+            );
             let final_height = measure_height(scale);
             TextFitResult {
                 scale,

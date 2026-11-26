@@ -7,9 +7,9 @@
 //! unrotated frame, normalised to 0–1, so gradients rotate with the shape.
 
 use egui::{Color32, Mesh, Pos2, Shape};
+use repub_color::Color;
 use repub_geometry::Rect;
 use repub_model::styles::{Fill, GradientStop};
-use repub_color::Color;
 
 use crate::canvas::DocToScreen;
 
@@ -29,7 +29,11 @@ pub fn color_at(fill: &Fill, u: f64, v: f64) -> Color {
         Fill::LinearGradient(g) => {
             let (dx, dy) = (g.end.x - g.start.x, g.end.y - g.start.y);
             let len_sq = dx * dx + dy * dy;
-            let t = if len_sq > 0.0 { ((u - g.start.x) * dx + (v - g.start.y) * dy) / len_sq } else { 0.0 };
+            let t = if len_sq > 0.0 {
+                ((u - g.start.x) * dx + (v - g.start.y) * dy) / len_sq
+            } else {
+                0.0
+            };
             stop_color(&g.stops, t)
         }
         Fill::RadialGradient(g) => {
@@ -44,7 +48,9 @@ pub fn color_at(fill: &Fill, u: f64, v: f64) -> Color {
 
 /// Colour at position `t` along the stops (clamped to the end stops).
 fn stop_color(stops: &[GradientStop], t: f64) -> Color {
-    let Some(first) = stops.first() else { return Color::WHITE };
+    let Some(first) = stops.first() else {
+        return Color::WHITE;
+    };
     if t <= first.position {
         return first.color;
     }
@@ -54,7 +60,12 @@ fn stop_color(stops: &[GradientStop], t: f64) -> Color {
             let span = (b.position - a.position).max(1e-9);
             let k = ((t - a.position) / span).clamp(0.0, 1.0);
             let mix = |x: f64, y: f64| x + (y - x) * k;
-            return Color::new(mix(a.color.r, b.color.r), mix(a.color.g, b.color.g), mix(a.color.b, b.color.b), mix(a.color.a, b.color.a));
+            return Color::new(
+                mix(a.color.r, b.color.r),
+                mix(a.color.g, b.color.g),
+                mix(a.color.b, b.color.b),
+                mix(a.color.a, b.color.a),
+            );
         }
     }
     stops.last().map_or(first.color, |s| s.color)
@@ -63,19 +74,33 @@ fn stop_color(stops: &[GradientStop], t: f64) -> Color {
 /// Fill `outline` shapes (screen space, any flat colour) with `fill`.
 /// `frame` is the object's bounds and `rotation` its rotation in degrees;
 /// `alpha` fades the result (thumbnails of dragged pages).
-pub fn fill_shapes(outline: Vec<Shape>, fill: &Fill, frame: Rect, rotation: f64, map: DocToScreen, alpha: f32) -> Shape {
+pub fn fill_shapes(
+    outline: Vec<Shape>,
+    fill: &Fill,
+    frame: Rect,
+    rotation: f64,
+    map: DocToScreen,
+    alpha: f32,
+) -> Shape {
     // Tessellate in screen points with a marker colour: white, so each vertex's
     // alpha is its anti-aliasing coverage
-    let mut tessellator = egui::epaint::Tessellator::new(1.0, Default::default(), [1, 1], Vec::new());
+    let mut tessellator =
+        egui::epaint::Tessellator::new(1.0, Default::default(), [1, 1], Vec::new());
     let mut flat = Mesh::default();
     for shape in outline {
         tessellator.tessellate_shape(recolor(shape), &mut flat);
     }
 
     // Screen point -> 0–1 frame coordinates (undoing the rotation)
-    let centre = map.point(frame.origin.x + frame.size.width / 2.0, frame.origin.y + frame.size.height / 2.0);
+    let centre = map.point(
+        frame.origin.x + frame.size.width / 2.0,
+        frame.origin.y + frame.size.height / 2.0,
+    );
     let (sin, cos) = (-rotation as f32).to_radians().sin_cos();
-    let (w, h) = ((frame.size.width as f32 * map.scale).max(1e-3), (frame.size.height as f32 * map.scale).max(1e-3));
+    let (w, h) = (
+        (frame.size.width as f32 * map.scale).max(1e-3),
+        (frame.size.height as f32 * map.scale).max(1e-3),
+    );
     let to_uv = |p: Pos2| -> (f64, f64) {
         let (dx, dy) = (p.x - centre.x, p.y - centre.y);
         let (x, y) = (dx * cos - dy * sin, dx * sin + dy * cos);
@@ -125,12 +150,28 @@ pub(crate) fn recolor(shape: Shape) -> Shape {
 
 type Vert = (Pos2, f32);
 
-fn subdivide(out: &mut Mesh, a: Vert, b: Vert, c: Vert, depth: u32, color: &dyn Fn(Pos2, f32) -> Color32) {
-    let edges = [(a.0 - b.0).length(), (b.0 - c.0).length(), (c.0 - a.0).length()];
+fn subdivide(
+    out: &mut Mesh,
+    a: Vert,
+    b: Vert,
+    c: Vert,
+    depth: u32,
+    color: &dyn Fn(Pos2, f32) -> Color32,
+) {
+    let edges = [
+        (a.0 - b.0).length(),
+        (b.0 - c.0).length(),
+        (c.0 - a.0).length(),
+    ];
     let longest = edges.iter().copied().fold(0.0, f32::max);
     if longest > MAX_EDGE && depth < 10 {
         // Split the longest edge at its midpoint
-        let mid = |p: Vert, q: Vert| -> Vert { (Pos2::new((p.0.x + q.0.x) / 2.0, (p.0.y + q.0.y) / 2.0), (p.1 + q.1) / 2.0) };
+        let mid = |p: Vert, q: Vert| -> Vert {
+            (
+                Pos2::new((p.0.x + q.0.x) / 2.0, (p.0.y + q.0.y) / 2.0),
+                (p.1 + q.1) / 2.0,
+            )
+        };
         if edges[0] == longest {
             let m = mid(a, b);
             subdivide(out, a, m, c, depth + 1, color);
@@ -171,7 +212,10 @@ mod tests {
         let g = Fill::LinearGradient(LinearGradient {
             start: Point::new(0.0, 0.0),
             end: Point::new(1.0, 0.0),
-            stops: vec![GradientStop::new(0.0, red()), GradientStop::new(1.0, blue())],
+            stops: vec![
+                GradientStop::new(0.0, red()),
+                GradientStop::new(1.0, blue()),
+            ],
         });
         assert_eq!(color_at(&g, 0.0, 0.5), red());
         assert_eq!(color_at(&g, 1.0, 0.5), blue());
@@ -185,11 +229,18 @@ mod tests {
         let g = Fill::RadialGradient(RadialGradient {
             center: Point::new(0.5, 0.5),
             radius: 1.0,
-            stops: vec![GradientStop::new(0.0, red()), GradientStop::new(1.0, blue())],
+            stops: vec![
+                GradientStop::new(0.0, red()),
+                GradientStop::new(1.0, blue()),
+            ],
         });
         assert_eq!(color_at(&g, 0.5, 0.5), red());
         assert_eq!(color_at(&g, 1.0, 0.5), blue(), "edge of the shape");
-        assert_eq!(color_at(&g, 0.0, 0.0), blue(), "corners clamp to the last stop");
+        assert_eq!(
+            color_at(&g, 0.0, 0.0),
+            blue(),
+            "corners clamp to the last stop"
+        );
     }
 
     #[test]
@@ -197,16 +248,39 @@ mod tests {
         let g = Fill::LinearGradient(LinearGradient {
             start: Point::new(0.0, 0.0),
             end: Point::new(1.0, 0.0),
-            stops: vec![GradientStop::new(0.0, red()), GradientStop::new(1.0, blue())],
+            stops: vec![
+                GradientStop::new(0.0, red()),
+                GradientStop::new(1.0, blue()),
+            ],
         });
-        let map = DocToScreen { origin: Pos2::ZERO, scale: 1.0 };
+        let map = DocToScreen {
+            origin: Pos2::ZERO,
+            scale: 1.0,
+        };
         let frame = Rect::new(0.0, 0.0, 100.0, 40.0);
         let rect = Shape::rect_filled(map.rect(&frame), 0.0, Color32::GRAY);
-        let Shape::Mesh(mesh) = fill_shapes(vec![rect], &g, frame, 0.0, map, 1.0) else { panic!("mesh") };
+        let Shape::Mesh(mesh) = fill_shapes(vec![rect], &g, frame, 0.0, map, 1.0) else {
+            panic!("mesh")
+        };
         assert!(mesh.indices.len() / 3 > 100, "subdivided");
-        let left = mesh.vertices.iter().filter(|v| v.pos.x < 1.0 && v.color.a() == 255).map(|v| v.color).next().unwrap();
-        let right = mesh.vertices.iter().filter(|v| v.pos.x > 99.0 && v.color.a() == 255).map(|v| v.color).next().unwrap();
+        let left = mesh
+            .vertices
+            .iter()
+            .filter(|v| v.pos.x < 1.0 && v.color.a() == 255)
+            .map(|v| v.color)
+            .next()
+            .unwrap();
+        let right = mesh
+            .vertices
+            .iter()
+            .filter(|v| v.pos.x > 99.0 && v.color.a() == 255)
+            .map(|v| v.color)
+            .next()
+            .unwrap();
         assert!(left.r() > 240 && left.b() < 15, "left is red: {left:?}");
-        assert!(right.b() > 240 && right.r() < 15, "right is blue: {right:?}");
+        assert!(
+            right.b() > 240 && right.r() < 15,
+            "right is blue: {right:?}"
+        );
     }
 }

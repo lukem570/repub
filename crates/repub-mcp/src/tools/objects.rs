@@ -3,18 +3,16 @@
 use repub_color::Color;
 use repub_geometry::{Point, Rect};
 use repub_model::geometry::ShapeGeometry;
-use repub_model::shape::{
-    ImageFit, ImageSource, Shape, ShapeKind, TextTransform, WordArtPreset,
-};
+use repub_model::shape::{ImageFit, ImageSource, Shape, ShapeKind, TextTransform, WordArtPreset};
 use repub_model::styles::{Fill, GradientStop, LinearGradient, Stroke};
 use repub_model::text::StyledText;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use super::Tool;
 use crate::error::{McpError, McpResult};
 use crate::protocol::{ToolDefinition, ToolResult};
 use crate::session::Session;
-use super::Tool;
 
 /// Add a text frame.
 pub struct AddTextFrame;
@@ -85,8 +83,8 @@ impl Tool for AddTextFrame {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: AddTextFrameArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: AddTextFrameArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document_mut()?;
         let page_count = doc.pages().len();
@@ -201,8 +199,8 @@ impl Tool for AddShape {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: AddShapeArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: AddShapeArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document_mut()?;
         let page_count = doc.pages().len();
@@ -230,7 +228,12 @@ impl Tool for AddShape {
                 let points = args.points.unwrap_or(5);
                 Shape::star(bounds, points, 0.5)
             }
-            _ => return Err(McpError::InvalidArgument(format!("Unknown shape type: {}", args.shape_type))),
+            _ => {
+                return Err(McpError::InvalidArgument(format!(
+                    "Unknown shape type: {}",
+                    args.shape_type
+                )))
+            }
         };
 
         // Apply fill
@@ -247,7 +250,8 @@ impl Tool for AddShape {
 
         // Apply stroke
         if let Some(stroke_args) = args.stroke {
-            let color = stroke_args.color
+            let color = stroke_args
+                .color
                 .and_then(|h| Color::from_hex(&h))
                 .unwrap_or(Color::BLACK);
             let width = stroke_args.width.unwrap_or(1.0);
@@ -308,8 +312,8 @@ impl Tool for AddImage {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: AddImageArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: AddImageArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document_mut()?;
         let page_count = doc.pages().len();
@@ -385,8 +389,8 @@ impl Tool for ListObjects {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: ListObjectsArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: ListObjectsArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document()?;
 
@@ -482,7 +486,9 @@ impl Tool for AddWordArt {
     fn definition(&self) -> ToolDefinition {
         ToolDefinition {
             name: "repub_add_wordart".to_string(),
-            description: "Add a WordArt object (decorative text with fill, outline, and transform effects)".to_string(),
+            description:
+                "Add a WordArt object (decorative text with fill, outline, and transform effects)"
+                    .to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -550,8 +556,8 @@ impl Tool for AddWordArt {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: AddWordArtArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: AddWordArtArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document_mut()?;
         let page_count = doc.pages().len();
@@ -602,10 +608,11 @@ impl Tool for AddWordArt {
         // Parse fill
         if let Some(fill_args) = args.fill {
             let fill_type = fill_args.fill_type.as_deref().unwrap_or("solid");
-            
+
             if fill_type == "gradient" {
                 if let Some(stops) = fill_args.gradient_stops {
-                    let gradient_stops: Vec<GradientStop> = stops.iter()
+                    let gradient_stops: Vec<GradientStop> = stops
+                        .iter()
                         .filter_map(|s| {
                             Color::from_hex(&s.color).map(|c| GradientStop {
                                 position: s.position,
@@ -613,7 +620,7 @@ impl Tool for AddWordArt {
                             })
                         })
                         .collect();
-                    
+
                     if !gradient_stops.is_empty() {
                         let angle = fill_args.gradient_angle.unwrap_or(90.0);
                         // Convert angle to start/end points
@@ -636,7 +643,8 @@ impl Tool for AddWordArt {
 
         // Parse outline
         if let Some(outline_args) = args.outline {
-            let color = outline_args.color
+            let color = outline_args
+                .color
                 .and_then(|h| Color::from_hex(&h))
                 .unwrap_or(Color::BLACK);
             let width = outline_args.width.unwrap_or(1.0);
@@ -684,8 +692,8 @@ impl Tool for DeleteObject {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: DeleteObjectArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: DeleteObjectArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         // For now, return a placeholder - full implementation would need
         // object tracking in the session
@@ -699,7 +707,7 @@ impl Tool for DeleteObject {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{Document, PageSize, PageOrientation};
+    use repub_model::{Document, PageOrientation, PageSize};
 
     fn setup_session() -> Session {
         let mut session = Session::new();
@@ -712,15 +720,20 @@ mod tests {
     fn test_add_text_frame() {
         let tool = AddTextFrame;
         let mut session = setup_session();
-        
-        let result = tool.execute(&mut session, json!({
-            "page": 0,
-            "x": 72.0,
-            "y": 72.0,
-            "width": 200.0,
-            "height": 100.0,
-            "text": "Hello, World!"
-        })).unwrap();
+
+        let result = tool
+            .execute(
+                &mut session,
+                json!({
+                    "page": 0,
+                    "x": 72.0,
+                    "y": 72.0,
+                    "width": 200.0,
+                    "height": 100.0,
+                    "text": "Hello, World!"
+                }),
+            )
+            .unwrap();
 
         assert!(!result.is_error);
     }
@@ -729,16 +742,21 @@ mod tests {
     fn test_add_shape() {
         let tool = AddShape;
         let mut session = setup_session();
-        
-        let result = tool.execute(&mut session, json!({
-            "page": 0,
-            "shape_type": "rectangle",
-            "x": 100.0,
-            "y": 100.0,
-            "width": 150.0,
-            "height": 100.0,
-            "fill": {"color": "ff0000"}
-        })).unwrap();
+
+        let result = tool
+            .execute(
+                &mut session,
+                json!({
+                    "page": 0,
+                    "shape_type": "rectangle",
+                    "x": 100.0,
+                    "y": 100.0,
+                    "width": 150.0,
+                    "height": 100.0,
+                    "fill": {"color": "ff0000"}
+                }),
+            )
+            .unwrap();
 
         assert!(!result.is_error);
     }
@@ -747,17 +765,22 @@ mod tests {
     fn test_list_objects() {
         let tool = ListObjects;
         let mut session = setup_session();
-        
+
         // Add an object first
         let add_tool = AddShape;
-        add_tool.execute(&mut session, json!({
-            "page": 0,
-            "shape_type": "ellipse",
-            "x": 50.0,
-            "y": 50.0,
-            "width": 100.0,
-            "height": 100.0
-        })).unwrap();
+        add_tool
+            .execute(
+                &mut session,
+                json!({
+                    "page": 0,
+                    "shape_type": "ellipse",
+                    "x": 50.0,
+                    "y": 50.0,
+                    "width": 100.0,
+                    "height": 100.0
+                }),
+            )
+            .unwrap();
 
         let result = tool.execute(&mut session, json!({})).unwrap();
         assert!(!result.is_error);

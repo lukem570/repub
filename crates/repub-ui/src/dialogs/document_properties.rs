@@ -32,7 +32,9 @@ impl DocumentPropertiesDialog {
     }
 
     pub fn open_for(&mut self, state: &AppState) {
-        let Some(doc) = state.document.as_ref() else { return };
+        let Some(doc) = state.document.as_ref() else {
+            return;
+        };
         self.metadata = doc.metadata.clone();
         self.title = self.metadata.title.clone().unwrap_or_default();
         self.author = self.metadata.author.clone().unwrap_or_default();
@@ -92,11 +94,22 @@ impl DocumentPropertiesDialog {
             "doc_units",
             "Units",
             &mut self.units,
-            &[(DisplayUnit::Inches, "Inches"), (DisplayUnit::Millimeters, "Millimeters"), (DisplayUnit::Points, "Points")],
+            &[
+                (DisplayUnit::Inches, "Inches"),
+                (DisplayUnit::Millimeters, "Millimeters"),
+                (DisplayUnit::Points, "Points"),
+            ],
         );
         let units = self.units;
         let mut spacing = units.from_points(self.grid_spacing);
-        if number_row(ui, "Grid spacing", &mut spacing, units.from_points(1.0)..=units.from_points(720.0), units.from_points(0.5), units.suffix()) {
+        if number_row(
+            ui,
+            "Grid spacing",
+            &mut spacing,
+            units.from_points(1.0)..=units.from_points(720.0),
+            units.from_points(0.5),
+            units.suffix(),
+        ) {
             self.grid_spacing = units.to_points(spacing);
         }
         ui.add_space(6.0);
@@ -130,7 +143,13 @@ impl DocumentPropertiesDialog {
             doc.metadata.title = opt(&self.title);
             doc.metadata.author = opt(&self.author);
             doc.metadata.subject = opt(&self.subject);
-            doc.metadata.keywords = self.keywords.split(',').map(str::trim).filter(|k| !k.is_empty()).map(str::to_string).collect();
+            doc.metadata.keywords = self
+                .keywords
+                .split(',')
+                .map(str::trim)
+                .filter(|k| !k.is_empty())
+                .map(str::to_string)
+                .collect();
         }
         state.store_document_settings();
         state.mark_dirty();
@@ -138,7 +157,9 @@ impl DocumentPropertiesDialog {
 }
 
 fn text_row(ui: &mut Ui, label: &str, text: &mut String) {
-    row(ui, label, |ui| ui.add(egui::TextEdit::singleline(text).desired_width(280.0)));
+    row(ui, label, |ui| {
+        ui.add(egui::TextEdit::singleline(text).desired_width(280.0))
+    });
 }
 
 /// A Unix timestamp as `YYYY-MM-DD HH:MM` (UTC).
@@ -155,7 +176,11 @@ pub fn format_timestamp(seconds: i64) -> String {
     let day = doy - (153 * mp + 2) / 5 + 1;
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
-    format!("{year:04}-{month:02}-{day:02} {:02}:{:02} UTC", rem / 3600, rem % 3600 / 60)
+    format!(
+        "{year:04}-{month:02}-{day:02} {:02}:{:02} UTC",
+        rem / 3600,
+        rem % 3600 / 60
+    )
 }
 
 #[cfg(test)]

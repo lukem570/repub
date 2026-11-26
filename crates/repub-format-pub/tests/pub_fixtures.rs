@@ -75,8 +75,7 @@ fn imports_several_fixtures_without_panicking() {
         if !path.is_file() {
             continue;
         }
-        let doc = repub_format_pub::import(&path)
-            .unwrap_or_else(|e| panic!("import {name}: {e}"));
+        let doc = repub_format_pub::import(&path).unwrap_or_else(|e| panic!("import {name}: {e}"));
         assert!(doc.page_count() >= 1, "{name}: expected at least one page");
         tested += 1;
     }
@@ -148,7 +147,10 @@ fn strict_and_lenient_agree() {
                 // Strict refused: it must name at least one unread item, and
                 // lenient must still have produced a usable document.
                 assert!(!items.is_empty(), "{name}: UnreadItems with no items");
-                assert!(lenient.page_count() >= 1, "{name}: lenient produced no pages");
+                assert!(
+                    lenient.page_count() >= 1,
+                    "{name}: lenient produced no pages"
+                );
             }
             Err(e) => panic!("{name}: unexpected strict error: {e}"),
         }
@@ -183,7 +185,11 @@ fn every_well_formed_fixture_imports_strictly() {
             match repub_format_pub::import(&path) {
                 Ok(_) => tested += 1,
                 Err(repub_format_pub::FormatError::UnreadItems(items)) => {
-                    panic!("{name}: strict import left {} item(s) unread:\n  {}", items.len(), items.join("\n  "));
+                    panic!(
+                        "{name}: strict import left {} item(s) unread:\n  {}",
+                        items.len(),
+                        items.join("\n  ")
+                    );
                 }
                 // A malformed container that isn't a fuzzer input is still a
                 // real failure to surface.

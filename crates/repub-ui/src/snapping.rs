@@ -186,7 +186,10 @@ impl SnapEngine {
             }
         }
 
-        (Point::new(bounds.origin.x + dx, bounds.origin.y + dy), snaps)
+        (
+            Point::new(bounds.origin.x + dx, bounds.origin.y + dy),
+            snaps,
+        )
     }
 
     fn snap_x(&self, x: f64) -> (f64, Option<SnapResult>) {
@@ -266,7 +269,15 @@ impl SnapEngine {
         }
 
         match best_snap {
-            Some((pos, target, guide_pos)) => (pos, Some(SnapResult { position: pos, target, guide_pos, axis: SnapAxis::Horizontal })),
+            Some((pos, target, guide_pos)) => (
+                pos,
+                Some(SnapResult {
+                    position: pos,
+                    target,
+                    guide_pos,
+                    axis: SnapAxis::Horizontal,
+                }),
+            ),
             None => (x, None),
         }
     }
@@ -348,7 +359,15 @@ impl SnapEngine {
         }
 
         match best_snap {
-            Some((pos, target, guide_pos)) => (pos, Some(SnapResult { position: pos, target, guide_pos, axis: SnapAxis::Vertical })),
+            Some((pos, target, guide_pos)) => (
+                pos,
+                Some(SnapResult {
+                    position: pos,
+                    target,
+                    guide_pos,
+                    axis: SnapAxis::Vertical,
+                }),
+            ),
             None => (y, None),
         }
     }
@@ -362,7 +381,7 @@ mod tests {
     fn test_snap_to_page_edge() {
         let page = Rect::new(0.0, 0.0, 612.0, 792.0);
         let engine = SnapEngine::new(SnapConfig::default(), page);
-        
+
         // Near left edge
         let (snapped, h, _v) = engine.snap_point(Point::new(3.0, 100.0));
         assert_eq!(snapped.x, 0.0);
@@ -375,7 +394,7 @@ mod tests {
         let page = Rect::new(0.0, 0.0, 612.0, 792.0);
         let mut engine = SnapEngine::new(SnapConfig::default(), page);
         engine.set_object_bounds(vec![Rect::new(100.0, 100.0, 50.0, 50.0)]);
-        
+
         // Near object right edge (150)
         let (snapped, h, _v) = engine.snap_point(Point::new(152.0, 200.0));
         assert_eq!(snapped.x, 150.0);
@@ -387,11 +406,11 @@ mod tests {
     fn test_snap_move() {
         let page = Rect::new(0.0, 0.0, 612.0, 792.0);
         let engine = SnapEngine::new(SnapConfig::default(), page);
-        
+
         // Moving a rect near the page edge
         let bounds = Rect::new(3.0, 5.0, 100.0, 50.0);
         let (new_pos, snaps) = engine.snap_move(&bounds);
-        
+
         // Should snap to left and top edges
         assert_eq!(new_pos.x, 0.0);
         assert_eq!(new_pos.y, 0.0);
@@ -407,15 +426,15 @@ mod tests {
         config.page_edges = false; // Disable page edges to test grid alone
         config.margins = false;
         config.objects = false;
-        
+
         let engine = SnapEngine::new(config, page);
-        
+
         // Near grid line at 18 (2 * 9)
         let (snapped, h, _v) = engine.snap_point(Point::new(16.0, 100.0));
         assert_eq!(snapped.x, 18.0);
         assert!(h.is_some());
         assert_eq!(h.unwrap().target, SnapTarget::Grid);
-        
+
         // Near grid line at 27 (3 * 9)
         let (snapped, _h, v) = engine.snap_point(Point::new(100.0, 25.0));
         assert_eq!(snapped.y, 27.0);

@@ -77,7 +77,7 @@ pub fn print_table<T: Tabled>(rows: &[T], opts: &GlobalOptions) {
     }
 
     let table = Table::new(rows);
-    
+
     if opts.no_color {
         println!("{table}");
     } else {

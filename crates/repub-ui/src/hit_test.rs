@@ -16,12 +16,12 @@
 //! Every test allows `tolerance` document points of slack, so clicks near an
 //! edge, a thin line or a line of text still count.
 
-use repub_model::Page;
 use repub_geometry::Point;
-use repub_model::ObjectId;
 use repub_model::geometry::ShapeGeometry;
 use repub_model::shape::{GroupData, Shape, ShapeKind};
 use repub_model::styles::Fill;
+use repub_model::ObjectId;
+use repub_model::Page;
 
 /// Screen pixels of slack around objects when clicking.
 pub const HIT_TOLERANCE_PX: f32 = 5.0;
@@ -57,8 +57,16 @@ pub fn object_at(page: &Page, pos: Point, tolerance: f64) -> Option<ObjectId> {
 /// The member of `group` a click at `pos` lands on (visible content first, as
 /// with [`object_at`]).
 pub fn member_at(group: &GroupData, pos: Point, tolerance: f64) -> Option<&Shape> {
-    let hits: Vec<(&Shape, Hit)> = group.children.iter().rev().filter_map(|c| hit(c, pos, tolerance).map(|h| (c, h))).collect();
-    hits.iter().find(|(_, h)| *h == Hit::Strong).or(hits.first()).map(|(c, _)| *c)
+    let hits: Vec<(&Shape, Hit)> = group
+        .children
+        .iter()
+        .rev()
+        .filter_map(|c| hit(c, pos, tolerance).map(|h| (c, h)))
+        .collect();
+    hits.iter()
+        .find(|(_, h)| *h == Hit::Strong)
+        .or(hits.first())
+        .map(|(c, _)| *c)
 }
 
 /// How `pos` hits `obj`, if at all.
@@ -71,11 +79,16 @@ pub fn hit(obj: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         ShapeKind::Line(line) => {
             let width = obj.line.as_ref().map_or(0.0, |s| s.width);
             let reach = tolerance + width / 2.0;
-            (distance_to_polyline(unrotate(pos, obj), &line_polyline(line), false) <= reach).then_some(Hit::Strong)
+            (distance_to_polyline(unrotate(pos, obj), &line_polyline(line), false) <= reach)
+                .then_some(Hit::Strong)
         }
         ShapeKind::TextFrame(_) => hit_text_frame(obj, pos, tolerance),
         // A group is hit wherever one of its members is
-        ShapeKind::Group(group) => group.children.iter().filter_map(|c| hit(c, pos, tolerance)).max(),
+        ShapeKind::Group(group) => group
+            .children
+            .iter()
+            .filter_map(|c| hit(c, pos, tolerance))
+            .max(),
         // Images, tables and the rest are solid rectangles
         _ => {
             let local = unrotate(pos, obj);
@@ -97,16 +110,33 @@ fn hit_shape(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         let near = subpaths
             .iter()
             .filter(|(_, _, style)| !style.no_stroke)
-            .any(|(pts, closed, _)| distance_to_polyline(pos, pts, *closed) <= tolerance + stroke / 2.0);
+            .any(|(pts, closed, _)| {
+                distance_to_polyline(pos, pts, *closed) <= tolerance + stroke / 2.0
+            });
         if near {
             return Some(Hit::Strong);
         }
-        let filled: Vec<&Vec<Point>> = subpaths.iter().filter(|(_, _, s)| !s.no_fill).map(|(p, _, _)| p).collect();
+        let filled: Vec<&Vec<Point>> = subpaths
+            .iter()
+            .filter(|(_, _, s)| !s.no_fill)
+            .map(|(p, _, _)| p)
+            .collect();
         let winding: i32 = filled.iter().map(|pts| winding_number(pos, pts)).sum();
-        let crossings: usize = filled.iter().filter(|pts| point_in_polygon(pos, pts)).count();
-        let inside = if path.even_odd { crossings % 2 == 1 } else { winding != 0 };
+        let crossings: usize = filled
+            .iter()
+            .filter(|pts| point_in_polygon(pos, pts))
+            .count();
+        let inside = if path.even_odd {
+            crossings % 2 == 1
+        } else {
+            winding != 0
+        };
         if inside {
-            return Some(if is_filled(&shape.fill) { Hit::Strong } else { Hit::Weak });
+            return Some(if is_filled(&shape.fill) {
+                Hit::Strong
+            } else {
+                Hit::Weak
+            });
         }
         return None;
     }
@@ -118,7 +148,11 @@ fn hit_shape(shape: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         return Some(Hit::Strong);
     }
     if point_in_polygon(pos, &outline) {
-        return Some(if is_filled(&shape.fill) { Hit::Strong } else { Hit::Weak });
+        return Some(if is_filled(&shape.fill) {
+            Hit::Strong
+        } else {
+            Hit::Weak
+        });
     }
     None
 }
@@ -141,7 +175,9 @@ fn winding_number(p: Point, points: &[Point]) -> i32 {
 }
 
 fn hit_text_frame(tf: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
-    let ShapeKind::TextFrame(data) = &tf.kind else { return None };
+    let ShapeKind::TextFrame(data) = &tf.kind else {
+        return None;
+    };
     // Text layout is in the frame's unrotated space
     let (fx, fy) = crate::text_edit::to_frame_space(tf, pos.x as f32, pos.y as f32);
     let local = Point::new(fx as f64, fy as f64);
@@ -158,8 +194,14 @@ fn hit_text_frame(tf: &Shape, pos: Point, tolerance: f64) -> Option<Hit> {
         let layout = crate::sdf_text::layout_frame(tf);
         let tol = tolerance as f32;
         let on_text = layout.lines.iter().filter(|l| l.end > l.start).any(|line| {
-            let (min_x, max_x) = line.xs.iter().fold((f32::MAX, f32::MIN), |(a, b), &x| (a.min(x), b.max(x)));
-            fx >= min_x - tol && fx <= max_x + tol && fy >= line.top - tol && fy <= line.bottom + tol
+            let (min_x, max_x) = line
+                .xs
+                .iter()
+                .fold((f32::MAX, f32::MIN), |(a, b), &x| (a.min(x), b.max(x)));
+            fx >= min_x - tol
+                && fx <= max_x + tol
+                && fy >= line.top - tol
+                && fy <= line.bottom + tol
         });
         if on_text {
             return Some(Hit::Strong);
@@ -217,7 +259,10 @@ pub fn line_polyline(line: &repub_model::shape::LineData) -> Vec<Point> {
                     let t = i as f64 / STEPS as f64;
                     let u = 1.0 - t;
                     let (w0, w1, w2, w3) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
-                    Point::new(w0 * a.x + w1 * c1.x + w2 * c2.x + w3 * b.x, w0 * a.y + w1 * c1.y + w2 * c2.y + w3 * b.y)
+                    Point::new(
+                        w0 * a.x + w1 * c1.x + w2 * c2.x + w3 * b.x,
+                        w0 * a.y + w1 * c1.y + w2 * c2.y + w3 * b.y,
+                    )
                 })
                 .collect()
         }
@@ -227,13 +272,19 @@ pub fn line_polyline(line: &repub_model::shape::LineData) -> Vec<Point> {
 fn distance_to_segment(p: Point, a: Point, b: Point) -> f64 {
     let (dx, dy) = (b.x - a.x, b.y - a.y);
     let len_sq = dx * dx + dy * dy;
-    let t = if len_sq > 0.0 { (((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq).clamp(0.0, 1.0) } else { 0.0 };
+    let t = if len_sq > 0.0 {
+        (((p.x - a.x) * dx + (p.y - a.y) * dy) / len_sq).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     let (cx, cy) = (a.x + t * dx, a.y + t * dy);
     ((p.x - cx).powi(2) + (p.y - cy).powi(2)).sqrt()
 }
 
 fn distance_to_polyline(p: Point, points: &[Point], closed: bool) -> f64 {
-    let open = points.windows(2).map(|w| distance_to_segment(p, w[0], w[1]));
+    let open = points
+        .windows(2)
+        .map(|w| distance_to_segment(p, w[0], w[1]));
     let closing = closed.then(|| distance_to_segment(p, points[points.len() - 1], points[0]));
     open.chain(closing).fold(f64::INFINITY, f64::min)
 }
@@ -256,10 +307,10 @@ fn point_in_polygon(p: Point, points: &[Point]) -> bool {
 mod tests {
     use super::*;
     use repub_color::Color;
-    use repub_model::Document;
     use repub_geometry::Rect;
     use repub_model::shape::{Shape, ShapeKind, TextFrameData};
     use repub_model::text::{Paragraph, StyledText};
+    use repub_model::Document;
     use repub_model::{PageOrientation, PageSize};
 
     const TOL: f64 = 5.0;
@@ -317,7 +368,9 @@ mod tests {
 
     fn text(r: Rect, s: &str) -> Shape {
         let mut data = TextFrameData::new();
-        data.content = StyledText { paragraphs: vec![Paragraph::plain(s)] };
+        data.content = StyledText {
+            paragraphs: vec![Paragraph::plain(s)],
+        };
         Shape::new(r, ShapeKind::TextFrame(data))
     }
 
@@ -336,7 +389,10 @@ mod tests {
         let on_text = Point::new(line.xs[2] as f64, ((line.top + line.bottom) / 2.0) as f64);
         assert_eq!(object_at(&page, on_text, TOL), Some(tf_id));
         // Just above the text line, within tolerance, still the text
-        assert_eq!(object_at(&page, Point::new(on_text.x, line.top as f64 - 3.0), TOL), Some(tf_id));
+        assert_eq!(
+            object_at(&page, Point::new(on_text.x, line.top as f64 - 3.0), TOL),
+            Some(tf_id)
+        );
         // On the box's border
         assert_eq!(object_at(&page, Point::new(50.0, 200.0), TOL), Some(box_id));
         // Inside the box over blank page: the box (weak hit, nothing else there)
@@ -349,7 +405,10 @@ mod tests {
         let bx = filled_box(Rect::new(50.0, 50.0, 400.0, 300.0));
         let box_id = bx.id();
         let page = page_with(vec![tf, bx]);
-        assert_eq!(object_at(&page, Point::new(110.0, 110.0), TOL), Some(box_id));
+        assert_eq!(
+            object_at(&page, Point::new(110.0, 110.0), TOL),
+            Some(box_id)
+        );
     }
 
     #[test]
@@ -360,7 +419,10 @@ mod tests {
         let tf = text(Rect::new(100.0, 100.0, 300.0, 300.0), "Hi");
         let (shape_id, tf_id) = (shape.id(), tf.id());
         let page = page_with(vec![shape, tf]);
-        assert_eq!(object_at(&page, Point::new(250.0, 350.0), TOL), Some(shape_id));
+        assert_eq!(
+            object_at(&page, Point::new(250.0, 350.0), TOL),
+            Some(shape_id)
+        );
         // Blank page inside the text box with nothing behind: the text box
         let page = page_with(vec![text(Rect::new(100.0, 100.0, 300.0, 300.0), "Hi")]);
         assert!(object_at(&page, Point::new(250.0, 350.0), TOL).is_some());

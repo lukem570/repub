@@ -41,12 +41,20 @@ pub enum GuideOrientation {
 impl Guide {
     /// Create a new horizontal guide at the given Y position.
     pub fn horizontal(y: f64) -> Self {
-        Self { position: y, orientation: GuideOrientation::Horizontal, locked: false }
+        Self {
+            position: y,
+            orientation: GuideOrientation::Horizontal,
+            locked: false,
+        }
     }
 
     /// Create a new vertical guide at the given X position.
     pub fn vertical(x: f64) -> Self {
-        Self { position: x, orientation: GuideOrientation::Vertical, locked: false }
+        Self {
+            position: x,
+            orientation: GuideOrientation::Vertical,
+            locked: false,
+        }
     }
 }
 
@@ -309,7 +317,9 @@ impl AppState {
     /// Get the document title for the window.
     pub fn window_title(&self) -> String {
         let doc_name = if let Some(ref path) = self.document_path {
-            path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Untitled".to_string())
+            path.file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Untitled".to_string())
         } else if self.document.is_some() {
             "Untitled".to_string()
         } else {
@@ -334,15 +344,20 @@ impl AppState {
         if let Some(edit) = &mut self.master_edit {
             return Some(&mut edit.page);
         }
-        self.document.as_mut()?.pages_mut().get_mut(self.current_page)
+        self.document
+            .as_mut()?
+            .pages_mut()
+            .get_mut(self.current_page)
     }
 
     /// Whether shape `id` on the current page is locked, or on a locked layer.
     pub fn is_locked(&self, id: ObjectId) -> bool {
         self.current_page().is_some_and(|page| {
-            page.layers()
-                .iter()
-                .any(|l| l.shapes().iter().any(|s| s.id() == id && (l.locked || s.common.locked)))
+            page.layers().iter().any(|l| {
+                l.shapes()
+                    .iter()
+                    .any(|s| s.id() == id && (l.locked || s.common.locked))
+            })
         })
     }
 
@@ -357,8 +372,14 @@ impl AppState {
     /// Start editing master page `id` in place of the current page.
     pub fn begin_master_edit(&mut self, id: MasterPageId) {
         self.end_master_edit();
-        let Some(master) = self.document.as_ref().and_then(|d| d.master_page(id)) else { return };
-        self.master_edit = Some(MasterEdit { id, page: master.to_page(), synced: master.to_page() });
+        let Some(master) = self.document.as_ref().and_then(|d| d.master_page(id)) else {
+            return;
+        };
+        self.master_edit = Some(MasterEdit {
+            id,
+            page: master.to_page(),
+            synced: master.to_page(),
+        });
         self.text_edit = None;
         self.selection.clear();
         self.fit_page_pending = true;
@@ -377,13 +398,21 @@ impl AppState {
 
     /// Keep the master being edited and the document in step.
     pub fn sync_master_edit(&mut self) {
-        let Some(edit) = self.master_edit.as_mut() else { return };
-        let Some(master) = self.document.as_mut().and_then(|d| d.master_page_mut(edit.id)) else {
+        let Some(edit) = self.master_edit.as_mut() else {
+            return;
+        };
+        let Some(master) = self
+            .document
+            .as_mut()
+            .and_then(|d| d.master_page_mut(edit.id))
+        else {
             self.master_edit = None;
             return;
         };
         let doc_now = master.to_page();
-        let same = |a: &Page, b: &Page| a.layers() == b.layers() && a.guides == b.guides && a.margins == b.margins;
+        let same = |a: &Page, b: &Page| {
+            a.layers() == b.layers() && a.guides == b.guides && a.margins == b.margins
+        };
         if !same(&doc_now, &edit.synced) {
             // Changed in the document: show that
             let id = edit.page.id;
@@ -412,7 +441,11 @@ impl AppState {
         if !self.two_page_spread || count < 2 || current == 0 || self.master_edit.is_some() {
             return vec![current];
         }
-        let left = if current % 2 == 1 { current } else { current - 1 };
+        let left = if current % 2 == 1 {
+            current
+        } else {
+            current - 1
+        };
         if left + 1 < count {
             vec![left, left + 1]
         } else {
@@ -497,7 +530,9 @@ impl AppState {
         self.sync_master_edit();
         self.pending_undo = None;
         self.last_coalesced_undo = None;
-        let Some(doc) = self.document.as_mut() else { return false };
+        let Some(doc) = self.document.as_mut() else {
+            return false;
+        };
         let undone = self.history.undo(doc);
         if undone {
             self.after_history_change();
@@ -508,7 +543,9 @@ impl AppState {
     /// Redo the last undone change. Returns true if something was redone.
     pub fn redo(&mut self) -> bool {
         self.sync_master_edit();
-        let Some(doc) = self.document.as_mut() else { return false };
+        let Some(doc) = self.document.as_mut() else {
+            return false;
+        };
         let redone = self.history.redo(doc);
         if redone {
             self.after_history_change();
@@ -526,7 +563,10 @@ impl AppState {
         }
         let ids: Vec<ObjectId> = self.selection.clone();
         let page = self.current_page();
-        self.selection = ids.into_iter().filter(|id| page.is_some_and(|p| p.get_shape(*id).is_some())).collect();
+        self.selection = ids
+            .into_iter()
+            .filter(|id| page.is_some_and(|p| p.get_shape(*id).is_some()))
+            .collect();
         self.selected_pages.retain(|&p| p < pages);
     }
 
@@ -543,9 +583,18 @@ impl AppState {
 
     /// Copy the first selected shape's formatting for the Format Painter.
     pub fn copy_format_from_selection(&mut self) -> bool {
-        let Some(&id) = self.selection.first() else { return false };
-        let Some(shape) = self.current_page().and_then(|p| p.get_shape(id)) else { return false };
-        let (fill, line, effects, opacity) = (shape.fill.clone(), shape.line.clone(), shape.effects.clone(), shape.opacity);
+        let Some(&id) = self.selection.first() else {
+            return false;
+        };
+        let Some(shape) = self.current_page().and_then(|p| p.get_shape(id)) else {
+            return false;
+        };
+        let (fill, line, effects, opacity) = (
+            shape.fill.clone(),
+            shape.line.clone(),
+            shape.effects.clone(),
+            shape.opacity,
+        );
         self.copied_format = Some(match &shape.kind {
             ShapeKind::TextFrame(data) => CopiedFormat::Text {
                 fill,
@@ -559,7 +608,12 @@ impl AppState {
                     .map(|p| p.style.default_char_style.clone())
                     .unwrap_or_default(),
             },
-            _ => CopiedFormat::Shape { fill, line, effects, opacity },
+            _ => CopiedFormat::Shape {
+                fill,
+                line,
+                effects,
+                opacity,
+            },
         });
         true
     }
@@ -576,12 +630,29 @@ impl AppState {
 
     /// Apply the copied formatting to a shape. Returns true when applied.
     pub fn apply_copied_format_to(&mut self, id: ObjectId) -> bool {
-        let Some(copied) = self.copied_format.clone() else { return false };
-        let Some(page) = self.current_page_mut() else { return false };
-        let Some(shape) = page.get_shape_mut(id) else { return false };
+        let Some(copied) = self.copied_format.clone() else {
+            return false;
+        };
+        let Some(page) = self.current_page_mut() else {
+            return false;
+        };
+        let Some(shape) = page.get_shape_mut(id) else {
+            return false;
+        };
         let (fill, line, effects, opacity, character) = match copied {
-            CopiedFormat::Shape { fill, line, effects, opacity } => (fill, line, effects, opacity, None),
-            CopiedFormat::Text { fill, line, effects, opacity, character } => (fill, line, effects, opacity, Some(character)),
+            CopiedFormat::Shape {
+                fill,
+                line,
+                effects,
+                opacity,
+            } => (fill, line, effects, opacity, None),
+            CopiedFormat::Text {
+                fill,
+                line,
+                effects,
+                opacity,
+                character,
+            } => (fill, line, effects, opacity, Some(character)),
         };
         shape.fill = fill;
         shape.line = line;
@@ -675,7 +746,11 @@ impl AppState {
     /// Select a range of pages (for shift-click).
     pub fn select_page_range(&mut self, to_index: usize) {
         let from_index = self.last_clicked_page.unwrap_or(0);
-        let (start, end) = if from_index <= to_index { (from_index, to_index) } else { (to_index, from_index) };
+        let (start, end) = if from_index <= to_index {
+            (from_index, to_index)
+        } else {
+            (to_index, from_index)
+        };
         self.selected_pages.clear();
         for i in start..=end {
             self.selected_pages.push(i);
@@ -751,7 +826,11 @@ impl AppState {
         if indices.is_empty() {
             return;
         }
-        self.record_undo(if indices.len() == 1 { "Duplicate Page" } else { "Duplicate Pages" });
+        self.record_undo(if indices.len() == 1 {
+            "Duplicate Page"
+        } else {
+            "Duplicate Pages"
+        });
         if let Some(doc) = self.document.as_mut() {
             for &i in indices.iter().rev() {
                 doc.duplicate_page(i);
@@ -774,7 +853,11 @@ impl AppState {
         if indices.is_empty() || indices.len() >= count {
             return;
         }
-        self.record_undo(if indices.len() == 1 { "Delete Page" } else { "Delete Pages" });
+        self.record_undo(if indices.len() == 1 {
+            "Delete Page"
+        } else {
+            "Delete Pages"
+        });
         let below_current = indices.iter().filter(|&&i| i < self.current_page).count();
         let current_deleted = indices.contains(&self.current_page);
         if let Some(doc) = self.document.as_mut() {
@@ -840,7 +923,10 @@ impl AppState {
 
     /// Convert document coordinates to screen coordinates.
     pub fn doc_to_screen(&self, doc_pos: Point) -> Point {
-        Point::new(doc_pos.x * self.zoom as f64 + self.pan_offset.x, doc_pos.y * self.zoom as f64 + self.pan_offset.y)
+        Point::new(
+            doc_pos.x * self.zoom as f64 + self.pan_offset.x,
+            doc_pos.y * self.zoom as f64 + self.pan_offset.y,
+        )
     }
 
     /// Add a guide.
@@ -1008,21 +1094,32 @@ mod tests {
 
     #[test]
     fn format_painter_copies_and_applies() {
+        use repub_color::Color;
         use repub_geometry::Rect;
         use repub_model::styles::Fill;
-        use repub_color::Color;
 
         let mut state = AppState::new();
         let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
         let mut src = Shape::rectangle(Rect::new(0.0, 0.0, 10.0, 10.0));
         src.fill = Fill::Solid(Color::RED);
         let src_id = doc.page_mut(0).unwrap().add_shape(src);
-        let dst_id = doc.page_mut(0).unwrap().add_shape(Shape::rectangle(Rect::new(20.0, 0.0, 10.0, 10.0)));
+        let dst_id = doc
+            .page_mut(0)
+            .unwrap()
+            .add_shape(Shape::rectangle(Rect::new(20.0, 0.0, 10.0, 10.0)));
         state.document = Some(doc);
 
         state.selection = vec![src_id];
         assert!(state.copy_format_from_selection());
         assert!(state.apply_copied_format_to(dst_id));
-        assert_eq!(state.current_page().unwrap().get_shape(dst_id).unwrap().fill, Fill::Solid(Color::RED));
+        assert_eq!(
+            state
+                .current_page()
+                .unwrap()
+                .get_shape(dst_id)
+                .unwrap()
+                .fill,
+            Fill::Solid(Color::RED)
+        );
     }
 }

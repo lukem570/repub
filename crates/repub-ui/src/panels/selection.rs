@@ -3,9 +3,9 @@
 //! page has more than one layer, each layer gets a row to show/hide and lock it.
 
 use egui::{Color32, Sense, Vec2};
-use repub_model::ObjectId;
 use repub_model::geometry::ShapeGeometry;
 use repub_model::shape::{Shape, ShapeKind};
+use repub_model::ObjectId;
 
 use crate::icons::Icon;
 use crate::state::AppState;
@@ -21,7 +21,11 @@ pub fn object_labels(objects: &[&Shape]) -> Vec<String> {
             let kind = kind_name(obj);
             let n = counts.entry(kind).or_insert(0);
             *n += 1;
-            obj.common.name.clone().filter(|n| !n.is_empty()).unwrap_or_else(|| format!("{kind} {n}"))
+            obj.common
+                .name
+                .clone()
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| format!("{kind} {n}"))
         })
         .collect()
 }
@@ -71,9 +75,11 @@ enum Renaming {
 /// (Enter or clicking away); Escape cancels.
 fn rename_field(ui: &mut egui::Ui, target: Renaming) -> Option<String> {
     let id = egui::Id::new("selection_rename");
-    let (current, mut text): (Option<Renaming>, String) = ui.data(|d| d.get_temp(id)).unwrap_or((None, String::new()));
+    let (current, mut text): (Option<Renaming>, String) =
+        ui.data(|d| d.get_temp(id)).unwrap_or((None, String::new()));
     debug_assert!(current == Some(target));
-    let response = ui.add(egui::TextEdit::singleline(&mut text).desired_width(ui.available_width() - 60.0));
+    let response =
+        ui.add(egui::TextEdit::singleline(&mut text).desired_width(ui.available_width() - 60.0));
     if !response.has_focus() && !response.lost_focus() {
         response.request_focus();
     }
@@ -92,11 +98,17 @@ fn rename_field(ui: &mut egui::Ui, target: Renaming) -> Option<String> {
 }
 
 fn start_rename(ui: &egui::Ui, target: Renaming, current: &str) {
-    ui.data_mut(|d| d.insert_temp(egui::Id::new("selection_rename"), (Some(target), current.to_string())));
+    ui.data_mut(|d| {
+        d.insert_temp(
+            egui::Id::new("selection_rename"),
+            (Some(target), current.to_string()),
+        )
+    });
 }
 
 fn renaming(ui: &egui::Ui) -> Option<Renaming> {
-    ui.data(|d| d.get_temp::<(Option<Renaming>, String)>(egui::Id::new("selection_rename"))).and_then(|(t, _)| t)
+    ui.data(|d| d.get_temp::<(Option<Renaming>, String)>(egui::Id::new("selection_rename")))
+        .and_then(|(t, _)| t)
 }
 
 /// A small icon toggle; returns true when clicked.
@@ -113,11 +125,17 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.add_space(6.0);
     ui.horizontal(|ui| {
         ui.add_space(8.0);
-        ui.label(egui::RichText::new("Selection").size(17.0).color(colors::accent()));
+        ui.label(
+            egui::RichText::new("Selection")
+                .size(17.0)
+                .color(colors::accent()),
+        );
     });
     ui.add_space(4.0);
 
-    let Some(page) = state.current_page() else { return };
+    let Some(page) = state.current_page() else {
+        return;
+    };
     let several_layers = true;
     let all: Vec<&Shape> = page.layers().iter().flat_map(|l| l.shapes()).collect();
     let labels = object_labels(&all);
@@ -137,121 +155,189 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     });
     ui.add_space(4.0);
 
-    egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-        // Front first: layers from the top, objects from the front
-        let mut first_label = 0;
-        let starts: Vec<usize> = page
-            .layers()
-            .iter()
-            .map(|l| {
-                let start = first_label;
-                first_label += l.shapes().len();
-                start
-            })
-            .collect();
-        for (li, layer) in page.layers().iter().enumerate().rev() {
-            {
-                let layer_count = page.layers().len();
-                ui.horizontal(|ui| {
-                    ui.add_space(8.0);
-                    let name = if layer.name.is_empty() { format!("Layer {}", li + 1) } else { layer.name.clone() };
-                    if renaming(ui) == Some(Renaming::Layer(li)) {
-                        if let Some(new_name) = rename_field(ui, Renaming::Layer(li)) {
-                            edit = Some(Edit::RenameLayer(li, new_name));
-                        }
-                    } else {
-                        let label = ui.add(
-                            egui::Label::new(egui::RichText::new(&name).strong().color(if layer.visible { colors::text_primary() } else { colors::text_disabled() }))
-                                .sense(Sense::click()),
-                        );
-                        if label.double_clicked() {
-                            start_rename(ui, Renaming::Layer(li), &name);
-                        }
-                        label.on_hover_text("Double-click to rename");
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            // Front first: layers from the top, objects from the front
+            let mut first_label = 0;
+            let starts: Vec<usize> = page
+                .layers()
+                .iter()
+                .map(|l| {
+                    let start = first_label;
+                    first_label += l.shapes().len();
+                    start
+                })
+                .collect();
+            for (li, layer) in page.layers().iter().enumerate().rev() {
+                {
+                    let layer_count = page.layers().len();
+                    ui.horizontal(|ui| {
                         ui.add_space(8.0);
-                        let menu = ui.menu_button("…", |ui| {
-                            if ui.add_enabled(li + 1 < layer_count, egui::Button::new("Move layer up")).clicked() {
-                                edit = Some(Edit::MoveLayer(li, true));
-                                ui.close_menu();
+                        let name = if layer.name.is_empty() {
+                            format!("Layer {}", li + 1)
+                        } else {
+                            layer.name.clone()
+                        };
+                        if renaming(ui) == Some(Renaming::Layer(li)) {
+                            if let Some(new_name) = rename_field(ui, Renaming::Layer(li)) {
+                                edit = Some(Edit::RenameLayer(li, new_name));
                             }
-                            if ui.add_enabled(li > 0, egui::Button::new("Move layer down")).clicked() {
-                                edit = Some(Edit::MoveLayer(li, false));
-                                ui.close_menu();
+                        } else {
+                            let label = ui.add(
+                                egui::Label::new(egui::RichText::new(&name).strong().color(
+                                    if layer.visible {
+                                        colors::text_primary()
+                                    } else {
+                                        colors::text_disabled()
+                                    },
+                                ))
+                                .sense(Sense::click()),
+                            );
+                            if label.double_clicked() {
+                                start_rename(ui, Renaming::Layer(li), &name);
                             }
-                            if ui.add_enabled(!state.selection.is_empty(), egui::Button::new("Move selection here")).clicked() {
-                                edit = Some(Edit::MoveSelectionToLayer(li));
-                                ui.close_menu();
+                            label.on_hover_text("Double-click to rename");
+                        }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.add_space(8.0);
+                            let menu = ui.menu_button("…", |ui| {
+                                if ui
+                                    .add_enabled(
+                                        li + 1 < layer_count,
+                                        egui::Button::new("Move layer up"),
+                                    )
+                                    .clicked()
+                                {
+                                    edit = Some(Edit::MoveLayer(li, true));
+                                    ui.close_menu();
+                                }
+                                if ui
+                                    .add_enabled(li > 0, egui::Button::new("Move layer down"))
+                                    .clicked()
+                                {
+                                    edit = Some(Edit::MoveLayer(li, false));
+                                    ui.close_menu();
+                                }
+                                if ui
+                                    .add_enabled(
+                                        !state.selection.is_empty(),
+                                        egui::Button::new("Move selection here"),
+                                    )
+                                    .clicked()
+                                {
+                                    edit = Some(Edit::MoveSelectionToLayer(li));
+                                    ui.close_menu();
+                                }
+                                if ui
+                                    .add(egui::Button::new(if layer.printable {
+                                        "Don't print this layer"
+                                    } else {
+                                        "Print this layer"
+                                    }))
+                                    .clicked()
+                                {
+                                    edit = Some(Edit::LayerPrintable(li, !layer.printable));
+                                    ui.close_menu();
+                                }
+                                if ui
+                                    .add_enabled(layer_count > 1, egui::Button::new("Delete layer"))
+                                    .clicked()
+                                {
+                                    edit = Some(Edit::RemoveLayer(li));
+                                    ui.close_menu();
+                                }
+                            });
+                            menu.response.on_hover_text("Layer options");
+                            let (icon, tip) = if layer.visible {
+                                (Icon::Eye, "Hide this layer")
+                            } else {
+                                (Icon::EyeOff, "Show this layer")
+                            };
+                            if icon_toggle(ui, icon, tip) {
+                                edit = Some(Edit::LayerVisible(li, !layer.visible));
                             }
-                            if ui.add(egui::Button::new(if layer.printable { "Don't print this layer" } else { "Print this layer" })).clicked() {
-                                edit = Some(Edit::LayerPrintable(li, !layer.printable));
-                                ui.close_menu();
-                            }
-                            if ui.add_enabled(layer_count > 1, egui::Button::new("Delete layer")).clicked() {
-                                edit = Some(Edit::RemoveLayer(li));
-                                ui.close_menu();
+                            let (icon, tip) = if layer.locked {
+                                (Icon::LockClosed, "Unlock this layer")
+                            } else {
+                                (Icon::LockOpen, "Lock this layer")
+                            };
+                            if icon_toggle(ui, icon, tip) {
+                                edit = Some(Edit::LayerLocked(li, !layer.locked));
                             }
                         });
-                        menu.response.on_hover_text("Layer options");
-                        let (icon, tip) = if layer.visible { (Icon::Eye, "Hide this layer") } else { (Icon::EyeOff, "Show this layer") };
-                        if icon_toggle(ui, icon, tip) {
-                            edit = Some(Edit::LayerVisible(li, !layer.visible));
-                        }
-                        let (icon, tip) = if layer.locked { (Icon::LockClosed, "Unlock this layer") } else { (Icon::LockOpen, "Lock this layer") };
-                        if icon_toggle(ui, icon, tip) {
-                            edit = Some(Edit::LayerLocked(li, !layer.locked));
-                        }
                     });
-                });
-            }
-            for (oi, obj) in layer.shapes().iter().enumerate().rev() {
-                let id = obj.id();
-                let visible = obj.common.visible && layer.visible;
-                let selected = state.selection.contains(&id);
-                let row = ui.horizontal(|ui| {
-                    ui.set_min_height(24.0);
-                    ui.add_space(if several_layers { 20.0 } else { 8.0 });
-                    if renaming(ui) == Some(Renaming::Object(id)) {
-                        if let Some(new_name) = rename_field(ui, Renaming::Object(id)) {
-                            edit = Some(Edit::RenameObject(li, oi, new_name));
+                }
+                for (oi, obj) in layer.shapes().iter().enumerate().rev() {
+                    let id = obj.id();
+                    let visible = obj.common.visible && layer.visible;
+                    let selected = state.selection.contains(&id);
+                    let row = ui.horizontal(|ui| {
+                        ui.set_min_height(24.0);
+                        ui.add_space(if several_layers { 20.0 } else { 8.0 });
+                        if renaming(ui) == Some(Renaming::Object(id)) {
+                            if let Some(new_name) = rename_field(ui, Renaming::Object(id)) {
+                                edit = Some(Edit::RenameObject(li, oi, new_name));
+                            }
+                        } else {
+                            let text =
+                                egui::RichText::new(&labels[starts[li] + oi]).color(if visible {
+                                    colors::text_primary()
+                                } else {
+                                    colors::text_disabled()
+                                });
+                            let label =
+                                ui.add(egui::Label::new(text).sense(Sense::click()).truncate());
+                            if label.clicked() {
+                                let extend = ui.input(|i| i.modifiers.shift || i.modifiers.command);
+                                edit = Some(Edit::Select(id, extend));
+                            }
+                            if label.double_clicked() {
+                                start_rename(ui, Renaming::Object(id), &labels[starts[li] + oi]);
+                            }
                         }
-                    } else {
-                        let text = egui::RichText::new(&labels[starts[li] + oi]).color(if visible { colors::text_primary() } else { colors::text_disabled() });
-                        let label = ui.add(egui::Label::new(text).sense(Sense::click()).truncate());
-                        if label.clicked() {
-                            let extend = ui.input(|i| i.modifiers.shift || i.modifiers.command);
-                            edit = Some(Edit::Select(id, extend));
-                        }
-                        if label.double_clicked() {
-                            start_rename(ui, Renaming::Object(id), &labels[starts[li] + oi]);
-                        }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.add_space(8.0);
+                            let on = obj.common.visible;
+                            let (icon, tip) = if on {
+                                (Icon::Eye, "Hide")
+                            } else {
+                                (Icon::EyeOff, "Show")
+                            };
+                            if icon_toggle(ui, icon, tip) {
+                                edit = Some(Edit::ObjectVisible(li, oi, !on));
+                            }
+                            let locked = obj.common.locked;
+                            let (icon, tip) = if locked {
+                                (Icon::LockClosed, "Unlock")
+                            } else {
+                                (Icon::LockOpen, "Lock")
+                            };
+                            if icon_toggle(ui, icon, tip) {
+                                edit = Some(Edit::ObjectLocked(li, oi, !locked));
+                            }
+                        });
+                    });
+                    if selected {
+                        let rect = row.response.rect.expand2(Vec2::new(0.0, 1.0));
+                        ui.painter().rect_filled(
+                            rect,
+                            0.0,
+                            Color32::from_rgba_unmultiplied(0x07, 0x75, 0x68, 40),
+                        );
                     }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.add_space(8.0);
-                        let on = obj.common.visible;
-                        let (icon, tip) = if on { (Icon::Eye, "Hide") } else { (Icon::EyeOff, "Show") };
-                        if icon_toggle(ui, icon, tip) {
-                            edit = Some(Edit::ObjectVisible(li, oi, !on));
-                        }
-                        let locked = obj.common.locked;
-                        let (icon, tip) = if locked { (Icon::LockClosed, "Unlock") } else { (Icon::LockOpen, "Lock") };
-                        if icon_toggle(ui, icon, tip) {
-                            edit = Some(Edit::ObjectLocked(li, oi, !locked));
-                        }
-                    });
-                });
-                if selected {
-                    let rect = row.response.rect.expand2(Vec2::new(0.0, 1.0));
-                    ui.painter().rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0x07, 0x75, 0x68, 40));
                 }
             }
-        }
-        if all.is_empty() {
-            ui.add_space(12.0);
-            ui.vertical_centered(|ui| ui.label(egui::RichText::new("No objects on this page").color(colors::text_disabled())));
-        }
-    });
+            if all.is_empty() {
+                ui.add_space(12.0);
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new("No objects on this page")
+                            .color(colors::text_disabled()),
+                    )
+                });
+            }
+        });
 
     apply(state, edit);
 }
@@ -271,11 +357,35 @@ fn apply(state: &mut AppState, edit: Option<Edit>) {
             }
             return;
         }
-        Edit::ObjectVisible(_, _, on) | Edit::AllVisible(on) => if *on { "Show Object" } else { "Hide Object" },
-        Edit::ObjectLocked(_, _, on) => if *on { "Lock Object" } else { "Unlock Object" },
+        Edit::ObjectVisible(_, _, on) | Edit::AllVisible(on) => {
+            if *on {
+                "Show Object"
+            } else {
+                "Hide Object"
+            }
+        }
+        Edit::ObjectLocked(_, _, on) => {
+            if *on {
+                "Lock Object"
+            } else {
+                "Unlock Object"
+            }
+        }
         Edit::RenameObject(..) => "Rename Object",
-        Edit::LayerVisible(_, on) => if *on { "Show Layer" } else { "Hide Layer" },
-        Edit::LayerLocked(_, on) => if *on { "Lock Layer" } else { "Unlock Layer" },
+        Edit::LayerVisible(_, on) => {
+            if *on {
+                "Show Layer"
+            } else {
+                "Hide Layer"
+            }
+        }
+        Edit::LayerLocked(_, on) => {
+            if *on {
+                "Lock Layer"
+            } else {
+                "Unlock Layer"
+            }
+        }
         Edit::LayerPrintable(..) => "Layer Printing",
         Edit::RenameLayer(..) => "Rename Layer",
         Edit::AddLayer => "New Layer",
@@ -329,7 +439,11 @@ fn apply(state: &mut AppState, edit: Option<Edit>) {
                     layer.name = name;
                 }
             }
-            Edit::Select(..) | Edit::AddLayer | Edit::RemoveLayer(_) | Edit::MoveLayer(..) | Edit::MoveSelectionToLayer(_) => {}
+            Edit::Select(..)
+            | Edit::AddLayer
+            | Edit::RemoveLayer(_)
+            | Edit::MoveLayer(..)
+            | Edit::MoveSelectionToLayer(_) => {}
         }
     }
     state.end_edit(label);

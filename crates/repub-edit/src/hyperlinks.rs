@@ -37,12 +37,17 @@ pub fn destination(link: &Hyperlink) -> Destination {
             _ => Destination::Unusable(target.to_owned()),
         };
     }
-    if ["http://", "https://", "mailto:", "ftp://"].iter().any(|s| lower.starts_with(s)) {
+    if ["http://", "https://", "mailto:", "ftp://"]
+        .iter()
+        .any(|s| lower.starts_with(s))
+    {
         return Destination::Address(target.to_owned());
     }
     // Anything else with a scheme (file:, javascript:, ...) isn't opened
     if lower.contains("://")
-        || lower.split_once(':').is_some_and(|(s, _)| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphabetic()))
+        || lower
+            .split_once(':')
+            .is_some_and(|(s, _)| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphabetic()))
     {
         return Destination::Unusable(target.to_owned());
     }
@@ -95,7 +100,13 @@ mod tests {
             Destination::Address("mailto:me@example.com".into())
         );
         assert_eq!(destination(&link("Page 3", false)), Destination::Page(2));
-        assert!(matches!(destination(&link("file:///etc/passwd", true)), Destination::Unusable(_)));
-        assert!(matches!(destination(&link("javascript:alert(1)", true)), Destination::Unusable(_)));
+        assert!(matches!(
+            destination(&link("file:///etc/passwd", true)),
+            Destination::Unusable(_)
+        ));
+        assert!(matches!(
+            destination(&link("javascript:alert(1)", true)),
+            Destination::Unusable(_)
+        ));
     }
 }

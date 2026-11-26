@@ -234,9 +234,7 @@ impl ToolResult {
     /// Create a successful text result.
     pub fn text(text: impl Into<String>) -> Self {
         Self {
-            content: vec![ToolResultContent::Text {
-                text: text.into(),
-            }],
+            content: vec![ToolResultContent::Text { text: text.into() }],
             is_error: false,
         }
     }
@@ -254,9 +252,7 @@ impl ToolResult {
     /// Create an error result.
     pub fn error(msg: impl Into<String>) -> Self {
         Self {
-            content: vec![ToolResultContent::Text {
-                text: msg.into(),
-            }],
+            content: vec![ToolResultContent::Text { text: msg.into() }],
             is_error: true,
         }
     }

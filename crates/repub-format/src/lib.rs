@@ -34,8 +34,8 @@ pub use error::{FormatError, FormatResult};
 // Re-export the common entry points and option types from each backend, so a
 // caller can reach everything through this one crate.
 pub use repub_export_raster::{
-    export_html, export_html_string, export_image, export_image_bytes, export_png as export_png_page,
-    ExportFormat, HtmlOptions, RasterExportOptions,
+    export_html, export_html_string, export_image, export_image_bytes,
+    export_png as export_png_page, ExportFormat, HtmlOptions, RasterExportOptions,
 };
 pub use repub_export_vector::{
     export_pdf, export_pdf_bytes, export_svg, export_svg_bytes, PdfOptions, SvgOptions,

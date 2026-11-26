@@ -8,9 +8,7 @@
 use repub_color::{Color, GradientStop as ColorStop, LinearGradient, RadialGradient};
 use repub_geometry::{Point, Rect};
 use repub_scene::Paint as ScenePaint;
-use tiny_skia::{
-    GradientStop, Paint, Point as SkPoint, Shader, SpreadMode, Transform,
-};
+use tiny_skia::{GradientStop, Paint, Point as SkPoint, Shader, SpreadMode, Transform};
 
 /// Convert a scene [`Color`] into a tiny-skia color.
 pub fn convert_color(color: &Color) -> tiny_skia::Color {

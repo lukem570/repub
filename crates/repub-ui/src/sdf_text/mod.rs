@@ -27,7 +27,9 @@ use eframe::egui_wgpu;
 use egui::{Painter, Pos2, Rect};
 use repub_model::shape::{Shape, ShapeKind, TextFitMode, TextFrameData};
 
-pub use layout::{set_exclusions, set_file_name, set_page_context, CaretLine, Exclusion, FrameLayout};
+pub use layout::{
+    set_exclusions, set_file_name, set_page_context, CaretLine, Exclusion, FrameLayout,
+};
 pub use render::install;
 use render::{TextCallback, Vertex};
 
@@ -62,7 +64,9 @@ pub fn prepare(shape: &Shape) {
         let mut extra = String::from(" 0123456789");
         match &para.style.list_style {
             repub_model::styles::ListStyle::Bullet { character, .. } => extra.push(*character),
-            repub_model::styles::ListStyle::Numbered { .. } => extra.push_str(".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+            repub_model::styles::ListStyle::Numbered { .. } => {
+                extra.push_str(".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+            }
             repub_model::styles::ListStyle::None => {}
         }
         runs.push((&para.style.default_char_style, extra.into()));
@@ -79,7 +83,11 @@ pub fn prepare(shape: &Shape) {
         runs.iter().any(|(style, text)| {
             !atlas.knows(style) || {
                 let (face, _) = atlas.resolve(style);
-                text.chars().any(|c| !atlas.has_glyph(face, c) || ((style.all_caps || style.small_caps) && c.to_uppercase().any(|u| !atlas.has_glyph(face, u))))
+                text.chars().any(|c| {
+                    !atlas.has_glyph(face, c)
+                        || ((style.all_caps || style.small_caps)
+                            && c.to_uppercase().any(|u| !atlas.has_glyph(face, u)))
+                })
             }
         })
     };
@@ -116,7 +124,9 @@ pub fn prepare(shape: &Shape) {
 /// shape that is not a text frame.
 pub fn content_height(shape: &Shape) -> f64 {
     const PROBE_HEIGHT: f64 = 100_000.0;
-    let Some(tf) = text_data(shape) else { return 0.0 };
+    let Some(tf) = text_data(shape) else {
+        return 0.0;
+    };
     let mut probe = shape.clone();
     let probe_data = TextFrameData {
         text_fit: TextFitMode::None,
@@ -160,20 +170,35 @@ pub fn draw_text_frame(painter: &Painter, page_origin: Pos2, zoom: f32, shape: &
 
     // Document space -> screen, rotating about the frame centre
     let bounds = shape.common.bounds;
-    let center = Pos2::new((bounds.origin.x + bounds.size.width / 2.0) as f32, (bounds.origin.y + bounds.size.height / 2.0) as f32);
+    let center = Pos2::new(
+        (bounds.origin.x + bounds.size.width / 2.0) as f32,
+        (bounds.origin.y + bounds.size.height / 2.0) as f32,
+    );
     let (sin, cos) = (shape.common.rotation as f32).to_radians().sin_cos();
     let to_screen = |x: f32, y: f32| -> Pos2 {
         let (dx, dy) = (x - center.x, y - center.y);
-        let rotated = Pos2::new(center.x + dx * cos - dy * sin, center.y + dx * sin + dy * cos);
+        let rotated = Pos2::new(
+            center.x + dx * cos - dy * sin,
+            center.y + dx * sin + dy * cos,
+        );
         page_origin + rotated.to_vec2() * zoom
     };
 
     // Clip to the frame's screen-space bounding box
     let corners = [
         to_screen(bounds.origin.x as f32, bounds.origin.y as f32),
-        to_screen((bounds.origin.x + bounds.size.width) as f32, bounds.origin.y as f32),
-        to_screen((bounds.origin.x + bounds.size.width) as f32, (bounds.origin.y + bounds.size.height) as f32),
-        to_screen(bounds.origin.x as f32, (bounds.origin.y + bounds.size.height) as f32),
+        to_screen(
+            (bounds.origin.x + bounds.size.width) as f32,
+            bounds.origin.y as f32,
+        ),
+        to_screen(
+            (bounds.origin.x + bounds.size.width) as f32,
+            (bounds.origin.y + bounds.size.height) as f32,
+        ),
+        to_screen(
+            bounds.origin.x as f32,
+            (bounds.origin.y + bounds.size.height) as f32,
+        ),
     ];
     // egui-wgpu rounds the callback viewport to whole physical pixels. Snap the
     // clip the same way so the NDC mapping below matches the viewport the GPU
@@ -195,7 +220,10 @@ pub fn draw_text_frame(painter: &Painter, page_origin: Pos2, zoom: f32, shape: &
 
     // The callback viewport is `clip`, so positions are NDC relative to it
     let to_ndc = |p: Pos2| -> [f32; 2] {
-        [(p.x - clip.min.x) / clip.width() * 2.0 - 1.0, 1.0 - (p.y - clip.min.y) / clip.height() * 2.0]
+        [
+            (p.x - clip.min.x) / clip.width() * 2.0 - 1.0,
+            1.0 - (p.y - clip.min.y) / clip.height() * 2.0,
+        ]
     };
     let mut vertices = Vec::with_capacity(quads.len() * 6);
     for q in &quads {
@@ -203,14 +231,29 @@ pub fn draw_text_frame(painter: &Painter, page_origin: Pos2, zoom: f32, shape: &
         let [u0, v0, u1, v1] = q.uv;
         // Synthetic italic: shear horizontally about the baseline
         let shear = |x: f32, y: f32| to_screen(x + q.skew * (q.baseline - y), y);
-        let corner = |x: f32, y: f32, u: f32, v: f32| Vertex { position: to_ndc(shear(x, y)), uv: [u, v], color: q.color };
-        let (tl, tr, br, bl) = (corner(x0, y0, u0, v0), corner(x1, y0, u1, v0), corner(x1, y1, u1, v1), corner(x0, y1, u0, v1));
+        let corner = |x: f32, y: f32, u: f32, v: f32| Vertex {
+            position: to_ndc(shear(x, y)),
+            uv: [u, v],
+            color: q.color,
+        };
+        let (tl, tr, br, bl) = (
+            corner(x0, y0, u0, v0),
+            corner(x1, y0, u1, v0),
+            corner(x1, y1, u1, v1),
+            corner(x0, y1, u0, v1),
+        );
         vertices.extend_from_slice(&[tl, tr, br, tl, br, bl]);
     }
 
     let slot = render::next_slot();
     painter
         .with_clip_rect(clip)
-        .add(egui_wgpu::Callback::new_paint_callback(clip, TextCallback { slot: Some(slot), vertices }));
+        .add(egui_wgpu::Callback::new_paint_callback(
+            clip,
+            TextCallback {
+                slot: Some(slot),
+                vertices,
+            },
+        ));
     true
 }

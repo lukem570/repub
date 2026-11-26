@@ -45,7 +45,8 @@ impl RenamePageDialog {
             .show(ctx, |ui| {
                 ui.set_min_width(280.0);
                 ui.label(egui::RichText::new("Page name").font(fonts::body()));
-                let resp = ui.add(egui::TextEdit::singleline(&mut self.name).desired_width(f32::INFINITY));
+                let resp =
+                    ui.add(egui::TextEdit::singleline(&mut self.name).desired_width(f32::INFINITY));
 
                 ui.add_space(12.0);
                 ui.horizontal(|ui| {
@@ -54,11 +55,17 @@ impl RenamePageDialog {
                         result = Some(false);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+                        if ui
+                            .add(egui::Button::new("OK").fill(colors::accent()))
+                            .clicked()
+                        {
                             let name = self.name.trim().to_string();
                             state.record_undo("Rename Page");
                             if let Some(doc) = state.document.as_mut() {
-                                doc.rename_page(self.page_index, if name.is_empty() { None } else { Some(name) });
+                                doc.rename_page(
+                                    self.page_index,
+                                    if name.is_empty() { None } else { Some(name) },
+                                );
                             }
                             state.mark_dirty();
                             self.open = false;
@@ -71,7 +78,10 @@ impl RenamePageDialog {
                     let name = self.name.trim().to_string();
                     state.record_undo("Rename Page");
                     if let Some(doc) = state.document.as_mut() {
-                        doc.rename_page(self.page_index, if name.is_empty() { None } else { Some(name) });
+                        doc.rename_page(
+                            self.page_index,
+                            if name.is_empty() { None } else { Some(name) },
+                        );
                     }
                     state.mark_dirty();
                     self.open = false;

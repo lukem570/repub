@@ -24,8 +24,6 @@
 //! - **Dialogs**: New document, export, etc.
 //! - **Commands**: Undo/redo command pattern
 
-
-
 pub mod app;
 pub mod background;
 pub mod canvas;
@@ -34,30 +32,30 @@ pub mod context_menu;
 pub mod dialogs;
 pub mod edit_points;
 pub mod gradient;
-pub mod hyperlinks;
-pub mod pattern_fill;
-pub mod shape_gallery;
-pub mod text_chain;
 pub mod hit_test;
+pub mod hyperlinks;
 pub mod icons;
 pub mod menus;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native_menu;
 pub mod panels;
+pub mod pattern_fill;
 pub mod sdf_text;
-pub mod spelling;
-pub mod table_view;
 pub mod settings;
+pub mod shape_gallery;
 pub mod snapping;
+pub mod spelling;
 pub mod start_screen;
 pub mod state;
+pub mod table_view;
+pub mod text_chain;
 pub mod text_edit;
 pub mod text_format;
 pub mod theme;
 pub mod tools;
 pub mod widgets;
-pub mod wordart_warp;
 pub mod wordart_path;
+pub mod wordart_warp;
 
 pub use app::RepubApp;
 pub use settings::Settings;

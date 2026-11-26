@@ -56,15 +56,17 @@ pub fn run(args: ConvertArgs, opts: &GlobalOptions) -> Result<()> {
         .map(|s| s.to_lowercase())
         .unwrap_or_default();
 
-    output::verbose(
-        format!("Converting {} -> {}", input_ext, output_ext),
-        opts,
-    );
+    output::verbose(format!("Converting {} -> {}", input_ext, output_ext), opts);
 
     // Currently we only support native format conversions
     match (input_ext.as_str(), output_ext.as_str()) {
         // Native to native (compressed/uncompressed)
-        ("pcd", "pcd") | ("pcd", "pcdz") | ("pcdz", "pcd") | ("pcdz", "pcdz") | ("json", "pcd") | ("pcd", "json") => {
+        ("pcd", "pcd")
+        | ("pcd", "pcdz")
+        | ("pcdz", "pcd")
+        | ("pcdz", "pcdz")
+        | ("json", "pcd")
+        | ("pcd", "json") => {
             let doc = native::load(&args.input)
                 .with_context(|| format!("Failed to load: {}", args.input.display()))?;
 
@@ -78,7 +80,11 @@ pub fn run(args: ConvertArgs, opts: &GlobalOptions) -> Result<()> {
                 .with_context(|| format!("Failed to save: {}", args.output.display()))?;
 
             output::success(
-                format!("Converted {} to {}", args.input.display(), args.output.display()),
+                format!(
+                    "Converted {} to {}",
+                    args.input.display(),
+                    args.output.display()
+                ),
                 opts,
             );
         }
@@ -90,11 +96,7 @@ pub fn run(args: ConvertArgs, opts: &GlobalOptions) -> Result<()> {
         }
 
         _ => {
-            anyhow::bail!(
-                "Unsupported conversion: {} to {}",
-                input_ext,
-                output_ext
-            );
+            anyhow::bail!("Unsupported conversion: {} to {}", input_ext, output_ext);
         }
     }
 

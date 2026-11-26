@@ -171,11 +171,7 @@ fn emit_shape(out: &mut String, shape: &Shape) {
             let len = (dx * dx + dy * dy).sqrt();
             let angle = dy.atan2(dx).to_degrees();
             let width = shape.line.as_ref().map(|s| s.width).unwrap_or(1.0);
-            let color = shape
-                .line
-                .as_ref()
-                .map(|s| s.color)
-                .unwrap_or(Color::BLACK);
+            let color = shape.line.as_ref().map(|s| s.color).unwrap_or(Color::BLACK);
             let _ = write!(
                 out,
                 "<div class=\"shape\" style=\"left:{x:.2}pt;top:{y:.2}pt;\

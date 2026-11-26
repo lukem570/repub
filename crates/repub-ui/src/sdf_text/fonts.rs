@@ -37,11 +37,17 @@ static REGISTRY: OnceLock<Registry> = OnceLock::new();
 pub fn scan_in_background() {
     static STARTED: OnceLock<()> = OnceLock::new();
     STARTED.get_or_init(|| {
-        let _ = std::thread::Builder::new().name("font-scan".into()).spawn(|| {
-            let start = std::time::Instant::now();
-            let r = registry();
-            log::info!("Found {} font families in {:.0} ms", r.families.len(), start.elapsed().as_secs_f64() * 1000.0);
-        });
+        let _ = std::thread::Builder::new()
+            .name("font-scan".into())
+            .spawn(|| {
+                let start = std::time::Instant::now();
+                let r = registry();
+                log::info!(
+                    "Found {} font families in {:.0} ms",
+                    r.families.len(),
+                    start.elapsed().as_secs_f64() * 1000.0
+                );
+            });
     });
 }
 
@@ -58,7 +64,11 @@ pub fn try_registry() -> Option<&'static Registry> {
 impl Registry {
     /// Family names for a font menu: the bundled family and every installed one.
     pub fn family_names(&self) -> Vec<String> {
-        let mut out: Vec<String> = self.families.values().map(|(name, _)| name.clone()).collect();
+        let mut out: Vec<String> = self
+            .families
+            .values()
+            .map(|(name, _)| name.clone())
+            .collect();
         if !self.families.contains_key(&BUNDLED.to_lowercase()) {
             out.push(BUNDLED.to_owned());
         }
@@ -89,7 +99,8 @@ fn font_dirs() -> Vec<PathBuf> {
         dirs.extend(["/System/Library/Fonts", "/Library/Fonts"].map(PathBuf::from));
         dirs.extend(home.map(|h| h.join("Library/Fonts")));
     } else if cfg!(target_os = "windows") {
-        let windir = std::env::var_os("WINDIR").map_or_else(|| PathBuf::from("C:\\Windows"), PathBuf::from);
+        let windir =
+            std::env::var_os("WINDIR").map_or_else(|| PathBuf::from("C:\\Windows"), PathBuf::from);
         dirs.push(windir.join("Fonts"));
         if let Some(local) = std::env::var_os("LOCALAPPDATA") {
             dirs.push(PathBuf::from(local).join("Microsoft\\Windows\\Fonts"));
@@ -105,7 +116,9 @@ fn font_dirs() -> Vec<PathBuf> {
 }
 
 fn walk(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
@@ -140,18 +153,32 @@ fn faces_in(path: &Path) -> Vec<(String, FontFile)> {
     if std::fs::metadata(path).map_or(true, |m| m.len() > MAX_FILE) {
         return Vec::new();
     }
-    let Ok(data) = std::fs::read(path) else { return Vec::new() };
+    let Ok(data) = std::fs::read(path) else {
+        return Vec::new();
+    };
     let count = ttf_parser::fonts_in_collection(&data).unwrap_or(1);
     let mut out = Vec::new();
     for index in 0..count {
-        let Ok(face) = ttf_parser::Face::parse(&data, index) else { continue };
+        let Ok(face) = ttf_parser::Face::parse(&data, index) else {
+            continue;
+        };
         // Hidden system families (".SF NS", ".Aqua...") aren't for documents
-        let Some(name) = family_name(&face).filter(|n| !n.starts_with('.')) else { continue };
+        let Some(name) = family_name(&face).filter(|n| !n.starts_with('.')) else {
+            continue;
+        };
         // Glyph outlines are needed (bitmap-only emoji fonts are skipped)
         if face.tables().glyf.is_none() && face.tables().cff.is_none() {
             continue;
         }
-        out.push((name, FontFile { path: path.to_path_buf(), index, weight: face.weight().to_number(), italic: face.is_italic() }));
+        out.push((
+            name,
+            FontFile {
+                path: path.to_path_buf(),
+                index,
+                weight: face.weight().to_number(),
+                italic: face.is_italic(),
+            },
+        ));
     }
     out
 }
@@ -174,7 +201,12 @@ struct CachedFile {
 /// Size and modification time (seconds) of a file.
 pub fn file_stamp(path: &Path) -> Option<(u64, u64)> {
     let meta = std::fs::metadata(path).ok()?;
-    let modified = meta.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs();
+    let modified = meta
+        .modified()
+        .ok()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
     Some((meta.len(), modified))
 }
 
@@ -196,10 +228,17 @@ fn scan() -> Registry {
     let mut entries: Vec<CachedFile> = Vec::new();
     let mut to_read: Vec<(PathBuf, u64, u64)> = Vec::new();
     for path in files {
-        let Some((size, modified)) = file_stamp(&path) else { continue };
+        let Some((size, modified)) = file_stamp(&path) else {
+            continue;
+        };
         match cached.get(&path) {
             Some(c) if c.size == size && c.modified == modified => {
-                entries.push(CachedFile { path, size, modified, faces: c.faces.clone() });
+                entries.push(CachedFile {
+                    path,
+                    size,
+                    modified,
+                    faces: c.faces.clone(),
+                });
             }
             _ => to_read.push((path, size, modified)),
         }
@@ -207,7 +246,9 @@ fn scan() -> Registry {
     let changed = !to_read.is_empty() || entries.len() != cached.len();
     if !to_read.is_empty() {
         // Reading and parsing font files: spread over all cores
-        let threads = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(1, 16);
+        let threads = std::thread::available_parallelism()
+            .map_or(4, |n| n.get())
+            .clamp(1, 16);
         let chunk = to_read.len().div_ceil(threads).max(1);
         let read: Vec<CachedFile> = std::thread::scope(|scope| {
             let workers: Vec<_> = to_read
@@ -219,13 +260,19 @@ fn scan() -> Registry {
                                 path: path.clone(),
                                 size: *size,
                                 modified: *modified,
-                                faces: faces_in(path).into_iter().map(|(name, f)| (name, f.index, f.weight, f.italic)).collect(),
+                                faces: faces_in(path)
+                                    .into_iter()
+                                    .map(|(name, f)| (name, f.index, f.weight, f.italic))
+                                    .collect(),
                             })
                             .collect::<Vec<_>>()
                     })
                 })
                 .collect();
-            workers.into_iter().flat_map(|w| w.join().unwrap_or_default()).collect()
+            workers
+                .into_iter()
+                .flat_map(|w| w.join().unwrap_or_default())
+                .collect()
         });
         entries.extend(read);
     }
@@ -240,8 +287,17 @@ fn scan() -> Registry {
     let mut families: BTreeMap<String, (String, Vec<FontFile>)> = BTreeMap::new();
     for entry in entries {
         for (name, index, weight, italic) in entry.faces {
-            let file = FontFile { path: entry.path.clone(), index, weight, italic };
-            families.entry(name.to_lowercase()).or_insert_with(|| (name.clone(), Vec::new())).1.push(file);
+            let file = FontFile {
+                path: entry.path.clone(),
+                index,
+                weight,
+                italic,
+            };
+            families
+                .entry(name.to_lowercase())
+                .or_insert_with(|| (name.clone(), Vec::new()))
+                .1
+                .push(file);
         }
     }
     Registry { families }

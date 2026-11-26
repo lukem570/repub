@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Args;
 use repub_format_native as native;
-use repub_model::shape::{Shape, ShapeKind};
 use repub_model::geometry::ShapeGeometry;
+use repub_model::shape::{Shape, ShapeKind};
 use serde::Serialize;
 use tabled::Tabled;
 
@@ -260,12 +260,7 @@ fn list_objects(
     Ok(())
 }
 
-fn collect_object_info(
-    objects: &mut Vec<ObjectInfo>,
-    obj: &Shape,
-    page: usize,
-    layer: &str,
-) {
+fn collect_object_info(objects: &mut Vec<ObjectInfo>, obj: &Shape, page: usize, layer: &str) {
     let bounds = &obj.common.bounds;
     let obj_type = match &obj.kind {
         ShapeKind::AutoShape(auto) => {

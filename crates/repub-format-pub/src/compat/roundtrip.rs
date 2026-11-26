@@ -1,44 +1,44 @@
 //! Round-trip testing: Import → Export → Re-import comparison.
 
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::Path;
 
 use repub_model::document::Document;
 
 use crate::error::FormatResult;
 use crate::model::{LayerObjectExt, Object};
-use crate::pub_import;
 use crate::pub_export::{self, PubExportOptions};
+use crate::pub_import;
 
 /// Result of a round-trip test
 #[derive(Debug, Clone)]
 pub struct RoundtripResult {
     /// Source file path
     pub source_path: String,
-    
+
     /// Import succeeded
     pub import_success: bool,
     /// Import error if any
     pub import_error: Option<String>,
-    
+
     /// Export succeeded
     pub export_success: bool,
     /// Export error if any
     pub export_error: Option<String>,
-    
+
     /// Re-import succeeded
     pub reimport_success: bool,
     /// Re-import error if any
     pub reimport_error: Option<String>,
-    
+
     /// Original document stats
     pub original: DocumentStats,
     /// Re-imported document stats
     pub reimported: DocumentStats,
-    
+
     /// Comparison results
     pub comparison: ComparisonResult,
-    
+
     /// Overall round-trip score (0-100%)
     pub score: f64,
     /// Score breakdown
@@ -59,10 +59,10 @@ pub struct DocumentStats {
     pub groups: usize,
     pub lines: usize,
     pub wordart: usize,
-    
+
     /// Page sizes (width, height) in points
     pub page_sizes: Vec<(f64, f64)>,
-    
+
     /// Object bounds for comparison
     pub object_bounds: Vec<(f64, f64, f64, f64)>,
 }
@@ -70,24 +70,24 @@ pub struct DocumentStats {
 impl DocumentStats {
     pub fn from_document(doc: &Document) -> Self {
         let mut stats = Self::default();
-        
+
         stats.pages = doc.pages().len();
-        
+
         for page in doc.pages() {
             stats.page_sizes.push((page.size.width, page.size.height));
-            
+
             for layer in page.layers() {
                 Self::count_objects(&layer.objects(), &mut stats);
             }
         }
-        
+
         stats
     }
-    
+
     fn count_objects(objects: &[Object], stats: &mut DocumentStats) {
         for obj in objects {
             stats.total_objects += 1;
-            
+
             // Record bounds
             let bounds = obj.bounds();
             stats.object_bounds.push((
@@ -96,7 +96,7 @@ impl DocumentStats {
                 bounds.width(),
                 bounds.height(),
             ));
-            
+
             match obj {
                 Object::TextFrame(tf) => {
                     stats.text_frames += 1;
@@ -137,29 +137,29 @@ pub struct ComparisonResult {
     pub pages_match: bool,
     /// Page count difference
     pub page_diff: i32,
-    
+
     /// Object count matches
     pub objects_match: bool,
     /// Object count difference
     pub object_diff: i32,
-    
+
     /// Text character count matches (within tolerance)
     pub text_match: bool,
     /// Text char difference
     pub text_diff: i32,
     /// Text match percentage
     pub text_match_percent: f64,
-    
+
     /// Image count matches
     pub images_match: bool,
     /// Image count difference
     pub image_diff: i32,
-    
+
     /// Page sizes match (within tolerance)
     pub sizes_match: bool,
     /// Number of matching page sizes
     pub matching_sizes: usize,
-    
+
     /// Overall match percentage
     pub overall_match: f64,
 }
@@ -167,15 +167,15 @@ pub struct ComparisonResult {
 impl ComparisonResult {
     pub fn compare(original: &DocumentStats, reimported: &DocumentStats) -> Self {
         let mut result = Self::default();
-        
+
         // Page count
         result.page_diff = reimported.pages as i32 - original.pages as i32;
         result.pages_match = result.page_diff == 0;
-        
+
         // Object count
         result.object_diff = reimported.total_objects as i32 - original.total_objects as i32;
         result.objects_match = result.object_diff == 0;
-        
+
         // Text
         result.text_diff = reimported.text_chars as i32 - original.text_chars as i32;
         if original.text_chars > 0 {
@@ -188,11 +188,11 @@ impl ComparisonResult {
             result.text_match_percent = 0.0;
         }
         result.text_match = result.text_match_percent >= 95.0;
-        
+
         // Images
         result.image_diff = reimported.images as i32 - original.images as i32;
         result.images_match = result.image_diff == 0;
-        
+
         // Page sizes
         result.matching_sizes = 0;
         for (i, (ow, oh)) in original.page_sizes.iter().enumerate() {
@@ -202,21 +202,25 @@ impl ComparisonResult {
                 }
             }
         }
-        result.sizes_match = result.matching_sizes == original.page_sizes.len() 
+        result.sizes_match = result.matching_sizes == original.page_sizes.len()
             && original.page_sizes.len() == reimported.page_sizes.len();
-        
+
         // Overall match
         let mut match_scores = Vec::new();
         match_scores.push(if result.pages_match { 100.0 } else { 0.0 });
-        match_scores.push(if result.objects_match { 100.0 } else { 
-            (1.0 - (result.object_diff.abs() as f64 / original.total_objects.max(1) as f64)).max(0.0) * 100.0
+        match_scores.push(if result.objects_match {
+            100.0
+        } else {
+            (1.0 - (result.object_diff.abs() as f64 / original.total_objects.max(1) as f64))
+                .max(0.0)
+                * 100.0
         });
         match_scores.push(result.text_match_percent);
         match_scores.push(if result.images_match { 100.0 } else { 0.0 });
         match_scores.push(if result.sizes_match { 100.0 } else { 0.0 });
-        
+
         result.overall_match = match_scores.iter().sum::<f64>() / match_scores.len() as f64;
-        
+
         result
     }
 }
@@ -236,7 +240,7 @@ impl RoundtripTest {
             verbose: false,
         }
     }
-    
+
     pub fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self
@@ -246,7 +250,7 @@ impl RoundtripTest {
     pub fn test<P: AsRef<Path>>(&self, path: P) -> RoundtripResult {
         let path = path.as_ref();
         let path_str = path.to_string_lossy().to_string();
-        
+
         let mut result = RoundtripResult {
             source_path: path_str,
             import_success: false,
@@ -274,12 +278,12 @@ impl RoundtripTest {
                 return result;
             }
         };
-        
+
         result.original = DocumentStats::from_document(&doc);
 
         // Step 2: Export to temp file
         let temp_path = std::env::temp_dir().join("repub_roundtrip_test.pub");
-        
+
         match pub_export::export(&doc, &temp_path, &self.export_options) {
             Ok(()) => {
                 result.export_success = true;
@@ -335,7 +339,7 @@ impl RoundtripTest {
 
         // Export to temp file
         let temp_path = std::env::temp_dir().join("repub_roundtrip_doc_test.pub");
-        
+
         match pub_export::export(doc, &temp_path, &self.export_options) {
             Ok(()) => {
                 result.export_success = true;
@@ -375,17 +379,23 @@ impl RoundtripTest {
 
         // Import success (20%)
         let import_score = if result.import_success { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Import".to_string(), import_score);
+        result
+            .score_breakdown
+            .insert("Import".to_string(), import_score);
         scores.push((20.0, import_score));
 
         // Export success (20%)
         let export_score = if result.export_success { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Export".to_string(), export_score);
+        result
+            .score_breakdown
+            .insert("Export".to_string(), export_score);
         scores.push((20.0, export_score));
 
         // Re-import success (20%)
         let reimport_score = if result.reimport_success { 100.0 } else { 0.0 };
-        result.score_breakdown.insert("Re-import".to_string(), reimport_score);
+        result
+            .score_breakdown
+            .insert("Re-import".to_string(), reimport_score);
         scores.push((20.0, reimport_score));
 
         // Data fidelity (40%)
@@ -394,7 +404,9 @@ impl RoundtripTest {
         } else {
             0.0
         };
-        result.score_breakdown.insert("Data Fidelity".to_string(), fidelity_score);
+        result
+            .score_breakdown
+            .insert("Data Fidelity".to_string(), fidelity_score);
         scores.push((40.0, fidelity_score));
 
         // Calculate weighted average
@@ -422,33 +434,66 @@ impl RoundtripResult {
         s.push_str(&format!("Round-trip Test: {}\n", self.source_path));
         s.push_str(&format!("Overall Score: {:.1}%\n", self.score));
         s.push_str("\nSteps:\n");
-        s.push_str(&format!("  Import:    {} {}\n", 
+        s.push_str(&format!(
+            "  Import:    {} {}\n",
             if self.import_success { "✓" } else { "✗" },
-            self.import_error.as_deref().unwrap_or("")));
-        s.push_str(&format!("  Export:    {} {}\n",
+            self.import_error.as_deref().unwrap_or("")
+        ));
+        s.push_str(&format!(
+            "  Export:    {} {}\n",
             if self.export_success { "✓" } else { "✗" },
-            self.export_error.as_deref().unwrap_or("")));
-        s.push_str(&format!("  Re-import: {} {}\n",
+            self.export_error.as_deref().unwrap_or("")
+        ));
+        s.push_str(&format!(
+            "  Re-import: {} {}\n",
             if self.reimport_success { "✓" } else { "✗" },
-            self.reimport_error.as_deref().unwrap_or("")));
-        
+            self.reimport_error.as_deref().unwrap_or("")
+        ));
+
         if self.import_success && self.reimport_success {
             s.push_str("\nComparison:\n");
-            s.push_str(&format!("  Pages:   {} → {} ({})\n",
-                self.original.pages, self.reimported.pages,
-                if self.comparison.pages_match { "match" } else { "MISMATCH" }));
-            s.push_str(&format!("  Objects: {} → {} ({})\n",
-                self.original.total_objects, self.reimported.total_objects,
-                if self.comparison.objects_match { "match" } else { "MISMATCH" }));
-            s.push_str(&format!("  Text:    {} → {} chars ({:.0}% match)\n",
-                self.original.text_chars, self.reimported.text_chars,
-                self.comparison.text_match_percent));
-            s.push_str(&format!("  Images:  {} → {} ({})\n",
-                self.original.images, self.reimported.images,
-                if self.comparison.images_match { "match" } else { "MISMATCH" }));
-            s.push_str(&format!("\n  Overall Fidelity: {:.1}%\n", self.comparison.overall_match));
+            s.push_str(&format!(
+                "  Pages:   {} → {} ({})\n",
+                self.original.pages,
+                self.reimported.pages,
+                if self.comparison.pages_match {
+                    "match"
+                } else {
+                    "MISMATCH"
+                }
+            ));
+            s.push_str(&format!(
+                "  Objects: {} → {} ({})\n",
+                self.original.total_objects,
+                self.reimported.total_objects,
+                if self.comparison.objects_match {
+                    "match"
+                } else {
+                    "MISMATCH"
+                }
+            ));
+            s.push_str(&format!(
+                "  Text:    {} → {} chars ({:.0}% match)\n",
+                self.original.text_chars,
+                self.reimported.text_chars,
+                self.comparison.text_match_percent
+            ));
+            s.push_str(&format!(
+                "  Images:  {} → {} ({})\n",
+                self.original.images,
+                self.reimported.images,
+                if self.comparison.images_match {
+                    "match"
+                } else {
+                    "MISMATCH"
+                }
+            ));
+            s.push_str(&format!(
+                "\n  Overall Fidelity: {:.1}%\n",
+                self.comparison.overall_match
+            ));
         }
-        
+
         s
     }
 }

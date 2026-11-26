@@ -41,21 +41,21 @@ use std::io::{Read, Seek};
 use std::path::Path as StdPath;
 use std::sync::OnceLock;
 
-use cfb::CompoundFile;
-use repub_escher::PresetExt;
-use repub_model::document::{Document, DocumentMetadata, Page};
-use repub_model::{Color, Point, Rect, Transform2D};
 use crate::model::{
     ConnectorType, Group, ImageFrame, ImageSource, LayerObjectExt, Line, LineEnding,
     LineEndingStyle, Margins, Object, PageObjectExt, Path, PathCommand, Shape, ShapeType,
     TableBorders, TextFrame,
 };
+use cfb::CompoundFile;
+use repub_escher::PresetExt;
+use repub_model::document::{Document, DocumentMetadata, Page};
 use repub_model::styles::{
-    CharacterStyle, DropShadow, Fill, FontSpec, FontStyle, FontWeight, GradientStop,
-    LinearGradient, LineSpacing, ListStyle, NumberFormat, ParagraphStyle, RadialGradient,
-    Stroke, TextAlignment, UnderlineStyle,
+    CharacterStyle, DropShadow, Fill, FontSpec, FontStyle, FontWeight, GradientStop, LineSpacing,
+    LinearGradient, ListStyle, NumberFormat, ParagraphStyle, RadialGradient, Stroke, TextAlignment,
+    UnderlineStyle,
 };
 use repub_model::text::{InlineElement, Paragraph, StyledText, TextRun};
+use repub_model::{Color, Point, Rect, Transform2D};
 use repub_model::{PageOrientation, PageSize};
 
 use crate::error::{FormatError, FormatResult, PubImportError};
@@ -103,7 +103,10 @@ impl FontSubstitution {
         // Segoe UI is the Windows system font; map to macOS equivalent or Selawik (open source clone)
         substitutions.insert("segoe ui".to_string(), "SF Pro".to_string());
         substitutions.insert("segoe ui light".to_string(), "SF Pro Light".to_string());
-        substitutions.insert("segoe ui semibold".to_string(), "SF Pro Semibold".to_string());
+        substitutions.insert(
+            "segoe ui semibold".to_string(),
+            "SF Pro Semibold".to_string(),
+        );
         substitutions.insert("segoe ui semilight".to_string(), "SF Pro".to_string());
         substitutions.insert("segoe ui black".to_string(), "SF Pro Black".to_string());
 
@@ -184,11 +187,7 @@ impl FontSubstitution {
         // Look up substitution
         if let Some(substitute) = self.substitutions.get(&lower) {
             if self.log_substitutions {
-                log::info!(
-                    "Font substitution: '{}' -> '{}'",
-                    font_name,
-                    substitute
-                );
+                log::info!("Font substitution: '{}' -> '{}'", font_name, substitute);
             }
             substitute.clone()
         } else {
@@ -476,7 +475,10 @@ impl WarningCollector {
 
     /// Add a partial stream parse warning.
     pub fn partial_stream_parse(&mut self, stream: impl Into<String>, desc: impl Into<String>) {
-        self.warn(ImportWarning::PartialStreamParse(stream.into(), desc.into()));
+        self.warn(ImportWarning::PartialStreamParse(
+            stream.into(),
+            desc.into(),
+        ));
     }
 
     /// Add an unhandled feature warning (feature was handled with a fallback).
@@ -641,8 +643,8 @@ mod escher_type {
     pub const FOPT: u16 = 0xf00b;
     pub const CLIENT_TEXTBOX: u16 = 0xf00d;
     pub const CHILD_ANCHOR: u16 = 0xf00f;
-    pub const CLIENT_ANCHOR: u16 = 0xf010;  // FClientAnchor - contains shape bounds
-    pub const CLIENT_DATA: u16 = 0xf011;    // FClientData - application-specific data
+    pub const CLIENT_ANCHOR: u16 = 0xf010; // FClientAnchor - contains shape bounds
+    pub const CLIENT_DATA: u16 = 0xf011; // FClientData - application-specific data
 
     // Blip types
     pub const BLIP_EMF: u16 = 0xf01a;
@@ -1845,7 +1847,8 @@ impl<R: Read + Seek> PubReader<R> {
             return Ok(PublisherVersion::Unknown(0));
         }
 
-        self.warnings.unsupported_feature("Could not determine Publisher version");
+        self.warnings
+            .unsupported_feature("Could not determine Publisher version");
         Ok(PublisherVersion::Unknown(0))
     }
 
@@ -1883,9 +1886,12 @@ impl<R: Read + Seek> PubReader<R> {
                     }
                 }
             }
-            log::debug!("Pre-scanned {} hyperlink URLs", self.hyperlinks.values().map(|v| v.len()).sum::<usize>());
+            log::debug!(
+                "Pre-scanned {} hyperlink URLs",
+                self.hyperlinks.values().map(|v| v.len()).sum::<usize>()
+            );
         }
-        
+
         // 1. Parse Quill (text content and formatting)
         self.quill_parsed = false;
         if self.has_stream("/Quill/QuillSub/CONTENTS") {
@@ -1903,10 +1909,8 @@ impl<R: Read + Seek> PubReader<R> {
                     }
                 }
                 Err(e) => {
-                    self.warnings.partial_stream_parse(
-                        "Quill",
-                        format!("Could not read stream: {}", e),
-                    );
+                    self.warnings
+                        .partial_stream_parse("Quill", format!("Could not read stream: {}", e));
                 }
             }
         }
@@ -1916,11 +1920,13 @@ impl<R: Read + Seek> PubReader<R> {
             if self.has_stream("/Contents") {
                 match self.read_stream("/Contents") {
                     Ok(data) => {
-                        
                         if let Err(e) = self.parse_contents(&data) {
                             self.warnings.partial_stream_parse(
                                 "Contents",
-                                format!("Structure parsing failed: {}. Some objects may be missing.", e),
+                                format!(
+                                    "Structure parsing failed: {}. Some objects may be missing.",
+                                    e
+                                ),
                             );
                         } else {
                             self.contents_parsed = true;
@@ -1948,7 +1954,10 @@ impl<R: Read + Seek> PubReader<R> {
                     if let Err(e) = self.parse_escher(&data) {
                         self.warnings.partial_stream_parse(
                             "EscherStm",
-                            format!("Geometry parsing failed: {}. Shapes will use default positions.", e),
+                            format!(
+                                "Geometry parsing failed: {}. Shapes will use default positions.",
+                                e
+                            ),
                         );
                     } else {
                         self.escher_parsed = true;
@@ -1957,7 +1966,10 @@ impl<R: Read + Seek> PubReader<R> {
                 Err(e) => {
                     self.warnings.partial_stream_parse(
                         "EscherStm",
-                        format!("Could not read stream: {}. Shapes will use default positions.", e),
+                        format!(
+                            "Could not read stream: {}. Shapes will use default positions.",
+                            e
+                        ),
                     );
                 }
             }
@@ -1971,7 +1983,10 @@ impl<R: Read + Seek> PubReader<R> {
                     if let Err(e) = self.parse_escher_delay(&data) {
                         self.warnings.partial_stream_parse(
                             "EscherDelayStm",
-                            format!("Image extraction failed: {}. Images will be placeholders.", e),
+                            format!(
+                                "Image extraction failed: {}. Images will be placeholders.",
+                                e
+                            ),
                         );
                     } else {
                         self.escher_delay_parsed = true;
@@ -2063,7 +2078,9 @@ impl<R: Read + Seek> PubReader<R> {
             };
 
             self.text_blocks.insert(0xFFFFFFFF, text_block);
-            self.warnings.formatting_lost("Text was recovered using fallback extraction; formatting may be lost");
+            self.warnings.formatting_lost(
+                "Text was recovered using fallback extraction; formatting may be lost",
+            );
         }
     }
 
@@ -2133,7 +2150,13 @@ impl<R: Read + Seek> PubReader<R> {
         let mut stsh_count = 0;
 
         for chunk in &chunk_refs {
-            log::trace!("Quill chunk: '{}' id={} offset={} len={}", chunk.name, chunk.id, chunk.offset, chunk.length);
+            log::trace!(
+                "Quill chunk: '{}' id={} offset={} len={}",
+                chunk.name,
+                chunk.id,
+                chunk.offset,
+                chunk.length
+            );
             match chunk.name.as_str() {
                 "TEXT" => {
                     text_chunk = Some(chunk);
@@ -2222,11 +2245,7 @@ impl<R: Read + Seek> PubReader<R> {
         })
     }
 
-    fn parse_strs_chunk(
-        &self,
-        data: &[u8],
-        chunk: &QuillChunkReference,
-    ) -> FormatResult<Vec<u32>> {
+    fn parse_strs_chunk(&self, data: &[u8], chunk: &QuillChunkReference) -> FormatResult<Vec<u32>> {
         let start = chunk.offset as usize;
         if start + 8 > data.len() {
             return Ok(Vec::new());
@@ -2248,11 +2267,7 @@ impl<R: Read + Seek> PubReader<R> {
         Ok(lengths)
     }
 
-    fn parse_syid_chunk(
-        &self,
-        data: &[u8],
-        chunk: &QuillChunkReference,
-    ) -> FormatResult<Vec<u32>> {
+    fn parse_syid_chunk(&self, data: &[u8], chunk: &QuillChunkReference) -> FormatResult<Vec<u32>> {
         let start = chunk.offset as usize;
         if start + 8 > data.len() {
             return Ok(Vec::new());
@@ -2316,8 +2331,13 @@ impl<R: Read + Seek> PubReader<R> {
 
                 log::trace!(
                     "Span {}: first={}, last={}, font_index={:?}, bold={}, italic={}, fdpc_id={}",
-                    i, current_start, text_offsets[i],
-                    style.font_index, style.bold, style.italic, chunk.id
+                    i,
+                    current_start,
+                    text_offsets[i],
+                    style.font_index,
+                    style.bold,
+                    style.italic,
+                    chunk.id
                 );
                 spans.push(TextSpanReference {
                     first: current_start,
@@ -2423,13 +2443,20 @@ impl<R: Read + Seek> PubReader<R> {
                     self.default_char_styles.len(),
                     style.font_index,
                     style.text_size_emu,
-                    style.text_size_emu.map(|s| s as f64 * 72.0 / 914400.0).unwrap_or(0.0)
+                    style
+                        .text_size_emu
+                        .map(|s| s as f64 * 72.0 / 914400.0)
+                        .unwrap_or(0.0)
                 );
                 self.default_char_styles.push(style);
             } else {
                 // Paragraph style
                 let style = self.parse_paragraph_style(data, actual_offset);
-                log::trace!("Default para style {}: alignment={:?}", self.default_para_styles.len(), style.alignment);
+                log::trace!(
+                    "Default para style {}: alignment={:?}",
+                    self.default_para_styles.len(),
+                    style.alignment
+                );
                 self.default_para_styles.push(style);
             }
         }
@@ -2521,7 +2548,7 @@ impl<R: Read + Seek> PubReader<R> {
         const ONE_STARTS_AT: usize = 0x4c;
         const TWO_STARTS_AT: usize = 0x68;
         const THREE_PLUS_INCREMENT: usize = 22;
-        
+
         // Header (8) + pre-data (count+2)*4 + middle section + urls
         let until = if count == 0 {
             0x34
@@ -2530,11 +2557,11 @@ impl<R: Read + Seek> PubReader<R> {
         } else {
             TWO_STARTS_AT + (count.saturating_sub(2)) * THREE_PLUS_INCREMENT
         };
-        
+
         // Add estimated url space (average 50 chars per url)
         until + count * 100
     }
-    
+
     /// Parse a Type 12 PLC structure containing hyperlinks.
     /// Structure based on Apache POI QCPLCBit.Type12:
     /// - 4 bytes: count
@@ -2542,22 +2569,34 @@ impl<R: Read + Seek> PubReader<R> {
     /// - (1 + count + 1) * 4 bytes: pre-data with text positions
     /// - Variable: middle section (shorts)
     /// - Variable: length + URL pairs
-    fn parse_type12_plc(&self, data: &[u8], start: usize, end: usize, count: usize, plc_offset: usize) -> Option<Vec<ParsedHyperlink>> {
+    fn parse_type12_plc(
+        &self,
+        data: &[u8],
+        start: usize,
+        end: usize,
+        count: usize,
+        plc_offset: usize,
+    ) -> Option<Vec<ParsedHyperlink>> {
         const ONE_STARTS_AT: usize = 0x4c;
         const TWO_STARTS_AT: usize = 0x68;
         const THREE_PLUS_INCREMENT: usize = 22;
-        
-        log::trace!("parse_type12_plc: start=0x{:x}, end=0x{:x}, count={}", start, end, count);
-        
+
+        log::trace!(
+            "parse_type12_plc: start=0x{:x}, end=0x{:x}, count={}",
+            start,
+            end,
+            count
+        );
+
         // Check if we have enough data for the header
         let pre_data_count = 1 + count + 1;
         let pre_data_end = start + 8 + pre_data_count * 4;
-        
+
         if pre_data_end > end || pre_data_end > data.len() {
             log::trace!("  Not enough data for pre-data");
             return None;
         }
-        
+
         // Read pre-data positions (character positions for each hyperlink)
         let mut positions = Vec::with_capacity(pre_data_count);
         for i in 0..pre_data_count {
@@ -2565,7 +2604,7 @@ impl<R: Read + Seek> PubReader<R> {
             positions.push(read_u32(&data[pos_offset..]));
         }
         log::trace!("  Pre-data positions: {:?}", positions);
-        
+
         // Calculate where hyperlinks start
         // For count=0 with actual hyperlinks, special case at 0x34
         // For count=1: oneStartsAt (0x4c)
@@ -2577,29 +2616,39 @@ impl<R: Read + Seek> PubReader<R> {
         } else {
             TWO_STARTS_AT + (count.saturating_sub(2)) * THREE_PLUS_INCREMENT
         };
-        
+
         let hyperlinks_start = start + hyperlinks_until;
-        log::trace!("  Hyperlinks should start at 0x{:x} (until=0x{:x})", hyperlinks_start, hyperlinks_until);
-        
+        log::trace!(
+            "  Hyperlinks should start at 0x{:x} (until=0x{:x})",
+            hyperlinks_start,
+            hyperlinks_until
+        );
+
         if hyperlinks_start >= end || hyperlinks_start >= data.len() {
             log::trace!("  Hyperlinks start is past end of data");
             return None;
         }
-        
+
         // Parse hyperlink strings
         let mut hyperlinks = Vec::new();
         let mut pos = hyperlinks_start;
-        
+
         for i in 0..count {
             if pos + 4 > end || pos + 4 > data.len() {
                 log::trace!("  Breaking at hyperlink {} - not enough data", i);
                 break;
             }
-            
+
             let length = read_u16(&data[pos..]) as usize;
             let first_word = read_u16(&data[pos + 2..]);
-            log::trace!("  Hyperlink {}: at 0x{:x}, length={}, first_word={}", i, pos, length, first_word);
-            
+            log::trace!(
+                "  Hyperlink {}: at 0x{:x}, length={}, first_word={}",
+                i,
+                pos,
+                length,
+                first_word
+            );
+
             let url = if first_word == 0 {
                 // Special case: empty hyperlink, length is in bytes from start
                 log::trace!("    Empty hyperlink, skipping {} bytes", length);
@@ -2612,13 +2661,13 @@ impl<R: Read + Seek> PubReader<R> {
                     log::trace!("    Not enough data for URL ({} bytes needed)", url_bytes);
                     break;
                 }
-                
+
                 let url = decode_utf16le(&data[pos + 2..pos + 2 + url_bytes]);
                 log::trace!("    URL: {:?}", url);
                 pos += 2 + url_bytes;
                 url
             };
-            
+
             // Get start/end positions from pre-data
             // Position 0 is some header value
             // Positions 1..count are hyperlink start positions
@@ -2633,7 +2682,7 @@ impl<R: Read + Seek> PubReader<R> {
             } else {
                 start_char + 1
             };
-            
+
             if !url.is_empty() {
                 hyperlinks.push(ParsedHyperlink {
                     start_char,
@@ -2643,7 +2692,7 @@ impl<R: Read + Seek> PubReader<R> {
                 });
             }
         }
-        
+
         log::trace!("  Parsed {} hyperlinks", hyperlinks.len());
         Some(hyperlinks)
     }
@@ -2721,7 +2770,9 @@ impl<R: Read + Seek> PubReader<R> {
                     // Unknown type - try to skip gracefully
                     log::trace!(
                         "Unknown char style block type=0x{:02X} at pos={}, id=0x{:02X}",
-                        block_type, pos - 2, block_id
+                        block_type,
+                        pos - 2,
+                        block_id
                     );
                     break;
                 }
@@ -2749,7 +2800,9 @@ impl<R: Read + Seek> PubReader<R> {
                     log::trace!("Found FONT_INDEX_CONTAINER at pos={}, skip={}", pos, skip);
                     if pos >= skip {
                         let container_start = pos - skip; // Container data starts after the 2-byte header
-                        if let Some(font_idx) = self.parse_font_index_container(data, container_start, end) {
+                        if let Some(font_idx) =
+                            self.parse_font_index_container(data, container_start, end)
+                        {
                             log::debug!("Parsed font_index={} from container", font_idx);
                             style.font_index = Some(font_idx);
                         }
@@ -2760,7 +2813,9 @@ impl<R: Read + Seek> PubReader<R> {
                     if block_id != 0 {
                         log::trace!(
                             "Unknown char style block_id=0x{:02X} type=0x{:02X} value={}",
-                            block_id, block_type, value
+                            block_id,
+                            block_type,
+                            value
                         );
                     }
                 }
@@ -2805,9 +2860,7 @@ impl<R: Read + Seek> PubReader<R> {
                         0x10 | 0x18 | 0x1a if pos + 2 <= sub_end => {
                             Some(read_u16(&data[pos..]) as u32)
                         }
-                        0x20 | 0x28 if pos + 4 <= sub_end => {
-                            Some(read_u32(&data[pos..]))
-                        }
+                        0x20 | 0x28 if pos + 4 <= sub_end => Some(read_u32(&data[pos..])),
                         0x00 | 0x08 => {
                             // Data is in the sub_id field for some type patterns
                             Some(inner_id as u32)
@@ -3018,13 +3071,17 @@ impl<R: Read + Seek> PubReader<R> {
             // Extract text as UTF-16LE
             let text_data = &data[block_start..block_end];
             let text = decode_utf16le(text_data);
-            log::trace!("Text block {} raw: {:?}", j, text.chars().take(60).collect::<String>());
+            log::trace!(
+                "Text block {} raw: {:?}",
+                j,
+                text.chars().take(60).collect::<String>()
+            );
             let text_chars: Vec<char> = text.chars().collect();
 
             // FDPP stores paragraph END positions as absolute byte offsets in the stream.
             // We need to convert these to character positions relative to the text block start.
             // The formula is: char_pos = (byte_pos - text_start) / 2
-            
+
             // Build paragraphs using paragraph END boundaries from FDPP
             let mut parsed_paras = Vec::new();
             let mut para_start_char = 0usize;
@@ -3067,11 +3124,8 @@ impl<R: Read + Seek> PubReader<R> {
                         (para_ref.last as usize - block_start) / 2
                     } else {
                         0
-                    }.min(text_chars.len());
-                    
-
-                    
-
+                    }
+                    .min(text_chars.len());
 
                     if para_start_char >= text_chars.len() || para_start_char >= para_end_char {
                         para_start_char = para_end_char;
@@ -3084,14 +3138,14 @@ impl<R: Read + Seek> PubReader<R> {
                         .collect::<String>()
                         .trim_end_matches('\r')
                         .to_string();
-                    
+
                     // Note: We preserve empty paragraphs for table cell handling
                     // (an empty paragraph means an empty cell). Text frames may filter these out later.
                     // We used to skip "page number remnant" paragraphs here (single digits, ".", etc.)
                     // but these can be legitimate table cell content.
 
                     // Build runs from spans that cover this paragraph.
-                    // 
+                    //
                     // libmspub processes spans SEQUENTIALLY using a single iterator.
                     // All spans are sorted by their 'last' byte position.
                     // The span with the smallest 'last' that is >= current position is the active one.
@@ -3099,11 +3153,11 @@ impl<R: Read + Seek> PubReader<R> {
                     // For each character position, find which span covers it.
                     let mut runs = Vec::new();
                     let run_start_char = para_start_char;
-                    
+
                     // Sort spans by their 'last' position (smallest first)
                     let mut sorted_spans: Vec<&TextSpanReference> = spans.iter().collect();
                     sorted_spans.sort_by_key(|s| s.last);
-                    
+
                     // Span positions from FDPC are offsets that include text_start.
                     // To get text-relative positions, subtract text_start.
                     // This is consistent with libmspub: bytesRead >= span.last - textChunkRef.offset
@@ -3112,7 +3166,7 @@ impl<R: Read + Seek> PubReader<R> {
                     // Para covers text bytes: block_text_offset + para_start_char*2 to block_text_offset + para_end_char*2
                     let block_text_offset = block_start - text_start;
                     let para_text_start_byte = block_text_offset + para_start_char * 2;
-                    
+
                     // Find spans that could cover this paragraph
                     // Span covers text bytes 0 to (span.last - text_start)
                     // Span is relevant if it ends AFTER our paragraph starts
@@ -3126,12 +3180,14 @@ impl<R: Read + Seek> PubReader<R> {
 
                     // Get the paragraph's default character style (used as base for missing span properties)
                     // If the paragraph doesn't specify an index, use index 0 (the document's base char style)
-                    let default_idx = para_ref.para_style.default_char_style_index.unwrap_or(0) as usize;
-                    let para_default_char_style = self.default_char_styles.get(default_idx)
+                    let default_idx =
+                        para_ref.para_style.default_char_style_index.unwrap_or(0) as usize;
+                    let para_default_char_style = self
+                        .default_char_styles
+                        .get(default_idx)
                         .cloned()
                         .unwrap_or_default();
 
-                    
                     if relevant_spans.is_empty() {
                         // No span info - create one run with the paragraph text using default style
                         runs.push(ParsedTextRun {
@@ -3141,23 +3197,23 @@ impl<R: Read + Seek> PubReader<R> {
                         });
                     } else {
                         // Process spans sequentially like libmspub.
-                        // 
+                        //
                         // Span positions include text_start offset; subtract to get text-relative.
                         //
                         // Current text position is calculated as:
                         // - block_text_offset: where this text block starts in the TEXT chunk (bytes from text_start)
                         // - current_char: character offset within this block
                         // - Total text position: block_text_offset + current_char * 2 (in bytes)
-                        
+
                         let block_text_offset = block_start - text_start; // bytes from TEXT start to this block
-                        
+
                         let mut span_iter = relevant_spans.iter().peekable();
                         let mut current_char = para_start_char;
-                        
+
                         while current_char < para_end_char {
                             // Calculate current text byte position (relative to TEXT chunk start)
                             let current_text_byte = block_text_offset + current_char * 2;
-                            
+
                             // Skip spans that end before or at our current position
                             // Span ends at (span.last - text_start) in text-relative bytes
                             while span_iter.peek().is_some_and(|s| {
@@ -3166,40 +3222,47 @@ impl<R: Read + Seek> PubReader<R> {
                             }) {
                                 span_iter.next();
                             }
-                            
+
                             let (run_style, run_end_char) = if let Some(span) = span_iter.peek() {
                                 // Use this span's style
                                 // Span ends at text byte (span.last - text_start)
                                 let span_text_end = (span.last as usize).saturating_sub(text_start);
                                 // Convert to character position in this block
-                                let span_end_char_in_block = span_text_end.saturating_sub(block_text_offset) / 2;
-                                let merged_style = span.char_style.with_defaults_from(&para_default_char_style);
+                                let span_end_char_in_block =
+                                    span_text_end.saturating_sub(block_text_offset) / 2;
+                                let merged_style =
+                                    span.char_style.with_defaults_from(&para_default_char_style);
                                 (merged_style, span_end_char_in_block.min(para_end_char))
                             } else {
                                 // No more spans - use default style for remaining text
                                 (para_default_char_style.clone(), para_end_char)
                             };
-                            
+
                             if current_char < run_end_char {
-                                let mut run_text: String = text_chars[current_char..run_end_char.min(text_chars.len())]
+                                let mut run_text: String = text_chars
+                                    [current_char..run_end_char.min(text_chars.len())]
                                     .iter()
                                     .collect::<String>()
                                     .trim_end_matches('\r')
                                     .to_string();
-                                
+
                                 if !run_text.is_empty() {
                                     // Check for hyperlink marker
                                     let hyperlink = if run_text.starts_with('#') {
                                         run_text = run_text[1..].to_string();
                                         self.hyperlinks.get(&0).and_then(|links| {
-                                            links.iter().find(|l| {
-                                                current_char >= l.start_char as usize && current_char < l.end_char as usize
-                                            }).map(|l| l.url.clone())
+                                            links
+                                                .iter()
+                                                .find(|l| {
+                                                    current_char >= l.start_char as usize
+                                                        && current_char < l.end_char as usize
+                                                })
+                                                .map(|l| l.url.clone())
                                         })
                                     } else {
                                         self.match_hyperlink_by_content(&run_text)
                                     };
-                                    
+
                                     runs.push(ParsedTextRun {
                                         text: run_text,
                                         style: run_style,
@@ -3207,7 +3270,7 @@ impl<R: Read + Seek> PubReader<R> {
                                     });
                                 }
                             }
-                            
+
                             current_char = run_end_char;
                         }
                     }
@@ -3224,7 +3287,7 @@ impl<R: Read + Seek> PubReader<R> {
                             hyperlink: None,
                         });
                     }
-                    
+
                     parsed_paras.push(ParsedParagraph {
                         runs,
                         style: para_ref.para_style.clone(),
@@ -3251,7 +3314,8 @@ impl<R: Read + Seek> PubReader<R> {
 
             if !parsed_paras.is_empty() {
                 // Show preview of text content
-                let preview: String = parsed_paras.iter()
+                let preview: String = parsed_paras
+                    .iter()
                     .flat_map(|p| p.runs.iter().map(|r| r.text.as_str()))
                     .collect::<Vec<_>>()
                     .join("")
@@ -3263,7 +3327,10 @@ impl<R: Read + Seek> PubReader<R> {
                     text_id,
                     parsed_paras.len(),
                     parsed_paras.iter().map(|p| p.runs.len()).sum::<usize>(),
-                    parsed_paras.iter().map(|p| p.runs.iter().map(|r| r.text.len()).sum::<usize>()).sum::<usize>(),
+                    parsed_paras
+                        .iter()
+                        .map(|p| p.runs.iter().map(|r| r.text.len()).sum::<usize>())
+                        .sum::<usize>(),
                     preview.replace('\r', "\\r").replace('\n', "\\n")
                 );
 
@@ -3281,39 +3348,38 @@ impl<R: Read + Seek> PubReader<R> {
     }
 
     // Hyperlink Extraction
-    
+
     /// Scan for Type 12 PLC structures (hyperlinks) by looking for valid URL patterns.
     /// This is more reliable than scanning for the PLC header which can have false positives.
     fn scan_for_hyperlinks(&mut self, data: &[u8]) {
         log::debug!("Scanning for hyperlinks ({} bytes)", data.len());
-        
+
         // Look for Type 12 PLC structures by searching backwards from known URL patterns
         // URLs in Publisher are stored as UTF-16LE with a 2-byte length prefix
-        
+
         // Pattern for "http" in UTF-16LE: 68 00 74 00 74 00 70 00
         let http_pattern = b"h\x00t\x00t\x00p\x00";
         // Pattern for "mailto" in UTF-16LE: 6d 00 61 00 69 00 6c 00 74 00 6f 00
         let mailto_pattern = b"m\x00a\x00i\x00l\x00t\x00o\x00";
-        
+
         let mut found_urls: Vec<(usize, String)> = Vec::new();
-        
+
         // Find all URL occurrences
         for i in 0..data.len().saturating_sub(16) {
             let is_http = data[i..].starts_with(http_pattern);
             let is_mailto = data[i..].starts_with(mailto_pattern);
-            
+
             if is_http || is_mailto {
                 // Check if there's a valid length prefix 2 bytes before
                 if i >= 2 {
                     let length = read_u16(&data[i - 2..]) as usize;
-                    
+
                     // Validate: length should be reasonable and URL should fit
                     if length > 0 && length < 500 && i + length * 2 <= data.len() {
                         // Try to decode the URL
-                        if let Ok(url) = String::from_utf8(
-                            decode_utf16le(&data[i..i + length * 2])
-                                .into_bytes()
-                        ) {
+                        if let Ok(url) =
+                            String::from_utf8(decode_utf16le(&data[i..i + length * 2]).into_bytes())
+                        {
                             if url.starts_with("http") || url.starts_with("mailto") {
                                 log::debug!("Found URL at offset 0x{:x}: {:?}", i, url);
                                 found_urls.push((i, url));
@@ -3330,29 +3396,35 @@ impl<R: Read + Seek> PubReader<R> {
                 }
             }
         }
-        
+
         // Try to find the Type 12 PLC header for each URL to get text positions
         for (url_offset, url) in &found_urls {
             // Search backwards from URL for the PLC header
             // Type 12 header structure: count (4), type=12 (4), positions...
             let search_start = url_offset.saturating_sub(0x200);
-            
+
             for pos in (search_start..*url_offset).step_by(4) {
                 if pos + 8 > data.len() {
                     continue;
                 }
-                
+
                 let count = read_u32(&data[pos..]) as usize;
                 let plc_type = read_u32(&data[pos + 4..]);
-                
+
                 if plc_type == 12 && count > 0 && count <= 20 {
                     // This might be the header - try to parse
-                    if let Some(hyperlinks) = self.parse_type12_plc(data, pos, data.len(), count, pos) {
+                    if let Some(hyperlinks) =
+                        self.parse_type12_plc(data, pos, data.len(), count, pos)
+                    {
                         // Check if any parsed URL matches
                         for link in hyperlinks {
                             if !link.url.is_empty() {
-                                log::debug!("Parsed hyperlink from Type 12 PLC: chars {}..{} -> {:?}", 
-                                    link.start_char, link.end_char, link.url);
+                                log::debug!(
+                                    "Parsed hyperlink from Type 12 PLC: chars {}..{} -> {:?}",
+                                    link.start_char,
+                                    link.end_char,
+                                    link.url
+                                );
                                 // Store with text_id 0 for now - we'll match later
                                 self.hyperlinks.entry(0).or_default().push(link);
                             }
@@ -3362,47 +3434,52 @@ impl<R: Read + Seek> PubReader<R> {
                 }
             }
         }
-        
-        log::debug!("Found {} hyperlinks total", 
-            self.hyperlinks.values().map(|v| v.len()).sum::<usize>());
+
+        log::debug!(
+            "Found {} hyperlinks total",
+            self.hyperlinks.values().map(|v| v.len()).sum::<usize>()
+        );
     }
 
     /// Match a hyperlink to text content using heuristics.
     /// This is used when text doesn't have the '#' marker but might still be hyperlinked.
     fn match_hyperlink_by_content(&self, text: &str) -> Option<String> {
         let lower = text.to_lowercase();
-        
+
         self.hyperlinks.get(&0).and_then(|links| {
             // Check for email-related text -> mailto: links
             if lower == "email link" || lower.contains("email") && lower.contains("link") {
-                return links.iter()
+                return links
+                    .iter()
                     .find(|l| l.url.starts_with("mailto:"))
                     .map(|l| l.url.clone());
             }
-            
+
             // Check for "final hyperlink" text
             if lower == "final hyperlink" {
                 // This is typically the second mailto: link in the sample
-                return links.iter()
+                return links
+                    .iter()
                     .filter(|l| l.url.starts_with("mailto:"))
-                    .nth(1)  // Get the second mailto link
+                    .nth(1) // Get the second mailto link
                     .or_else(|| links.iter().find(|l| l.url.starts_with("mailto:")))
                     .map(|l| l.url.clone());
             }
-            
+
             // Check for "link to a file" text -> file:// or local path
             if lower.contains("link to a fil") || lower.contains("link to file") {
-                return links.iter()
+                return links
+                    .iter()
                     .find(|l| l.url.contains(":\\") || l.url.starts_with("file:"))
                     .map(|l| l.url.clone());
             }
-            
+
             // Check for "within doc" or internal link text
             if lower.contains("within doc") || lower.contains("internal") {
                 // These are typically anchor/bookmark links, not external URLs
                 return None;
             }
-            
+
             None
         })
     }
@@ -3474,7 +3551,8 @@ impl<R: Read + Seek> PubReader<R> {
                                 | chunk_type::ALTSHAPE => shape_chunk_indices.push(idx),
                                 chunk_type::CELLS => {
                                     // Store CELLS chunks for table cell linking
-                                    self.cells_chunks.insert(chunk_ref.seq_num, chunk_ref.clone());
+                                    self.cells_chunks
+                                        .insert(chunk_ref.seq_num, chunk_ref.clone());
                                 }
                                 _ => {}
                             }
@@ -3645,13 +3723,23 @@ impl<R: Read + Seek> PubReader<R> {
         let end = (start + len).min(data.len());
         let mut pos = start + 4;
 
-        log::debug!("parse_document_chunk: start={}, len={}, end={}", start, len, end);
+        log::debug!(
+            "parse_document_chunk: start={}, len={}, end={}",
+            start,
+            len,
+            end
+        );
 
         while pos + 2 <= end {
             let block = self.parse_content_block(data, pos)?;
-            log::trace!("Document chunk block: id=0x{:02x}, type=0x{:02x}", block.id, block.block_type);
+            log::trace!(
+                "Document chunk block: id=0x{:02x}, type=0x{:02x}",
+                block.id,
+                block.block_type
+            );
 
-            if block.id == block_id::DOCUMENT_SIZE && block.block_type == block_type::GENERAL_CONTAINER
+            if block.id == block_id::DOCUMENT_SIZE
+                && block.block_type == block_type::GENERAL_CONTAINER
             {
                 // Parse size container - sub-blocks start immediately after container length
                 let size_end = block.data_offset as usize + block.data_length as usize;
@@ -3666,13 +3754,15 @@ impl<R: Read + Seek> PubReader<R> {
                         _ => {}
                     }
 
-                    size_pos =
-                        sub_block.data_offset as usize + sub_block.data_length as usize;
+                    size_pos = sub_block.data_offset as usize + sub_block.data_length as usize;
                 }
             } else if block.id == block_id::DOCUMENT_PAGE_LIST {
                 // Parse page list - sub-blocks start immediately after container length
                 // Only parse if we haven't already parsed a page list (avoid duplicates from multiple Contents streams)
-                log::debug!("Found DOCUMENT_PAGE_LIST, page_order.len()={}", self.page_order.len());
+                log::debug!(
+                    "Found DOCUMENT_PAGE_LIST, page_order.len()={}",
+                    self.page_order.len()
+                );
                 if self.page_order.is_empty() {
                     let list_end = block.data_offset as usize + block.data_length as usize;
                     let mut list_pos = block.data_offset as usize;
@@ -3685,8 +3775,7 @@ impl<R: Read + Seek> PubReader<R> {
                             self.page_order.push(sub_block.data);
                         }
 
-                        list_pos =
-                            sub_block.data_offset as usize + sub_block.data_length as usize;
+                        list_pos = sub_block.data_offset as usize + sub_block.data_length as usize;
                     }
                 }
             }
@@ -3724,8 +3813,12 @@ impl<R: Read + Seek> PubReader<R> {
             crop_type: None,
             parent_seq_num: chunk.parent_seq_num,
         };
-        
-        log::trace!("parse_shape_chunk: seq={}, chunk_type=0x{:02x}", chunk.seq_num, chunk.chunk_type);
+
+        log::trace!(
+            "parse_shape_chunk: seq={}, chunk_type=0x{:02x}",
+            chunk.seq_num,
+            chunk.chunk_type
+        );
 
         // Check if this is a TABLE chunk (0x10)
         let is_table = chunk.chunk_type == chunk_type::TABLE;
@@ -3739,7 +3832,7 @@ impl<R: Read + Seek> PubReader<R> {
 
             while pos + 2 <= end {
                 let block = self.parse_content_block(data, pos)?;
-                
+
                 match block.id {
                     block_id::TABLE_CELLS_SEQNUM => cells_seq_num = Some(block.data),
                     block_id::TABLE_NUM_ROWS => num_rows = Some(block.data),
@@ -3888,16 +3981,23 @@ impl<R: Read + Seek> PubReader<R> {
 
         log::trace!(
             "parse_table_rowcol_array: rows={}, cols={}, row_heights_emu={:?}, col_widths_emu={:?}",
-            num_rows, num_cols, row_heights, col_widths
+            num_rows,
+            num_cols,
+            row_heights,
+            col_widths
         );
-        
+
         Ok((row_heights, col_widths))
     }
 
     /// Parse table cells from a CELLS chunk.
     ///
     /// Based on libmspub MSPUBParser.cpp lines 874-932.
-    fn parse_table_cells(&self, data: &[u8], cells_seq_num: u32) -> FormatResult<Vec<ParsedCellInfo>> {
+    fn parse_table_cells(
+        &self,
+        data: &[u8],
+        cells_seq_num: u32,
+    ) -> FormatResult<Vec<ParsedCellInfo>> {
         // Look up the CELLS chunk by sequence number
         let cells_chunk = match self.cells_chunks.get(&cells_seq_num) {
             Some(chunk) => chunk.clone(),
@@ -4030,8 +4130,7 @@ impl<R: Read + Seek> PubReader<R> {
                             self.shape_pages.insert(sub_block.data, chunk.seq_num);
                         }
 
-                        list_pos =
-                            sub_block.data_offset as usize + sub_block.data_length as usize;
+                        list_pos = sub_block.data_offset as usize + sub_block.data_length as usize;
                     }
                 }
                 // THIS_MASTER_NAME (0x0E with type 0xC0 string): if non-empty, designate as master
@@ -4088,9 +4187,12 @@ impl<R: Read + Seek> PubReader<R> {
     // Escher Parsing
 
     fn parse_escher_delay(&mut self, data: &[u8]) -> FormatResult<()> {
-        log::debug!("parse_escher_delay: total data size={} bytes, {} BSE entries", 
-            data.len(), self.blip_store.len());
-        
+        log::debug!(
+            "parse_escher_delay: total data size={} bytes, {} BSE entries",
+            data.len(),
+            self.blip_store.len()
+        );
+
         // If we have BSE entries, use them to map blip indices to offsets
         // Otherwise, fall back to sequential parsing
         if !self.blip_store.is_empty() {
@@ -4098,19 +4200,30 @@ impl<R: Read + Seek> PubReader<R> {
             for bse in &self.blip_store.clone() {
                 let pos = bse.offset_in_delay as usize;
                 if pos + 8 > data.len() {
-                    log::trace!("BSE {} offset {} exceeds data length {}", bse.index, pos, data.len());
+                    log::trace!(
+                        "BSE {} offset {} exceeds data length {}",
+                        bse.index,
+                        pos,
+                        data.len()
+                    );
                     continue;
                 }
-                
+
                 let info = self.parse_escher_container(data, pos)?;
                 let image_type = ImageType::from_blip_type(info.record_type);
-                log::trace!("BSE {} at offset {}: record_type=0x{:04x}, image_type={:?}, contents_len={}", 
-                    bse.index, pos, info.record_type, image_type, info.contents_length);
-                
+                log::trace!(
+                    "BSE {} at offset {}: record_type=0x{:04x}, image_type={:?}, contents_len={}",
+                    bse.index,
+                    pos,
+                    info.record_type,
+                    image_type,
+                    info.contents_length
+                );
+
                 if image_type == ImageType::Unknown {
                     continue;
                 }
-                
+
                 // Calculate start offset based on image type
                 let start_offset = self.get_blip_start_offset(image_type, info.initial);
                 let image_start = info.contents_offset as usize + start_offset;
@@ -4131,8 +4244,12 @@ impl<R: Read + Seek> PubReader<R> {
                         image_data = self.reconstruct_bmp(&image_data);
                     }
 
-                    log::debug!("Extracted image via BSE: index={}, type={:?}, size={} bytes", 
-                        bse.index, image_type, image_data.len());
+                    log::debug!(
+                        "Extracted image via BSE: index={}, type={:?}, size={} bytes",
+                        bse.index,
+                        image_type,
+                        image_data.len()
+                    );
                     self.images.push(ExtractedImage {
                         index: bse.index,
                         image_type,
@@ -4144,7 +4261,7 @@ impl<R: Read + Seek> PubReader<R> {
             // Fallback: sequential parsing (old method)
             let mut pos = 0usize;
             let mut image_index = 1u32;
-            
+
             while pos + 8 <= data.len() {
                 let info = self.parse_escher_container(data, pos)?;
                 let image_type = ImageType::from_blip_type(info.record_type);
@@ -4172,8 +4289,12 @@ impl<R: Read + Seek> PubReader<R> {
                             image_data = self.reconstruct_bmp(&image_data);
                         }
 
-                        log::debug!("Extracted image: index={}, type={:?}, size={} bytes", 
-                            image_index, image_type, image_data.len());
+                        log::debug!(
+                            "Extracted image: index={}, type={:?}, size={} bytes",
+                            image_index,
+                            image_type,
+                            image_data.len()
+                        );
                         self.images.push(ExtractedImage {
                             index: image_index,
                             image_type,
@@ -4196,39 +4317,45 @@ impl<R: Read + Seek> PubReader<R> {
         // 2. Then, for each drawing, there's a 4-byte drawing ID followed by a DgContainer
         //
         // We parse the DggContainer first, then look for DgContainers after it
-        
+
         let mut pos = 0usize;
-        
+
         // Parse the first container (usually DggContainer)
         if pos + 8 <= data.len() {
             let info = self.parse_escher_container(data, pos)?;
             let is_container = (info.initial & 0x0f) == 0x0f;
-            
+
             if is_container && info.record_type == escher_type::DGG_CONTAINER {
                 // Parse the DggContainer contents
-                let container_end = (info.contents_offset as usize + info.contents_length as usize).min(data.len());
+                let container_end =
+                    (info.contents_offset as usize + info.contents_length as usize).min(data.len());
                 self.parse_escher_recursive(data, info.contents_offset as usize, container_end)?;
-                
+
                 // Move to end of DggContainer
                 pos = container_end;
             }
         }
-        
+
         // Now look for DgContainers (they may be prefixed by 4-byte drawing IDs)
         // Each DgContainer corresponds to a page (drawing_index 0 = page 1, etc.)
         self.current_drawing_index = 0;
-        
+
         while pos + 12 <= data.len() {
             // Check if the next 8 bytes look like a valid Escher header
             let initial = read_u16(&data[pos..]);
             let record_type = read_u16(&data[pos + 2..]);
             let is_container = (initial & 0x0f) == 0x0f;
-            
+
             if is_container && record_type == escher_type::DG_CONTAINER {
                 // Found a DgContainer - parse it
-                log::trace!("Found DgContainer at 0x{:04X}, drawing_index={}", pos, self.current_drawing_index);
+                log::trace!(
+                    "Found DgContainer at 0x{:04X}, drawing_index={}",
+                    pos,
+                    self.current_drawing_index
+                );
                 let info = self.parse_escher_container(data, pos)?;
-                let container_end = (info.contents_offset as usize + info.contents_length as usize).min(data.len());
+                let container_end =
+                    (info.contents_offset as usize + info.contents_length as usize).min(data.len());
                 self.parse_escher_recursive(data, info.contents_offset as usize, container_end)?;
                 self.current_drawing_index += 1;
                 pos = container_end;
@@ -4237,15 +4364,25 @@ impl<R: Read + Seek> PubReader<R> {
                 let initial_at_4 = read_u16(&data[pos + 4..]);
                 let record_type_at_4 = read_u16(&data[pos + 6..]);
                 let is_container_at_4 = (initial_at_4 & 0x0f) == 0x0f;
-                
+
                 if is_container_at_4 && record_type_at_4 == escher_type::DG_CONTAINER {
                     // Skip the 4-byte drawing ID prefix
-                    log::trace!("Found DgContainer with 4-byte prefix at 0x{:04X}, drawing_index={}", pos, self.current_drawing_index);
+                    log::trace!(
+                        "Found DgContainer with 4-byte prefix at 0x{:04X}, drawing_index={}",
+                        pos,
+                        self.current_drawing_index
+                    );
                     pos += 4;
-                    
+
                     let info = self.parse_escher_container(data, pos)?;
-                    let container_end = (info.contents_offset as usize + info.contents_length as usize).min(data.len());
-                    self.parse_escher_recursive(data, info.contents_offset as usize, container_end)?;
+                    let container_end = (info.contents_offset as usize
+                        + info.contents_length as usize)
+                        .min(data.len());
+                    self.parse_escher_recursive(
+                        data,
+                        info.contents_offset as usize,
+                        container_end,
+                    )?;
                     self.current_drawing_index += 1;
                     pos = container_end;
                 } else {
@@ -4256,7 +4393,7 @@ impl<R: Read + Seek> PubReader<R> {
                 break;
             }
         }
-        
+
         // Build the shape ID index after parsing
         self.build_escher_shape_index();
 
@@ -4299,17 +4436,26 @@ impl<R: Read + Seek> PubReader<R> {
         let mut pos = start;
         let mut index = 1u32; // Blip indices are 1-based
 
-        log::debug!("parse_bstore_container: start=0x{:04X}, end=0x{:04X}", start, end);
-        
+        log::debug!(
+            "parse_bstore_container: start=0x{:04X}, end=0x{:04X}",
+            start,
+            end
+        );
+
         while pos + 8 <= end {
             let info = self.parse_escher_container(data, pos)?;
-            log::trace!("BStore record at 0x{:04X}: type=0x{:04X}, len={}", pos, info.record_type, info.contents_length);
-            
+            log::trace!(
+                "BStore record at 0x{:04X}: type=0x{:04X}, len={}",
+                pos,
+                info.record_type,
+                info.contents_length
+            );
+
             if info.record_type == escher_type::FBSE {
                 // BSE record - contains blip store entry
                 let bse_start = info.contents_offset as usize;
                 let bse_end = bse_start + info.contents_length as usize;
-                
+
                 // BSE header is 36 bytes minimum (may have embedded blip after that)
                 if bse_end <= data.len() && info.contents_length >= 36 {
                     // BSE header structure (36 bytes):
@@ -4323,13 +4469,18 @@ impl<R: Read + Seek> PubReader<R> {
                     // 32: usage (1 byte)
                     // 33: cbName (1 byte name length)
                     // 34-35: unused
-                    
+
                     let bse_data = &data[bse_start..bse_end];
                     let size = read_u32(&bse_data[20..]);
                     let offset_in_delay = read_u32(&bse_data[28..]);
-                    
-                    log::debug!("BSE entry {}: offset_in_delay={}, size={}", index, offset_in_delay, size);
-                    
+
+                    log::debug!(
+                        "BSE entry {}: offset_in_delay={}, size={}",
+                        index,
+                        offset_in_delay,
+                        size
+                    );
+
                     // Only add entries that point to actual data (non-zero size)
                     if size > 0 {
                         self.blip_store.push(BlipStoreEntry {
@@ -4341,13 +4492,13 @@ impl<R: Read + Seek> PubReader<R> {
                         log::trace!("Skipping BSE entry {} with size=0 (placeholder)", index);
                     }
                 }
-                
+
                 index += 1;
             }
-            
+
             pos = info.contents_offset as usize + info.contents_length as usize;
         }
-        
+
         log::debug!("Parsed {} BSE entries in blip store", self.blip_store.len());
         Ok(())
     }
@@ -4366,16 +4517,26 @@ impl<R: Read + Seek> PubReader<R> {
 
             log::trace!(
                 "Escher record at 0x{:04X}: type=0x{:04X} is_container={} len={}",
-                pos, info.record_type, is_container, info.contents_length
+                pos,
+                info.record_type,
+                is_container,
+                info.contents_length
             );
 
             match info.record_type {
                 escher_type::BSTORE_CONTAINER => {
                     // BStore container contains BSE entries that map blip indices to image offsets
-                    log::debug!("Found BSTORE_CONTAINER at 0x{:04X}, calling parse_bstore_container", pos);
+                    log::debug!(
+                        "Found BSTORE_CONTAINER at 0x{:04X}, calling parse_bstore_container",
+                        pos
+                    );
                     let container_end =
                         (info.contents_offset as usize + info.contents_length as usize).min(end);
-                    self.parse_bstore_container(data, info.contents_offset as usize, container_end)?;
+                    self.parse_bstore_container(
+                        data,
+                        info.contents_offset as usize,
+                        container_end,
+                    )?;
                 }
                 escher_type::DGG_CONTAINER
                 | escher_type::DG_CONTAINER
@@ -4384,7 +4545,11 @@ impl<R: Read + Seek> PubReader<R> {
                     // Container - recurse into contents
                     let container_end =
                         (info.contents_offset as usize + info.contents_length as usize).min(end);
-                    self.parse_escher_recursive(data, info.contents_offset as usize, container_end)?;
+                    self.parse_escher_recursive(
+                        data,
+                        info.contents_offset as usize,
+                        container_end,
+                    )?;
                 }
                 escher_type::FSP => {
                     // Shape record - contains shape ID and flags
@@ -4392,7 +4557,7 @@ impl<R: Read + Seek> PubReader<R> {
                     if info.contents_length >= 8 {
                         let shape_id = read_u32(&data[info.contents_offset as usize..]);
                         let flags = read_u32(&data[info.contents_offset as usize + 4..]);
-                        
+
                         // Extract shape type from the instance field (bits 4-15 of initial word)
                         let fsp_shape_type = (info.initial >> 4) as u32;
 
@@ -4408,11 +4573,15 @@ impl<R: Read + Seek> PubReader<R> {
                         );
 
                         // Check if we already have this shape (avoid duplicates from nested parsing)
-                        let existing_idx = self.escher_shapes.iter().position(|s|
+                        let existing_idx = self.escher_shapes.iter().position(|s| {
                             s.shape_id == shape_id && s.drawing_index == self.current_drawing_index
-                        );
+                        });
                         if let Some(idx) = existing_idx {
-                            log::trace!("Skipping duplicate shape_id={} in drawing_index={}", shape_id, self.current_drawing_index);
+                            log::trace!(
+                                "Skipping duplicate shape_id={} in drawing_index={}",
+                                shape_id,
+                                self.current_drawing_index
+                            );
                             // Still make this the current shape so that any FOPT /
                             // anchor records in this pass bind to it, not to the
                             // last pushed shape.
@@ -4420,68 +4589,68 @@ impl<R: Read + Seek> PubReader<R> {
                         } else {
                             self.current_escher_idx = Some(self.escher_shapes.len());
                             self.escher_shapes.push(ParsedEscherShape {
-                            shape_id,
-                            drawing_index: self.current_drawing_index,
-                            shape_type: None,
-                            fsp_shape_type: Some(fsp_shape_type),
-                            bounds_emu: None,
-                            fill_color: None,
-                            line_color: None,
-                            line_width_emu: None,
-                            text_id: None,
-                            blip_index: None,
-                            rotation: 0.0,
-                            flip_h: (flags & FSP_FLAG_FLIP_H) != 0,
-                            flip_v: (flags & FSP_FLAG_FLIP_V) != 0,
-                            text_inset_emu: None,
-                            adjust1: None,
-                            adjust2: None,
-                            adjust_more: [None; 8],
-                            start_arrow: None,
-                            end_arrow: None,
-                            no_fill: false,
-                            no_line: false,
-                            num_columns: 1,
-                            column_spacing: 0.0,
-                            text_wrap_mode: None,
-                            fill_type: None,
-                            fill_back_color: None,
-                            fill_angle: None,
-                            fill_focus: None,
-                            fill_blip: None,
-                            crop_left: None,
-                            crop_top: None,
-                            crop_right: None,
-                            crop_bottom: None,
-                            shadow_type: None,
-                            shadow_color: None,
-                            shadow_opacity: 1.0,
-                            shadow_offset_x: 0.0,
-                            shadow_offset_y: 0.0,
-                            custom_vertices: None,
-                            custom_segments: None,
-                            geo_right: 21600,
-                            geo_bottom: 21600,
-                            line_top_color: None,
-                            line_top_width: None,
-                            line_right_color: None,
-                            line_right_width: None,
-                            line_bottom_color: None,
-                            line_bottom_width: None,
-                            line_left_color: None,
-                            line_left_width: None,
-                            wordart_text: None,
-                            wordart_font: None,
-                            wordart_size: None,
-                            wordart_spacing: None,
-                            wordart_flags: 0,
-                            extrusion_depth_backward: None,
-                            extrusion_depth_forward: None,
-                            extrusion_color: None,
-                            rotation_3d_x: None,
-                            rotation_3d_y: None,
-                            flags_3d: 0,
-                        });
+                                shape_id,
+                                drawing_index: self.current_drawing_index,
+                                shape_type: None,
+                                fsp_shape_type: Some(fsp_shape_type),
+                                bounds_emu: None,
+                                fill_color: None,
+                                line_color: None,
+                                line_width_emu: None,
+                                text_id: None,
+                                blip_index: None,
+                                rotation: 0.0,
+                                flip_h: (flags & FSP_FLAG_FLIP_H) != 0,
+                                flip_v: (flags & FSP_FLAG_FLIP_V) != 0,
+                                text_inset_emu: None,
+                                adjust1: None,
+                                adjust2: None,
+                                adjust_more: [None; 8],
+                                start_arrow: None,
+                                end_arrow: None,
+                                no_fill: false,
+                                no_line: false,
+                                num_columns: 1,
+                                column_spacing: 0.0,
+                                text_wrap_mode: None,
+                                fill_type: None,
+                                fill_back_color: None,
+                                fill_angle: None,
+                                fill_focus: None,
+                                fill_blip: None,
+                                crop_left: None,
+                                crop_top: None,
+                                crop_right: None,
+                                crop_bottom: None,
+                                shadow_type: None,
+                                shadow_color: None,
+                                shadow_opacity: 1.0,
+                                shadow_offset_x: 0.0,
+                                shadow_offset_y: 0.0,
+                                custom_vertices: None,
+                                custom_segments: None,
+                                geo_right: 21600,
+                                geo_bottom: 21600,
+                                line_top_color: None,
+                                line_top_width: None,
+                                line_right_color: None,
+                                line_right_width: None,
+                                line_bottom_color: None,
+                                line_bottom_width: None,
+                                line_left_color: None,
+                                line_left_width: None,
+                                wordart_text: None,
+                                wordart_font: None,
+                                wordart_size: None,
+                                wordart_spacing: None,
+                                wordart_flags: 0,
+                                extrusion_depth_backward: None,
+                                extrusion_depth_forward: None,
+                                extrusion_color: None,
+                                rotation_3d_x: None,
+                                rotation_3d_y: None,
+                                flags_3d: 0,
+                            });
                         }
                     }
                 }
@@ -4498,7 +4667,11 @@ impl<R: Read + Seek> PubReader<R> {
                     self.parse_client_anchor(data, &info)?;
                 }
                 _ => {
-                    log::trace!("Skipping Escher record type 0x{:04X} at offset {}", info.record_type, pos);
+                    log::trace!(
+                        "Skipping Escher record type 0x{:04X} at offset {}",
+                        info.record_type,
+                        pos
+                    );
                 }
             }
 
@@ -4551,11 +4724,16 @@ impl<R: Read + Seek> PubReader<R> {
             Some(s) => s,
             None => return Ok(()),
         };
-        
+
         // Log WordArt shapes
         let spt = shape.fsp_shape_type.unwrap_or(0);
         if matches!(spt, 25..=31 | 136..=175) {
-            log::info!("Parsing FOPT for WordArt shape_id={}, spt={}, data_len={}", shape.shape_id, spt, end - start);
+            log::info!(
+                "Parsing FOPT for WordArt shape_id={}, spt={}, data_len={}",
+                shape.shape_id,
+                spt,
+                end - start
+            );
         }
 
         // Text inset property IDs (from MS-ODRAW spec)
@@ -4573,7 +4751,7 @@ impl<R: Read + Seek> PubReader<R> {
 
         // Extract property count from FOPT header instance field (bits 4-15)
         let num_props = ((info.initial >> 4) & 0x0FFF) as usize;
-        
+
         // Use FoptProperty::parse_with_count to properly handle complex properties
         let fopt_data = &data[start..end];
         let properties = FoptProperty::parse_with_count(fopt_data, Some(num_props));
@@ -4621,7 +4799,11 @@ impl<R: Read + Seek> PubReader<R> {
                         shape.no_line = true;
                         shape.line_color = None;
                         shape.line_width_emu = None;
-                        log::trace!("Shape {} has no line (LINE_STYLE_BOOL_PROPS=0x{:08X})", shape.shape_id, value);
+                        log::trace!(
+                            "Shape {} has no line (LINE_STYLE_BOOL_PROPS=0x{:08X})",
+                            shape.shape_id,
+                            value
+                        );
                     }
                 }
                 // Fill flags: check if shape should have no fill
@@ -4633,7 +4815,11 @@ impl<R: Read + Seek> PubReader<R> {
                     if f_use_f_filled && !f_filled {
                         shape.no_fill = true;
                         shape.fill_color = None;
-                        log::trace!("Shape {} has no fill (FILL_FLAGS=0x{:08X})", shape.shape_id, value);
+                        log::trace!(
+                            "Shape {} has no fill (FILL_FLAGS=0x{:08X})",
+                            shape.shape_id,
+                            value
+                        );
                     }
                 }
                 // Text column properties (from MS-ODRAW)
@@ -4648,7 +4834,11 @@ impl<R: Read + Seek> PubReader<R> {
                 0x008D => {
                     // Convert EMUs to points
                     shape.column_spacing = emus_to_points_u(value);
-                    log::trace!("Shape {} has {:.1}pt column spacing", shape.shape_id, shape.column_spacing);
+                    log::trace!(
+                        "Shape {} has {:.1}pt column spacing",
+                        shape.shape_id,
+                        shape.column_spacing
+                    );
                 }
                 // Text wrap mode (0x0085)
                 0x0085 => {
@@ -4669,7 +4859,11 @@ impl<R: Read + Seek> PubReader<R> {
                 // Values are in EMUs (can be negative for extending beyond original)
                 0x0100 => {
                     shape.crop_left = Some(value as i32);
-                    log::trace!("Shape {} has crop_left={} EMU", shape.shape_id, value as i32);
+                    log::trace!(
+                        "Shape {} has crop_left={} EMU",
+                        shape.shape_id,
+                        value as i32
+                    );
                 }
                 0x0101 => {
                     shape.crop_top = Some(value as i32);
@@ -4677,11 +4871,19 @@ impl<R: Read + Seek> PubReader<R> {
                 }
                 0x0102 => {
                     shape.crop_right = Some(value as i32);
-                    log::trace!("Shape {} has crop_right={} EMU", shape.shape_id, value as i32);
+                    log::trace!(
+                        "Shape {} has crop_right={} EMU",
+                        shape.shape_id,
+                        value as i32
+                    );
                 }
                 0x0103 => {
                     shape.crop_bottom = Some(value as i32);
-                    log::trace!("Shape {} has crop_bottom={} EMU", shape.shape_id, value as i32);
+                    log::trace!(
+                        "Shape {} has crop_bottom={} EMU",
+                        shape.shape_id,
+                        value as i32
+                    );
                 }
                 // Shadow properties (from MS-ODRAW spec)
                 FOPT_SHADOW_TYPE => {
@@ -4694,22 +4896,40 @@ impl<R: Read + Seek> PubReader<R> {
                     let g = ((value >> 8) & 0xff) as u8;
                     let b = ((value >> 16) & 0xff) as u8;
                     shape.shadow_color = Some(Color::from_rgb8(r, g, b));
-                    log::trace!("Shape {} has shadow_color RGB({},{},{})", shape.shape_id, r, g, b);
+                    log::trace!(
+                        "Shape {} has shadow_color RGB({},{},{})",
+                        shape.shape_id,
+                        r,
+                        g,
+                        b
+                    );
                 }
                 FOPT_SHADOW_OPACITY => {
                     // Fixed-point 16.16 format (0x10000 = 1.0)
                     shape.shadow_opacity = (value as f64 / 65536.0).clamp(0.0, 1.0);
-                    log::trace!("Shape {} has shadow_opacity={:.2}", shape.shape_id, shape.shadow_opacity);
+                    log::trace!(
+                        "Shape {} has shadow_opacity={:.2}",
+                        shape.shape_id,
+                        shape.shadow_opacity
+                    );
                 }
                 FOPT_SHADOW_OFFSET_X => {
                     // Offset in EMUs (signed)
                     shape.shadow_offset_x = emus_to_points(value as i32 as i64);
-                    log::trace!("Shape {} has shadow_offset_x={:.1}pt", shape.shape_id, shape.shadow_offset_x);
+                    log::trace!(
+                        "Shape {} has shadow_offset_x={:.1}pt",
+                        shape.shape_id,
+                        shape.shadow_offset_x
+                    );
                 }
                 FOPT_SHADOW_OFFSET_Y => {
                     // Offset in EMUs (signed)
                     shape.shadow_offset_y = emus_to_points(value as i32 as i64);
-                    log::trace!("Shape {} has shadow_offset_y={:.1}pt", shape.shape_id, shape.shadow_offset_y);
+                    log::trace!(
+                        "Shape {} has shadow_offset_y={:.1}pt",
+                        shape.shape_id,
+                        shape.shadow_offset_y
+                    );
                 }
                 FOPT_SHADOW_FLAGS => {
                     // Shadow flags: bit 0x20 = fShadow (has shadow), bit 0x200000 = fUsefShadow
@@ -4719,13 +4939,21 @@ impl<R: Read + Seek> PubReader<R> {
                         // No shadow flag explicitly set - clear shadow properties
                         shape.shadow_type = None;
                         shape.shadow_color = None;
-                        log::trace!("Shape {} has no shadow (SHADOW_FLAGS=0x{:08X})", shape.shape_id, value);
+                        log::trace!(
+                            "Shape {} has no shadow (SHADOW_FLAGS=0x{:08X})",
+                            shape.shape_id,
+                            value
+                        );
                     }
                 }
                 // Edge-specific line properties (for table/shape borders)
                 escher_prop::LINE_TOP_COLOR => {
                     shape.line_top_color = Some(value);
-                    log::trace!("Shape {} has line_top_color=0x{:08X}", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has line_top_color=0x{:08X}",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 escher_prop::LINE_TOP_WIDTH => {
                     shape.line_top_width = Some(value);
@@ -4733,23 +4961,43 @@ impl<R: Read + Seek> PubReader<R> {
                 }
                 escher_prop::LINE_RIGHT_COLOR => {
                     shape.line_right_color = Some(value);
-                    log::trace!("Shape {} has line_right_color=0x{:08X}", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has line_right_color=0x{:08X}",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 escher_prop::LINE_RIGHT_WIDTH => {
                     shape.line_right_width = Some(value);
-                    log::trace!("Shape {} has line_right_width={} EMU", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has line_right_width={} EMU",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 escher_prop::LINE_BOTTOM_COLOR => {
                     shape.line_bottom_color = Some(value);
-                    log::trace!("Shape {} has line_bottom_color=0x{:08X}", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has line_bottom_color=0x{:08X}",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 escher_prop::LINE_BOTTOM_WIDTH => {
                     shape.line_bottom_width = Some(value);
-                    log::trace!("Shape {} has line_bottom_width={} EMU", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has line_bottom_width={} EMU",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 escher_prop::LINE_LEFT_COLOR => {
                     shape.line_left_color = Some(value);
-                    log::trace!("Shape {} has line_left_color=0x{:08X}", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has line_left_color=0x{:08X}",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 escher_prop::LINE_LEFT_WIDTH => {
                     shape.line_left_width = Some(value);
@@ -4758,11 +5006,19 @@ impl<R: Read + Seek> PubReader<R> {
                 // WordArt (geometry text) properties
                 crate::escher::FOPT_GTEXT_SIZE => {
                     shape.wordart_size = Some(emus_to_points_u(value));
-                    log::trace!("Shape {} has WordArt size {:.1}pt", shape.shape_id, shape.wordart_size.unwrap());
+                    log::trace!(
+                        "Shape {} has WordArt size {:.1}pt",
+                        shape.shape_id,
+                        shape.wordart_size.unwrap()
+                    );
                 }
                 crate::escher::FOPT_GTEXT_SPACING => {
                     shape.wordart_spacing = Some(emus_to_points_u(value));
-                    log::trace!("Shape {} has WordArt spacing {:.1}pt", shape.shape_id, shape.wordart_spacing.unwrap());
+                    log::trace!(
+                        "Shape {} has WordArt spacing {:.1}pt",
+                        shape.shape_id,
+                        shape.wordart_spacing.unwrap()
+                    );
                 }
                 crate::escher::FOPT_GTEXT_FLAGS => {
                     shape.wordart_flags = value;
@@ -4771,15 +5027,27 @@ impl<R: Read + Seek> PubReader<R> {
                 // 3D Object properties
                 crate::escher::FOPT_3D_EXTRUDE_BACKWARD => {
                     shape.extrusion_depth_backward = Some(value);
-                    log::trace!("Shape {} has 3D extrusion backward {} EMU", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has 3D extrusion backward {} EMU",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 crate::escher::FOPT_3D_EXTRUDE_FORWARD => {
                     shape.extrusion_depth_forward = Some(value);
-                    log::trace!("Shape {} has 3D extrusion forward {} EMU", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has 3D extrusion forward {} EMU",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 crate::escher::FOPT_3D_EXTRUSION_COLOR => {
                     shape.extrusion_color = Some(value);
-                    log::trace!("Shape {} has 3D extrusion color 0x{:08X}", shape.shape_id, value);
+                    log::trace!(
+                        "Shape {} has 3D extrusion color 0x{:08X}",
+                        shape.shape_id,
+                        value
+                    );
                 }
                 crate::escher::FOPT_3D_BOOL => {
                     shape.flags_3d = value;
@@ -4797,7 +5065,8 @@ impl<R: Read + Seek> PubReader<R> {
                     // Strip high bit (0xC145 -> 0x0145) for comparison since FoptProperty::parse_all already does this
                     0x0145 => {
                         // pVertices - custom path vertices
-                        shape.custom_vertices = Some(EscherParser::parse_path_vertices(complex_data));
+                        shape.custom_vertices =
+                            Some(EscherParser::parse_path_vertices(complex_data));
                         log::trace!(
                             "Shape {} has {} custom vertices",
                             shape.shape_id,
@@ -4806,7 +5075,8 @@ impl<R: Read + Seek> PubReader<R> {
                     }
                     0x0146 => {
                         // pSegments - custom path segments
-                        shape.custom_segments = Some(EscherParser::parse_path_segments(complex_data));
+                        shape.custom_segments =
+                            Some(EscherParser::parse_path_segments(complex_data));
                         log::trace!(
                             "Shape {} has {} custom segments",
                             shape.shape_id,
@@ -4816,12 +5086,20 @@ impl<R: Read + Seek> PubReader<R> {
                     // WordArt text (GTEXT_UNICODE = 0xC0C0, stripped high bit = 0x00C0)
                     0x00C0 => {
                         shape.wordart_text = Self::parse_unicode_string(complex_data);
-                        log::trace!("Shape {} has WordArt text: {:?}", shape.shape_id, shape.wordart_text);
+                        log::trace!(
+                            "Shape {} has WordArt text: {:?}",
+                            shape.shape_id,
+                            shape.wordart_text
+                        );
                     }
                     // WordArt font (GTEXT_FONT = 0xC0C5, stripped high bit = 0x00C5)
                     0x00C5 => {
                         shape.wordart_font = Self::parse_unicode_string(complex_data);
-                        log::trace!("Shape {} has WordArt font: {:?}", shape.shape_id, shape.wordart_font);
+                        log::trace!(
+                            "Shape {} has WordArt font: {:?}",
+                            shape.shape_id,
+                            shape.wordart_font
+                        );
                     }
                     _ => {}
                 }
@@ -4830,7 +5108,11 @@ impl<R: Read + Seek> PubReader<R> {
 
         // Store text insets if any were found
         // Default values in Publisher are typically 91440 EMUs (0.1 inch = 7.2 points)
-        if text_left.is_some() || text_top.is_some() || text_right.is_some() || text_bottom.is_some() {
+        if text_left.is_some()
+            || text_top.is_some()
+            || text_right.is_some()
+            || text_bottom.is_some()
+        {
             shape.text_inset_emu = Some((
                 text_left.unwrap_or(91440),   // Default 0.1 inch
                 text_top.unwrap_or(45720),    // Default 0.05 inch
@@ -4847,21 +5129,19 @@ impl<R: Read + Seek> PubReader<R> {
         Ok(())
     }
 
-    fn parse_client_anchor(
-        &mut self,
-        data: &[u8],
-        info: &EscherContainerInfo,
-    ) -> FormatResult<()> {
+    fn parse_client_anchor(&mut self, data: &[u8], info: &EscherContainerInfo) -> FormatResult<()> {
         let start = info.contents_offset as usize;
         let record_len = info.contents_length as usize;
-        
+
         // Parse the anchor data first, before getting mutable reference to shape
         let anchor_bounds: Option<(i32, i32, i32, i32)>;
-        
+
         // Try Publisher 2016+ tagged block format first
         // Format: length (4 bytes), then tagged blocks
         if record_len >= 8 && start + record_len <= data.len() {
-            if let Some(bounds) = Self::parse_publisher_anchor_blocks_static(&data[start..start + record_len]) {
+            if let Some(bounds) =
+                Self::parse_publisher_anchor_blocks_static(&data[start..start + record_len])
+            {
                 log::debug!(
                     "ClientAnchor (Publisher format): ({}, {}, {}, {}) EMU = ({:.1}x{:.1} pt at ({:.1},{:.1}))",
                     bounds.0, bounds.1, bounds.2, bounds.3,
@@ -4877,7 +5157,7 @@ impl<R: Read + Seek> PubReader<R> {
         } else {
             anchor_bounds = None;
         }
-        
+
         // If Publisher format didn't work, try standard Escher format
         let bounds = anchor_bounds.or_else(|| {
             if start + 16 <= data.len() {
@@ -4890,7 +5170,10 @@ impl<R: Read + Seek> PubReader<R> {
                 if left != 0 || top != 0 || right != 0 || bottom != 0 {
                     log::trace!(
                         "ClientAnchor (standard format): ({}, {}, {}, {}) EMU",
-                        left, top, right, bottom
+                        left,
+                        top,
+                        right,
+                        bottom
                     );
                     Some((left, top, right, bottom))
                 } else {
@@ -4901,7 +5184,7 @@ impl<R: Read + Seek> PubReader<R> {
                 None
             }
         });
-        
+
         // Now get the shape and apply the bounds
         let target_idx = self
             .current_escher_idx
@@ -4911,7 +5194,11 @@ impl<R: Read + Seek> PubReader<R> {
             if let Some((left, top, right, bottom)) = bounds {
                 log::trace!(
                     "Setting bounds_emu for shape {}: ({}, {}, {}, {})",
-                    shape.shape_id, left, top, right, bottom
+                    shape.shape_id,
+                    left,
+                    top,
+                    right,
+                    bottom
                 );
                 shape.bounds_emu = Some((left, top, right, bottom));
             }
@@ -4919,9 +5206,9 @@ impl<R: Read + Seek> PubReader<R> {
 
         Ok(())
     }
-    
+
     /// Parse Publisher 2016+ FClientAnchor tagged blocks format.
-    /// 
+    ///
     /// Format: length (u32), then blocks with: id (u8), type (u8), data (varies by type)
     /// Block IDs: 0x01=left/x1, 0x02=top/y1, 0x03=right/x2, 0x04=bottom/y2
     /// Block types: 0x08=1 byte, 0x10=2 bytes, 0x20=4 bytes, 0x28=8 bytes
@@ -4929,50 +5216,67 @@ impl<R: Read + Seek> PubReader<R> {
         if data.len() < 8 {
             return None;
         }
-        
+
         let length = read_u32(data) as usize;
-        
+
         // Check if first byte after length looks like a block ID (0x01-0x04 or similar small value)
         // and second byte looks like a type (0x08, 0x10, 0x20, 0x28)
         if data.len() < 6 {
             return None;
         }
-        
+
         let first_id = data[4];
         let first_type = data[5];
-        
+
         // Validate that this looks like Publisher format
-        if first_id > 0x10 || (first_type != 0x08 && first_type != 0x10 && first_type != 0x20 && first_type != 0x28) {
+        if first_id > 0x10
+            || (first_type != 0x08
+                && first_type != 0x10
+                && first_type != 0x20
+                && first_type != 0x28)
+        {
             return None;
         }
-        
+
         let mut left: Option<i32> = None;
         let mut top: Option<i32> = None;
         let mut right: Option<i32> = None;
         let mut bottom: Option<i32> = None;
-        
+
         let mut pos = 4; // Skip the length field
         let end = (4 + length).min(data.len());
-        
+
         while pos + 2 <= end {
             let block_id = data[pos];
             let block_type = data[pos + 1];
             pos += 2;
-            
+
             let (data_len, value): (usize, i32) = match block_type {
                 0x08 => (1, data.get(pos).map(|&b| b as i8 as i32).unwrap_or(0)),
-                0x10 => (2, data.get(pos..pos+2)
-                    .map(|b| i16::from_le_bytes([b[0], b[1]]) as i32)
-                    .unwrap_or(0)),
-                0x20 => (4, data.get(pos..pos+4)
-                    .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-                    .unwrap_or(0)),
-                0x28 => (8, data.get(pos..pos+8)
-                    .map(|b| i64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]) as i32)
-                    .unwrap_or(0)),
+                0x10 => (
+                    2,
+                    data.get(pos..pos + 2)
+                        .map(|b| i16::from_le_bytes([b[0], b[1]]) as i32)
+                        .unwrap_or(0),
+                ),
+                0x20 => (
+                    4,
+                    data.get(pos..pos + 4)
+                        .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                        .unwrap_or(0),
+                ),
+                0x28 => (
+                    8,
+                    data.get(pos..pos + 8)
+                        .map(|b| {
+                            i64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                                as i32
+                        })
+                        .unwrap_or(0),
+                ),
                 _ => break, // Unknown type, stop parsing
             };
-            
+
             match block_id {
                 0x01 => left = Some(value),
                 0x02 => top = Some(value),
@@ -4980,10 +5284,10 @@ impl<R: Read + Seek> PubReader<R> {
                 0x04 => bottom = Some(value),
                 _ => {} // Other blocks ignored
             }
-            
+
             pos += data_len;
         }
-        
+
         // Only return if we have all four coordinates
         if let (Some(l), Some(t), Some(r), Some(b)) = (left, top, right, bottom) {
             Some((l, t, r, b))
@@ -5128,14 +5432,18 @@ impl<R: Read + Seek> PubReader<R> {
                 .map(|(i, _)| i)
                 .collect()
         };
-        
+
         let num_pages = content_page_indices.len().max(1);
         for _ in 0..num_pages {
             let page = document.add_page();
             // Publisher files typically have 0.5 inch (36pt) margins
             page.margins = repub_model::document::Margins::all(36.0);
         }
-        log::debug!("Created {} document pages from {} content pages", num_pages, content_page_indices.len());
+        log::debug!(
+            "Created {} document pages from {} content pages",
+            num_pages,
+            content_page_indices.len()
+        );
 
         // Store which parsed page indices map to document page indices
         let page_index_map = content_page_indices;
@@ -5149,7 +5457,7 @@ impl<R: Read + Seek> PubReader<R> {
         if options.extract_images {
             self.import_orphan_escher_images(&mut document)?;
         }
-        
+
         // Import orphan WordArt shapes (WordArt with no Contents shape)
         if options.extract_shapes {
             self.import_orphan_escher_wordart(&mut document)?;
@@ -5223,7 +5531,7 @@ impl<R: Read + Seek> PubReader<R> {
                             master_seq_num,
                             master_data.shape_seq_nums.len()
                         );
-                        
+
                         // Add master page shapes as background
                         for &shape_seq_num in &master_data.shape_seq_nums {
                             if let Some(shape) = self.shapes.get(&shape_seq_num) {
@@ -5265,7 +5573,8 @@ impl<R: Read + Seek> PubReader<R> {
                                 "Page {} background: {:?}",
                                 doc_page_idx,
                                 match &fill {
-                                    Fill::Solid(c) => format!("Solid({:.2},{:.2},{:.2})", c.r, c.g, c.b),
+                                    Fill::Solid(c) =>
+                                        format!("Solid({:.2},{:.2},{:.2})", c.r, c.g, c.b),
                                     Fill::LinearGradient(_) => "LinearGradient".to_string(),
                                     Fill::RadialGradient(_) => "RadialGradient".to_string(),
                                     Fill::Texture(_) => "Texture/Image".to_string(),
@@ -5286,7 +5595,8 @@ impl<R: Read + Seek> PubReader<R> {
                                     "Page {} background (via shape): {:?}",
                                     doc_page_idx,
                                     match &fill {
-                                        Fill::Solid(c) => format!("Solid({:.2},{:.2},{:.2})", c.r, c.g, c.b),
+                                        Fill::Solid(c) =>
+                                            format!("Solid({:.2},{:.2},{:.2})", c.r, c.g, c.b),
                                         Fill::LinearGradient(_) => "LinearGradient".to_string(),
                                         Fill::RadialGradient(_) => "RadialGradient".to_string(),
                                         Fill::Texture(_) => "Texture/Image".to_string(),
@@ -5300,14 +5610,16 @@ impl<R: Read + Seek> PubReader<R> {
                 }
 
                 // Collect shapes already added from master page to avoid duplicates
-                let master_shape_seq_nums: std::collections::HashSet<u32> = page.master_seq_num
+                let master_shape_seq_nums: std::collections::HashSet<u32> = page
+                    .master_seq_num
                     .and_then(|m| self.master_pages.get(&m))
                     .map(|md| md.shape_seq_nums.iter().copied().collect())
                     .unwrap_or_default();
 
                 // Track text_ids we've already added to avoid duplicate linked text frames
                 // In Publisher, linked text frames share the same text_id but appear as separate shapes
-                let mut added_text_ids: std::collections::HashSet<u32> = std::collections::HashSet::new();
+                let mut added_text_ids: std::collections::HashSet<u32> =
+                    std::collections::HashSet::new();
 
                 // Identify group chunks and the children that belong to each
                 // (a child references its group through `parent_seq_num`). Group
@@ -5330,7 +5642,10 @@ impl<R: Read + Seek> PubReader<R> {
                 for &shape_seq_num in &page.shape_seq_nums {
                     // Skip if already added from master page
                     if master_shape_seq_nums.contains(&shape_seq_num) {
-                        log::trace!("Skipping shape {} (already added from master page)", shape_seq_num);
+                        log::trace!(
+                            "Skipping shape {} (already added from master page)",
+                            shape_seq_num
+                        );
                         continue;
                     }
 
@@ -5359,7 +5674,7 @@ impl<R: Read + Seek> PubReader<R> {
                                 continue;
                             }
                         }
-                        
+
                         match self.create_object(shape, options) {
                             Some(obj) => {
                                 // Track text_id if present
@@ -5432,23 +5747,29 @@ impl<R: Read + Seek> PubReader<R> {
                 .collect();
 
             // Assign unassigned shapes to pages with failures
-            // For Publisher 2016+, the shape seq_nums don't match, so we need to 
+            // For Publisher 2016+, the shape seq_nums don't match, so we need to
             // distribute shapes to pages intelligently based on expected shape counts
             if !unassigned_shapes.is_empty() && !pages_with_failures.is_empty() {
-                log::trace!("Fallback: {} unassigned shapes, {} pages with failures",
-                    unassigned_shapes.len(), pages_with_failures.len());
-                
+                log::trace!(
+                    "Fallback: {} unassigned shapes, {} pages with failures",
+                    unassigned_shapes.len(),
+                    pages_with_failures.len()
+                );
+
                 // Build a map of expected shapes per page from the page definitions
-                let expected_per_page: Vec<(usize, usize)> = pages_with_failures.iter()
+                let expected_per_page: Vec<(usize, usize)> = pages_with_failures
+                    .iter()
                     .map(|&idx| {
-                        let count = self.pages.get(idx)
+                        let count = self
+                            .pages
+                            .get(idx)
                             .map(|p| p.shape_seq_nums.len())
                             .unwrap_or(0);
                         (idx, count)
                     })
                     .filter(|(_, count)| *count > 0)
                     .collect();
-                
+
                 // Distribute shapes to pages based on expected counts
                 let mut shape_iter = unassigned_shapes.into_iter();
                 for (page_idx, expected_count) in expected_per_page {
@@ -5462,7 +5783,7 @@ impl<R: Read + Seek> PubReader<R> {
                         }
                     }
                 }
-                
+
                 // Any remaining shapes go to the first page with failures
                 if let Some(&page_idx) = pages_with_failures.first() {
                     if let Some(doc_page) = document.page_mut(page_idx) {
@@ -5524,7 +5845,10 @@ impl<R: Read + Seek> PubReader<R> {
         }
 
         if children.is_empty() {
-            log::trace!("Group seq_num={} has no reconstructable children", group_seq);
+            log::trace!(
+                "Group seq_num={} has no reconstructable children",
+                group_seq
+            );
             return None;
         }
 
@@ -5537,17 +5861,16 @@ impl<R: Read + Seek> PubReader<R> {
             log::trace!("Skipping ALTSHAPE seq_num={}", shape.seq_num);
             return None;
         }
-        
+
         // Get bounds from Escher if available
         let bounds = self.get_shape_bounds(shape);
-        
 
-        
         // Get rotation and flip from Escher
-        let (rotation, flip_h, flip_v) = self.find_escher_shape(shape.seq_num)
+        let (rotation, flip_h, flip_v) = self
+            .find_escher_shape(shape.seq_num)
             .map(|e| (e.rotation, e.flip_h, e.flip_v))
             .unwrap_or((0.0, false, false));
-        
+
         // Get text insets from Escher if available
         let text_insets = self.get_text_insets(shape);
 
@@ -5555,15 +5878,17 @@ impl<R: Read + Seek> PubReader<R> {
         if let Some(ref table_info) = shape.table_info {
             if options.extract_shapes {
                 // Convert EMU heights/widths to points
-                let mut row_heights: Vec<f64> = table_info.row_heights_emu.iter()
+                let mut row_heights: Vec<f64> = table_info
+                    .row_heights_emu
+                    .iter()
                     .map(|&h| emus_to_points_u(h))
                     .collect();
-                let mut col_widths: Vec<f64> = table_info.col_widths_emu.iter()
+                let mut col_widths: Vec<f64> = table_info
+                    .col_widths_emu
+                    .iter()
                     .map(|&w| emus_to_points_u(w))
                     .collect();
-                
 
-                
                 // If we have fewer row heights than rows, the heights given are for
                 // the last rows (the small footer/page-number row); the remaining
                 // height goes to the content rows above it.
@@ -5583,7 +5908,7 @@ impl<R: Read + Seek> PubReader<R> {
                         shape.seq_num, table_info.row_heights_emu.len(), missing_rows, height_per_missing, row_heights
                     );
                 }
-                
+
                 // If we have fewer col widths than cols, distribute width equally
                 if col_widths.len() < table_info.num_cols as usize {
                     let num_cols = table_info.num_cols as usize;
@@ -5594,7 +5919,7 @@ impl<R: Read + Seek> PubReader<R> {
                         shape.seq_num, table_info.col_widths_emu.len(), bounds.size.width, num_cols
                     );
                 }
-                
+
                 // If col_widths sum doesn't match bounds, scale proportionally
                 let col_sum: f64 = col_widths.iter().sum();
                 if (col_sum - bounds.size.width).abs() > 1.0 && col_sum > 0.0 {
@@ -5607,8 +5932,8 @@ impl<R: Read + Seek> PubReader<R> {
                         *w *= scale;
                     }
                 }
-                
-                // If row_heights sum doesn't match bounds, scale proportionally  
+
+                // If row_heights sum doesn't match bounds, scale proportionally
                 let row_sum: f64 = row_heights.iter().sum();
                 if (row_sum - bounds.size.height).abs() > 1.0 && row_sum > 0.0 {
                     let scale = bounds.size.height / row_sum;
@@ -5620,25 +5945,29 @@ impl<R: Read + Seek> PubReader<R> {
                         *h *= scale;
                     }
                 }
-                    
+
                 // Use the bounds from Escher - they represent the actual table size
                 let table_bounds = bounds;
-                
+
                 log::trace!(
                     "Table seq_num={}: rows={}, cols={}, row_heights={:?}, col_widths={:?}, table_bounds={:?}",
                     shape.seq_num, table_info.num_rows, table_info.num_cols, row_heights, col_widths, table_bounds
                 );
-                
+
                 // Create table with proper dimensions
-                let mut table = crate::model::Table::new(table_bounds, table_info.num_rows, table_info.num_cols);
+                let mut table = crate::model::Table::new(
+                    table_bounds,
+                    table_info.num_rows,
+                    table_info.num_cols,
+                );
                 table.row_heights = row_heights;
                 table.col_widths = col_widths;
                 table.common.rotation = rotation;
-                
+
                 if flip_h || flip_v {
                     table.common.transform = self.create_flip_transform(flip_h, flip_v);
                 }
-                
+
                 // Apply table borders from Escher properties
                 if let Some(escher) = self.find_escher_shape(shape.seq_num) {
                     // Only apply borders if the shape should have a line
@@ -5648,7 +5977,7 @@ impl<R: Read + Seek> PubReader<R> {
                         table.borders = TableBorders::none();
                         log::trace!("Table seq_num={}: no borders (no_line flag)", shape.seq_num);
                     }
-                    
+
                     // Apply table fill color (applies to all cells as default)
                     if !escher.no_fill {
                         if let Some(fill_color) = escher.fill_color {
@@ -5662,11 +5991,15 @@ impl<R: Read + Seek> PubReader<R> {
                             }
                             log::trace!(
                                 "Table seq_num={}: fill RGB({},{},{}) applied to {} cells",
-                                shape.seq_num, r, g, b, table.cells.len()
+                                shape.seq_num,
+                                r,
+                                g,
+                                b,
+                                table.cells.len()
                             );
                         }
                     }
-                    
+
                     // Look for cell-level shapes that belong to THIS table
                     // In Publisher, table cells have their own Escher shapes with fills.
                     // The challenge is matching cell shapes to the correct table when there
@@ -5676,59 +6009,69 @@ impl<R: Read + Seek> PubReader<R> {
                     // 1. Find all visual tables on the content drawing (type=20 shapes with bounds)
                     // 2. Match this structural table to a visual table by comparing bounds
                     // 3. Find cell shapes that overlap with the matched visual table
-                    
+
                     // Find the main content drawing (usually the one with the most shapes)
-                    let mut drawing_counts: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
+                    let mut drawing_counts: std::collections::HashMap<usize, usize> =
+                        std::collections::HashMap::new();
                     for e in &self.escher_shapes {
                         *drawing_counts.entry(e.drawing_index).or_insert(0) += 1;
                     }
-                    let content_drawing = drawing_counts.iter()
+                    let content_drawing = drawing_counts
+                        .iter()
                         .max_by_key(|&(_, count)| count)
                         .map(|(&idx, _)| idx)
                         .unwrap_or(0);
-                    
+
                     // Find visual table containers on the content drawing
                     // A table in Publisher typically consists of a type=20 shape followed by
                     // cell shapes (rectangles, type=1) in sequential spid order.
-                    // 
+                    //
                     // Strategy: Find ALL type=20 shapes, then associate each structural table
                     // with a visual table based on order/index (first structural table = first visual table).
-                    
-                    let mut visual_table_spids: Vec<u32> = self.escher_shapes
+
+                    let mut visual_table_spids: Vec<u32> = self
+                        .escher_shapes
                         .iter()
                         .filter(|e| {
-                            e.drawing_index == content_drawing &&
-                            e.fsp_shape_type == Some(20)  // TextBox/Table shape type
+                            e.drawing_index == content_drawing && e.fsp_shape_type == Some(20)
+                            // TextBox/Table shape type
                         })
                         .map(|e| e.shape_id)
                         .collect();
                     visual_table_spids.sort();
-                    
+
                     // Track which visual table we're on (using a static counter based on table seq_num)
                     // This is a simplification - in a real implementation we'd track this better
-                    let structural_tables: Vec<u32> = self.shapes
+                    let structural_tables: Vec<u32> = self
+                        .shapes
                         .values()
                         .filter(|s| s.table_info.is_some())
                         .map(|s| s.seq_num)
                         .collect();
                     let mut sorted_structural = structural_tables.clone();
                     sorted_structural.sort();
-                    
-                    let table_index = sorted_structural.iter().position(|&seq| seq == shape.seq_num);
-                    
+
+                    let table_index = sorted_structural
+                        .iter()
+                        .position(|&seq| seq == shape.seq_num);
+
                     log::trace!(
                         "Table seq_num={}: found {} visual tables, this is structural table #{}",
-                        shape.seq_num, visual_table_spids.len(), 
-                        table_index.map(|i| i.to_string()).unwrap_or_else(|| "?".to_string())
+                        shape.seq_num,
+                        visual_table_spids.len(),
+                        table_index
+                            .map(|i| i.to_string())
+                            .unwrap_or_else(|| "?".to_string())
                     );
-                    
+
                     // Match this structural table to a visual table by index
                     if let Some(idx) = table_index {
                         if let Some(&vt_spid) = visual_table_spids.get(idx) {
                             let total_cells = (table_info.num_rows * table_info.num_cols) as usize;
-                            
+
                             // Find cell shapes (rectangles with colored fills) following this visual table
-                            let cell_shapes: Vec<(u32, &ParsedEscherShape)> = self.escher_shapes
+                            let cell_shapes: Vec<(u32, &ParsedEscherShape)> = self
+                                .escher_shapes
                                 .iter()
                                 .filter(|e| {
                                     e.drawing_index == content_drawing &&
@@ -5742,24 +6085,26 @@ impl<R: Read + Seek> PubReader<R> {
                                 })
                                 .map(|e| (e.shape_id, e))
                                 .collect();
-                            
+
                             log::trace!(
                                 "Table seq_num={}: visual table spid={}, found {} cell shapes with RGB fills",
                                 shape.seq_num, vt_spid, cell_shapes.len()
                             );
-                            
+
                             // Apply fills to cells in row-major order
                             // The cell shapes are ordered by spid, which should correspond to row-major order
-                            for (cell_idx, (_spid, cell_escher)) in cell_shapes.iter().take(total_cells).enumerate() {
+                            for (cell_idx, (_spid, cell_escher)) in
+                                cell_shapes.iter().take(total_cells).enumerate()
+                            {
                                 if let Some(fill_color) = cell_escher.fill_color {
                                     if !cell_escher.no_fill {
                                         let r = (fill_color & 0xff) as u8;
                                         let g = ((fill_color >> 8) & 0xff) as u8;
                                         let b = ((fill_color >> 16) & 0xff) as u8;
-                                        
+
                                         let row = cell_idx as u32 / table_info.num_cols;
                                         let col = cell_idx as u32 % table_info.num_cols;
-                                        
+
                                         if let Some(cell) = table.cell_mut(row, col) {
                                             cell.fill = Fill::Solid(Color::from_rgb8(r, g, b));
                                             log::debug!(
@@ -5773,77 +6118,89 @@ impl<R: Read + Seek> PubReader<R> {
                         }
                     }
                 }
-                
+
                 // Apply cell spans from parsed cell info
-                // 
+                //
                 // NOTE: The cell info parsing from MS Publisher format is complex.
                 // The start_row/end_row in ParsedCellInfo represent the grid positions
                 // that a cell occupies, but they're associated with cell indices (0, 1, 2...)
-                // rather than grid positions. The cell info index determines which cell 
+                // rather than grid positions. The cell info index determines which cell
                 // gets the text (from paragraph order), so we map:
                 //   cell_info_index -> (row, col) in row-major order for text
-                // 
+                //
                 // For spans, we need to look at which cell info describes a merged cell.
-                // If cell_info has start_row != end_row or start_col != end_col, 
+                // If cell_info has start_row != end_row or start_col != end_col,
                 // that indicates a span. But we need to apply it to the right cell
                 // based on the cell_info's INDEX, not its start_row.
                 for (idx, cell_info) in table_info.cells.iter().enumerate() {
                     // The cell_info's index maps to table cells in row-major order
                     let cell_row = idx as u32 / table_info.num_cols;
                     let cell_col = idx as u32 % table_info.num_cols;
-                    
+
                     if cell_row < table_info.num_rows && cell_col < table_info.num_cols {
                         // Calculate spans from the cell_info's grid dimensions
-                        let row_span = (cell_info.end_row.saturating_sub(cell_info.start_row) + 1).max(1);
-                        let col_span = (cell_info.end_column.saturating_sub(cell_info.start_column) + 1).max(1);
-                        
+                        let row_span =
+                            (cell_info.end_row.saturating_sub(cell_info.start_row) + 1).max(1);
+                        let col_span =
+                            (cell_info.end_column.saturating_sub(cell_info.start_column) + 1)
+                                .max(1);
+
                         // Only set spans if they're > 1 (merged cells)
                         if row_span > 1 || col_span > 1 {
                             if let Some(cell) = table.cell_mut(cell_row, cell_col) {
                                 cell.row_span = row_span;
                                 cell.col_span = col_span;
                                 log::trace!(
-                                    "Table cell [{},{}] has span: {}x{} (from cell_info {})", 
-                                    cell_row, cell_col, col_span, row_span, idx
+                                    "Table cell [{},{}] has span: {}x{} (from cell_info {})",
+                                    cell_row,
+                                    cell_col,
+                                    col_span,
+                                    row_span,
+                                    idx
                                 );
                             }
                         }
                     }
                 }
-                
+
                 // If the table has text_id, populate cells with text
                 if let Some(text_id) = shape.text_id {
                     if let Some(text_block) = self.text_blocks.get(&text_id) {
                         // Each paragraph typically corresponds to a table cell
                         // The paragraphs are ordered row by row, column by column
                         // Filter out "." column separator markers but keep empty paragraphs
-                        let paragraphs: Vec<_> = text_block.paragraphs.iter()
+                        let paragraphs: Vec<_> = text_block
+                            .paragraphs
+                            .iter()
                             .filter(|p| {
                                 let text: String = p.runs.iter().map(|r| r.text.as_str()).collect();
                                 text.trim() != "."
                             })
                             .collect();
-                        
+
                         log::trace!(
                             "Table seq_num={} text_id={}: {} paragraphs after filtering",
-                            shape.seq_num, text_id, paragraphs.len()
+                            shape.seq_num,
+                            text_id,
+                            paragraphs.len()
                         );
-                        
+
                         // Skip leading empty paragraphs to align content with the correct rows
-                        let paragraphs: Vec<_> = paragraphs.into_iter()
+                        let paragraphs: Vec<_> = paragraphs
+                            .into_iter()
                             .skip_while(|p| {
                                 let text: String = p.runs.iter().map(|r| r.text.as_str()).collect();
                                 text.trim().is_empty()
                             })
                             .collect();
-                        
+
                         let total_cells = (table_info.num_rows * table_info.num_cols) as usize;
-                        
+
                         log::trace!(
                             "Table seq_num={}: after skipping empty: {} paragraphs for {} total slots",
                             shape.seq_num, paragraphs.len(), total_cells
                         );
-                        
+
                         // If we have fewer paragraphs than table slots, align them to the END
                         // (content fills from the last row up, so page numbers go in footer)
                         let start_offset = if paragraphs.len() < total_cells {
@@ -5851,7 +6208,7 @@ impl<R: Read + Seek> PubReader<R> {
                         } else {
                             0
                         };
-                        
+
                         // Populate cells with full styled content (preserving alignment etc.)
                         for (i, para) in paragraphs.iter().enumerate() {
                             let cell_idx = start_offset + i;
@@ -5861,19 +6218,23 @@ impl<R: Read + Seek> PubReader<R> {
                                 if let Some(cell) = table.cell_mut(row, col) {
                                     // Convert parsed paragraph to StyledText paragraph
                                     let styled_para = self.convert_paragraph(para);
-                                    cell.content = StyledText { paragraphs: vec![styled_para] };
+                                    cell.content = StyledText {
+                                        paragraphs: vec![styled_para],
+                                    };
                                 }
                             }
                         }
                     }
                 }
-                
+
                 log::trace!(
                     "Created Table: {}x{} at ({:.1},{:.1})",
-                    table_info.num_rows, table_info.num_cols,
-                    bounds.origin.x, bounds.origin.y
+                    table_info.num_rows,
+                    table_info.num_cols,
+                    bounds.origin.x,
+                    bounds.origin.y
                 );
-                
+
                 return Some(Object::Table(table));
             }
         }
@@ -5918,14 +6279,19 @@ impl<R: Read + Seek> PubReader<R> {
                             };
                             log::trace!(
                                 "TextFrame seq_num={}: {} columns, {:.1}pt gap",
-                                shape.seq_num, escher.num_columns, escher.column_spacing
+                                shape.seq_num,
+                                escher.num_columns,
+                                escher.column_spacing
                             );
                         }
                         // Apply fill from Escher (only from this frame's own record).
                         if record_is_this_frame && !escher.no_fill {
                             if let Some(fill) = self.create_shape_fill_from_escher(escher) {
                                 tf.style.fill = fill;
-                                log::trace!("TextFrame seq_num={}: fill from Escher", shape.seq_num);
+                                log::trace!(
+                                    "TextFrame seq_num={}: fill from Escher",
+                                    shape.seq_num
+                                );
                             }
                         }
                         // Apply stroke from Escher (only from this frame's own record).
@@ -5939,7 +6305,8 @@ impl<R: Read + Seek> PubReader<R> {
                                             // Darken the fill color by reducing RGB values by ~40%
                                             let r = ((fill_color & 0xff) as f32 * 0.6) as u8;
                                             let g = (((fill_color >> 8) & 0xff) as f32 * 0.6) as u8;
-                                            let b = (((fill_color >> 16) & 0xff) as f32 * 0.6) as u8;
+                                            let b =
+                                                (((fill_color >> 16) & 0xff) as f32 * 0.6) as u8;
                                             (Some(Color::from_rgb8(r, g, b)), true)
                                         } else {
                                             // Fill is also a scheme ref - use a default dark color
@@ -5956,10 +6323,11 @@ impl<R: Read + Seek> PubReader<R> {
                                     let b = ((line_color >> 16) & 0xff) as u8;
                                     (Some(Color::from_rgb8(r, g, b)), false)
                                 };
-                                
+
                                 if let Some(color) = stroke_color {
                                     // For line width: check if it's a scheme ref too
-                                    let width = escher.line_width_emu
+                                    let width = escher
+                                        .line_width_emu
                                         .filter(|&w| (w >> 24) == 0) // Only use if not a scheme ref
                                         .map(|w| emus_to_points_u(w))
                                         .unwrap_or(if is_scheme { 2.0 } else { 0.75 });
@@ -5969,7 +6337,9 @@ impl<R: Read + Seek> PubReader<R> {
                                     ));
                                     log::trace!(
                                         "TextFrame seq_num={}: stroke {} {:.1}pt",
-                                        shape.seq_num, if is_scheme { "from scheme" } else { "RGB" }, width
+                                        shape.seq_num,
+                                        if is_scheme { "from scheme" } else { "RGB" },
+                                        width
                                     );
                                 }
                             }
@@ -5979,7 +6349,9 @@ impl<R: Read + Seek> PubReader<R> {
                             tf.style.shadow = Some(shadow);
                             log::trace!(
                                 "TextFrame seq_num={}: drop shadow offset=({:.1},{:.1})",
-                                shape.seq_num, escher.shadow_offset_x, escher.shadow_offset_y
+                                shape.seq_num,
+                                escher.shadow_offset_x,
+                                escher.shadow_offset_y
                             );
                         }
                     }
@@ -6023,7 +6395,10 @@ impl<R: Read + Seek> PubReader<R> {
                 if record_is_this_frame && !escher.no_fill {
                     if let Some(fill) = self.create_shape_fill_from_escher(escher) {
                         tf.style.fill = fill;
-                        log::trace!("TextFrame seq_num={}: fill from Escher (placeholder)", shape.seq_num);
+                        log::trace!(
+                            "TextFrame seq_num={}: fill from Escher (placeholder)",
+                            shape.seq_num
+                        );
                     }
                 }
                 // Apply stroke from Escher
@@ -6050,19 +6425,20 @@ impl<R: Read + Seek> PubReader<R> {
                             let b = ((line_color >> 16) & 0xff) as u8;
                             (Some(Color::from_rgb8(r, g, b)), false)
                         };
-                        
+
                         if let Some(color) = stroke_color {
-                            let width = escher.line_width_emu
+                            let width = escher
+                                .line_width_emu
                                 .filter(|&w| (w >> 24) == 0)
                                 .map(|w| emus_to_points_u(w))
                                 .unwrap_or(if is_scheme { 2.0 } else { 0.75 });
-                            tf.style.stroke = Some(repub_model::styles::Stroke::solid(
-                                color,
-                                width.max(0.5),
-                            ));
+                            tf.style.stroke =
+                                Some(repub_model::styles::Stroke::solid(color, width.max(0.5)));
                             log::trace!(
                                 "TextFrame seq_num={}: stroke {} {:.1}pt (placeholder)",
-                                shape.seq_num, if is_scheme { "from scheme" } else { "RGB" }, width
+                                shape.seq_num,
+                                if is_scheme { "from scheme" } else { "RGB" },
+                                width
                             );
                         }
                     }
@@ -6085,16 +6461,19 @@ impl<R: Read + Seek> PubReader<R> {
                 let shape_type = escher.fsp_shape_type.or(escher.shape_type);
                 if let Some(st) = shape_type {
                     let mapped = map_escher_shape_type(st, escher.adjust1, escher.adjust2);
-                    
+
                     // Handle Line shapes
                     if let MappedShapeType::Line { .. } = mapped {
                         let mut line = Line::new(
                             Point::new(bounds.origin.x, bounds.origin.y),
-                            Point::new(bounds.origin.x + bounds.size.width, bounds.origin.y + bounds.size.height),
+                            Point::new(
+                                bounds.origin.x + bounds.size.width,
+                                bounds.origin.y + bounds.size.height,
+                            ),
                         );
                         line.common.bounds = bounds;
                         line.common.rotation = rotation;
-                        
+
                         // Apply arrow styles from Escher properties
                         if let Some(start_arrow) = escher.start_arrow {
                             line.start_ending = Self::convert_arrow_style(start_arrow);
@@ -6102,49 +6481,55 @@ impl<R: Read + Seek> PubReader<R> {
                         if let Some(end_arrow) = escher.end_arrow {
                             line.end_ending = Self::convert_arrow_style(end_arrow);
                         }
-                        
+
                         // Apply stroke color and width
                         if let Some(line_color) = escher.line_color {
                             let r = (line_color & 0xff) as u8;
                             let g = ((line_color >> 8) & 0xff) as u8;
                             let b = ((line_color >> 16) & 0xff) as u8;
-                            let line_width_pts = escher.line_width_emu
+                            let line_width_pts = escher
+                                .line_width_emu
                                 .map(|w| emus_to_points_u(w))
                                 .unwrap_or(0.75);
-                            line.stroke = Stroke::solid(
-                                Color::from_rgb8(r, g, b),
-                                line_width_pts.max(0.5),
-                            );
+                            line.stroke =
+                                Stroke::solid(Color::from_rgb8(r, g, b), line_width_pts.max(0.5));
                         }
-                        
+
                         if flip_h || flip_v {
                             line.common.transform = self.create_flip_transform(flip_h, flip_v);
                         }
-                        
+
                         log::trace!(
                             "Line seq_num={}: ({:.1},{:.1}) to ({:.1},{:.1})",
-                            shape.seq_num, line.start.x, line.start.y, line.end.x, line.end.y
+                            shape.seq_num,
+                            line.start.x,
+                            line.start.y,
+                            line.end.x,
+                            line.end.y
                         );
-                        
+
                         return Some(Object::Line(line));
                     }
-                    
+
                     // Handle Connector shapes
                     if let MappedShapeType::Connector { connector_type, .. } = mapped {
                         let mut line = Line::new(
                             Point::new(bounds.origin.x, bounds.origin.y),
-                            Point::new(bounds.origin.x + bounds.size.width, bounds.origin.y + bounds.size.height),
+                            Point::new(
+                                bounds.origin.x + bounds.size.width,
+                                bounds.origin.y + bounds.size.height,
+                            ),
                         );
                         line.common.bounds = bounds;
                         line.common.rotation = rotation;
-                        
+
                         // Set connector type
                         line.connector_type = match connector_type {
                             ConnectorRouting::Straight => ConnectorType::Straight,
                             ConnectorRouting::Elbow => ConnectorType::Elbow,
                             ConnectorRouting::Curved => ConnectorType::Curved,
                         };
-                        
+
                         // Apply arrow styles from Escher properties
                         if let Some(start_arrow) = escher.start_arrow {
                             line.start_ending = Self::convert_arrow_style(start_arrow);
@@ -6152,31 +6537,34 @@ impl<R: Read + Seek> PubReader<R> {
                         if let Some(end_arrow) = escher.end_arrow {
                             line.end_ending = Self::convert_arrow_style(end_arrow);
                         }
-                        
+
                         // Apply stroke color and width
                         if let Some(line_color) = escher.line_color {
                             let r = (line_color & 0xff) as u8;
                             let g = ((line_color >> 8) & 0xff) as u8;
                             let b = ((line_color >> 16) & 0xff) as u8;
-                            let line_width_pts = escher.line_width_emu
+                            let line_width_pts = escher
+                                .line_width_emu
                                 .map(|w| emus_to_points_u(w))
                                 .unwrap_or(0.75);
-                            line.stroke = Stroke::solid(
-                                Color::from_rgb8(r, g, b),
-                                line_width_pts.max(0.5),
-                            );
+                            line.stroke =
+                                Stroke::solid(Color::from_rgb8(r, g, b), line_width_pts.max(0.5));
                         }
-                        
+
                         if flip_h || flip_v {
                             line.common.transform = self.create_flip_transform(flip_h, flip_v);
                         }
-                        
+
                         log::trace!(
                             "Connector seq_num={}: type={:?}, ({:.1},{:.1}) to ({:.1},{:.1})",
-                            shape.seq_num, line.connector_type,
-                            line.start.x, line.start.y, line.end.x, line.end.y
+                            shape.seq_num,
+                            line.connector_type,
+                            line.start.x,
+                            line.start.y,
+                            line.end.x,
+                            line.end.y
                         );
-                        
+
                         return Some(Object::Line(line));
                     }
                 }
@@ -6188,12 +6576,19 @@ impl<R: Read + Seek> PubReader<R> {
             if let Some(escher) = self.find_escher_shape(shape.seq_num) {
                 if let Some(blip_idx) = escher.blip_index {
                     // This shape references an image - create an ImageFrame
-                    if let Some(image) = self.images.iter().find(|i| i.index == blip_idx)
-                        .or_else(|| self.images.iter().find(|i| i.index == blip_idx.saturating_sub(1)))
+                    if let Some(image) = self
+                        .images
+                        .iter()
+                        .find(|i| i.index == blip_idx)
+                        .or_else(|| {
+                            self.images
+                                .iter()
+                                .find(|i| i.index == blip_idx.saturating_sub(1))
+                        })
                         .or_else(|| self.images.iter().find(|i| i.index == blip_idx + 1))
                     {
                         let mut img_frame = ImageFrame::new(bounds);
-                        
+
                         // Embed as base64
                         use base64::Engine;
                         let b64 = base64::engine::general_purpose::STANDARD.encode(&image.data);
@@ -6202,28 +6597,32 @@ impl<R: Read + Seek> PubReader<R> {
                             mime_type: image.image_type.mime_type().to_string(),
                         };
                         img_frame.common.rotation = rotation;
-                        
+
                         if flip_h || flip_v {
                             img_frame.common.transform = self.create_flip_transform(flip_h, flip_v);
                         }
-                        
+
                         // Apply image cropping from Escher if present
                         if let Some(bounds_emu) = escher.bounds_emu {
-                            if let Some(crop_rect) = self.convert_crop_to_normalized(escher, bounds_emu) {
+                            if let Some(crop_rect) =
+                                self.convert_crop_to_normalized(escher, bounds_emu)
+                            {
                                 img_frame.crop = Some(crop_rect);
                             }
                         }
-                        
+
                         // Apply drop shadow from Escher
                         if let Some(shadow) = Self::create_drop_shadow_from_escher(escher) {
                             img_frame.style.shadow = Some(shadow);
                         }
-                        
+
                         log::trace!(
                             "Shape seq_num={} -> ImageFrame: blip_idx={}, bounds={:?}",
-                            shape.seq_num, blip_idx, bounds
+                            shape.seq_num,
+                            blip_idx,
+                            bounds
                         );
-                        
+
                         return Some(Object::ImageFrame(img_frame));
                     }
                 }
@@ -6235,43 +6634,45 @@ impl<R: Read + Seek> PubReader<R> {
             if let Some(escher) = self.find_escher_shape(shape.seq_num) {
                 // Check for WordArt by shape type or presence of WordArt text
                 let spt = escher.fsp_shape_type.unwrap_or(0);
-                let is_wordart_type = matches!(spt, 
+                let is_wordart_type = matches!(spt,
                     25..=31 |      // TextOctagon through TextOnRing
                     136..=175      // TextPlainText through TextCanDown
                 );
-                
+
                 if is_wordart_type || escher.wordart_text.is_some() {
                     // Get the text from Escher WordArt text property or use placeholder
-                    let text = escher.wordart_text.clone()
+                    let text = escher
+                        .wordart_text
+                        .clone()
                         .or_else(|| {
                             // Try to get text from text_id reference
                             escher.text_id.and_then(|tid| self.get_text_content(tid))
                         })
                         .unwrap_or_else(|| "WordArt".to_string());
-                    
+
                     let mut wordart = crate::model::WordArt::new(bounds, text);
                     wordart.common.rotation = rotation;
-                    
+
                     // Apply font if specified
                     if let Some(ref font) = escher.wordart_font {
                         wordart.style.font.family = font.clone();
                     }
-                    
-                    // Apply size if specified  
+
+                    // Apply size if specified
                     if let Some(size) = escher.wordart_size {
                         wordart.style.font_size = size.max(6.0);
                     }
-                    
+
                     // Apply letter spacing
                     if let Some(spacing) = escher.wordart_spacing {
                         wordart.letter_spacing = spacing;
                     }
-                    
+
                     // Apply fill from Escher
                     if let Some(fill) = self.create_shape_fill_from_escher(escher) {
                         wordart.fill = fill;
                     }
-                    
+
                     // Apply outline from Escher line properties
                     if !escher.no_line {
                         if let Some(line_color) = escher.line_color {
@@ -6279,22 +6680,20 @@ impl<R: Read + Seek> PubReader<R> {
                                 let r = (line_color & 0xff) as u8;
                                 let g = ((line_color >> 8) & 0xff) as u8;
                                 let b = ((line_color >> 16) & 0xff) as u8;
-                                let width = escher.line_width_emu
+                                let width = escher
+                                    .line_width_emu
                                     .map(|w| emus_to_points_u(w))
                                     .unwrap_or(0.75);
-                                wordart.outline = Some(Stroke::solid(
-                                    Color::from_rgb8(r, g, b),
-                                    width.max(0.5),
-                                ));
+                                wordart.outline =
+                                    Some(Stroke::solid(Color::from_rgb8(r, g, b), width.max(0.5)));
                             }
                         }
                     }
-                    
+
                     // Map shape type to WordArt preset
-                    wordart.transform = crate::model::TextTransform::Preset(
-                        Self::map_spt_to_wordart_preset(spt)
-                    );
-                    
+                    wordart.transform =
+                        crate::model::TextTransform::Preset(Self::map_spt_to_wordart_preset(spt));
+
                     // Apply flags (bold, italic, vertical)
                     let flags = escher.wordart_flags;
                     if (flags & crate::escher::GTEXT_FLAG_BOLD) != 0 {
@@ -6304,16 +6703,18 @@ impl<R: Read + Seek> PubReader<R> {
                         wordart.style.font.style = repub_model::styles::FontStyle::Italic;
                     }
                     wordart.vertical = (flags & crate::escher::GTEXT_FLAG_VERTICAL) != 0;
-                    
+
                     if flip_h || flip_v {
                         wordart.common.transform = self.create_flip_transform(flip_h, flip_v);
                     }
-                    
+
                     log::trace!(
                         "WordArt seq_num={}: spt={}, text={:?}",
-                        shape.seq_num, spt, wordart.text
+                        shape.seq_num,
+                        spt,
+                        wordart.text
                     );
-                    
+
                     return Some(Object::WordArt(wordart));
                 }
             }
@@ -6348,10 +6749,10 @@ impl<R: Read + Seek> PubReader<R> {
             } else {
                 Shape::rectangle(bounds)
             };
-            
+
             // Apply rotation
             shape_obj.common.rotation = rotation;
-            
+
             // Flips mirror the outline in its own frame (drawn by every renderer)
             shape_obj.common.flip_h = flip_h;
             shape_obj.common.flip_v = flip_v;
@@ -6367,10 +6768,7 @@ impl<R: Read + Seek> PubReader<R> {
                     );
                 } else if let Some(fill) = self.create_shape_fill_from_escher(escher) {
                     shape_obj.style.fill = fill;
-                    log::trace!(
-                        "Shape seq_num={}: fill from Escher",
-                        shape.seq_num
-                    );
+                    log::trace!("Shape seq_num={}: fill from Escher", shape.seq_num);
                 } else {
                     // No fill specified - keep default (Fill::None)
                     log::trace!(
@@ -6378,13 +6776,14 @@ impl<R: Read + Seek> PubReader<R> {
                         shape.seq_num
                     );
                 }
-                
+
                 // Apply stroke/line color
                 if let Some(line) = escher.line_color {
                     let r = (line & 0xff) as u8;
                     let g = ((line >> 8) & 0xff) as u8;
                     let b = ((line >> 16) & 0xff) as u8;
-                    let line_width_pts = escher.line_width_emu
+                    let line_width_pts = escher
+                        .line_width_emu
                         .map(|w| emus_to_points_u(w))
                         .unwrap_or(0.75);
                     shape_obj.style.stroke = Some(repub_model::styles::Stroke::solid(
@@ -6398,15 +6797,17 @@ impl<R: Read + Seek> PubReader<R> {
                     shape_obj.style.shadow = Some(shadow);
                     log::trace!(
                         "Shape seq_num={}: drop shadow offset=({:.1},{:.1})",
-                        shape.seq_num, escher.shadow_offset_x, escher.shadow_offset_y
+                        shape.seq_num,
+                        escher.shadow_offset_x,
+                        escher.shadow_offset_y
                     );
                 }
-                
+
                 // Apply text wrap settings
                 if let Some(wrap_mode) = escher.text_wrap_mode {
                     shape_obj.common.text_wrap = Self::convert_text_wrap_mode(wrap_mode);
                 }
-                
+
                 // Skip shapes that are genuinely invisible in Publisher: the
                 // Escher record explicitly sets "no fill" (the fNoFill flag),
                 // carries no stroke, and has no fill colour. A shape whose fill
@@ -6434,11 +6835,11 @@ impl<R: Read + Seek> PubReader<R> {
                     if let (Some(w), Some(h)) = (shape.width_emu, shape.height_emu) {
                         if w > 0 && h > 0 {
                             shape_obj.style.fill = repub_model::styles::Fill::Solid(
-                                Color::from_rgb8(200, 200, 200)  // Light gray default
+                                Color::from_rgb8(200, 200, 200), // Light gray default
                             );
                             shape_obj.style.stroke = Some(repub_model::styles::Stroke::solid(
-                                Color::from_rgb8(0, 0, 0),  // Black stroke
-                                0.75,  // Default 0.75pt stroke width
+                                Color::from_rgb8(0, 0, 0), // Black stroke
+                                0.75,                      // Default 0.75pt stroke width
                             ));
                             log::trace!(
                                 "Shape seq_num={}: no Escher in file, using default style",
@@ -6465,12 +6866,16 @@ impl<R: Read + Seek> PubReader<R> {
 
         None
     }
-    
+
     /// The Office preset for an Escher shape's type and adjust values (its
     /// outline from Office's own template), or a rectangle for types without
     /// one.
     fn preset_shape(escher: &ParsedEscherShape, bounds: Rect) -> Shape {
-        let Some(spt) = escher.fsp_shape_type.or(escher.shape_type).and_then(|t| u16::try_from(t).ok()) else {
+        let Some(spt) = escher
+            .fsp_shape_type
+            .or(escher.shape_type)
+            .and_then(|t| u16::try_from(t).ok())
+        else {
             return Shape::rectangle(bounds);
         };
         let mut adjust = vec![escher.adjust1, escher.adjust2];
@@ -6504,7 +6909,7 @@ impl<R: Read + Seek> PubReader<R> {
         let scale_y = if flip_v { -1.0 } else { 1.0 };
         Transform2D::scale(scale_x, scale_y)
     }
-    
+
     /// Map Escher shape type (spt) to WordArt preset.
     fn map_spt_to_wordart_preset(spt: u32) -> crate::model::WordArtPreset {
         use crate::model::WordArtPreset;
@@ -6536,16 +6941,16 @@ impl<R: Read + Seek> PubReader<R> {
             174 => WordArtPreset::CanUp,           // TextCanUp
             175 => WordArtPreset::CanDown,         // TextCanDown
             // Legacy types (25-31)
-            25 => WordArtPreset::Stop,             // TextOctagon
-            26 => WordArtPreset::Plain,            // TextHexagon
-            27 => WordArtPreset::ArchUp,           // TextCurve
-            28 => WordArtPreset::Wave,             // TextWave
-            29 => WordArtPreset::RingInside,       // TextRing
-            30 | 31 => WordArtPreset::Circle,      // TextOnCurve/Ring
+            25 => WordArtPreset::Stop,        // TextOctagon
+            26 => WordArtPreset::Plain,       // TextHexagon
+            27 => WordArtPreset::ArchUp,      // TextCurve
+            28 => WordArtPreset::Wave,        // TextWave
+            29 => WordArtPreset::RingInside,  // TextRing
+            30 | 31 => WordArtPreset::Circle, // TextOnCurve/Ring
             _ => WordArtPreset::Plain,
         }
     }
-    
+
     /// Get text content from a text ID reference in the Quill stream.
     fn get_text_content(&self, _text_id: u32) -> Option<String> {
         // Look up text ID in the parsed text content
@@ -6554,13 +6959,13 @@ impl<R: Read + Seek> PubReader<R> {
         // For now, WordArt text comes from GTEXT_UNICODE property in Escher
         None
     }
-    
+
     /// Parse a Unicode (UTF-16LE) string from complex property data.
     fn parse_unicode_string(data: &[u8]) -> Option<String> {
         if data.is_empty() {
             return None;
         }
-        
+
         // The data is UTF-16LE with possible null terminator
         let mut chars: Vec<u16> = Vec::with_capacity(data.len() / 2);
         let mut i = 0;
@@ -6572,7 +6977,7 @@ impl<R: Read + Seek> PubReader<R> {
             chars.push(c);
             i += 2;
         }
-        
+
         String::from_utf16(&chars).ok().filter(|s| !s.is_empty())
     }
 
@@ -6675,17 +7080,17 @@ impl<R: Read + Seek> PubReader<R> {
 
         path
     }
-    
+
     /// Convert Escher arrow type to Line ending style.
     fn convert_arrow_style(arrow_type: u32) -> LineEnding {
         let style = match arrow_type {
             0 => LineEndingStyle::None,
-            1 => LineEndingStyle::Arrow,         // Triangle arrow
-            2 => LineEndingStyle::StealthArrow,  // Stealth arrow
-            3 => LineEndingStyle::Diamond,       // Diamond
-            4 => LineEndingStyle::Circle,        // Oval/circle
-            5 => LineEndingStyle::OpenArrow,     // Open arrow
-            _ => LineEndingStyle::Arrow,         // Default to arrow
+            1 => LineEndingStyle::Arrow,        // Triangle arrow
+            2 => LineEndingStyle::StealthArrow, // Stealth arrow
+            3 => LineEndingStyle::Diamond,      // Diamond
+            4 => LineEndingStyle::Circle,       // Oval/circle
+            5 => LineEndingStyle::OpenArrow,    // Open arrow
+            _ => LineEndingStyle::Arrow,        // Default to arrow
         };
         LineEnding {
             style,
@@ -6693,11 +7098,11 @@ impl<R: Read + Seek> PubReader<R> {
             filled: true,
         }
     }
-    
+
     /// Convert Escher text wrap mode to document model TextWrap
     fn convert_text_wrap_mode(escher_mode: u32) -> repub_model::styles::TextWrap {
-        use repub_model::styles::{TextWrap, TextWrapStyle, TextWrapSide};
-        
+        use repub_model::styles::{TextWrap, TextWrapSide, TextWrapStyle};
+
         // Escher wrap modes: 0=none, 1=square, 2=by points, 3=none, 4=tight, 5=through
         let style = match escher_mode {
             0 | 3 => TextWrapStyle::None,
@@ -6706,7 +7111,7 @@ impl<R: Read + Seek> PubReader<R> {
             5 => TextWrapStyle::Through,
             _ => TextWrapStyle::None,
         };
-        
+
         TextWrap {
             style,
             side: TextWrapSide::Both,
@@ -6764,7 +7169,10 @@ impl<R: Read + Seek> PubReader<R> {
         // Gradient fills (types 4-8)
         if (4..=8).contains(&fill_type) {
             let start_color = escher.fill_color.map(bgr_to_color).unwrap_or(Color::WHITE);
-            let end_color = escher.fill_back_color.map(bgr_to_color).unwrap_or(Color::WHITE);
+            let end_color = escher
+                .fill_back_color
+                .map(bgr_to_color)
+                .unwrap_or(Color::WHITE);
 
             // Calculate gradient angle from fill_angle (fixed-point 16.16 degrees)
             let angle_degrees = escher.fill_angle.map(|a| a as f64 / 65536.0).unwrap_or(0.0);
@@ -6772,11 +7180,17 @@ impl<R: Read + Seek> PubReader<R> {
             match fill_type {
                 5 => {
                     // Shade center - radial gradient from center
-                    return Some(Fill::RadialGradient(RadialGradient::centered(start_color, end_color)));
+                    return Some(Fill::RadialGradient(RadialGradient::centered(
+                        start_color,
+                        end_color,
+                    )));
                 }
                 6 => {
                     // Shade shape - also treated as radial for simplicity
-                    return Some(Fill::RadialGradient(RadialGradient::centered(start_color, end_color)));
+                    return Some(Fill::RadialGradient(RadialGradient::centered(
+                        start_color,
+                        end_color,
+                    )));
                 }
                 4 | 7 | 8 => {
                     // Linear gradient types (shade, shade_scale, shade_title)
@@ -6820,10 +7234,7 @@ impl<R: Read + Seek> PubReader<R> {
     ///
     /// For gradients, fill_color is the start/inner color and fill_back_color is the end/outer.
     /// fill_angle (fixed-point 16.16) specifies gradient direction for linear gradients.
-    fn create_background_fill_from_escher(
-        &self,
-        escher: &ParsedEscherShape,
-    ) -> Option<Fill> {
+    fn create_background_fill_from_escher(&self, escher: &ParsedEscherShape) -> Option<Fill> {
         // Helper to convert BGR color value to Color
         let bgr_to_color = |bgr: u32| -> Color {
             let r = (bgr & 0xff) as u8;
@@ -6835,8 +7246,15 @@ impl<R: Read + Seek> PubReader<R> {
         // Check for image background first (texture fill)
         if let Some(blip_idx) = escher.fill_blip.or(escher.blip_index) {
             // Try to find the image data
-            if let Some(image) = self.images.iter().find(|i| i.index == blip_idx)
-                .or_else(|| self.images.iter().find(|i| i.index == blip_idx.saturating_sub(1)))
+            if let Some(image) = self
+                .images
+                .iter()
+                .find(|i| i.index == blip_idx)
+                .or_else(|| {
+                    self.images
+                        .iter()
+                        .find(|i| i.index == blip_idx.saturating_sub(1))
+                })
                 .or_else(|| self.images.iter().find(|i| i.index == blip_idx + 1))
             {
                 log::trace!(
@@ -6866,7 +7284,10 @@ impl<R: Read + Seek> PubReader<R> {
         // Gradient fills (types 4-8)
         if (4..=8).contains(&fill_type) {
             let start_color = escher.fill_color.map(bgr_to_color).unwrap_or(Color::WHITE);
-            let end_color = escher.fill_back_color.map(bgr_to_color).unwrap_or(Color::WHITE);
+            let end_color = escher
+                .fill_back_color
+                .map(bgr_to_color)
+                .unwrap_or(Color::WHITE);
 
             // Calculate gradient angle from fill_angle (fixed-point 16.16 degrees)
             let angle_degrees = escher.fill_angle.map(|a| a as f64 / 65536.0).unwrap_or(0.0);
@@ -6874,11 +7295,17 @@ impl<R: Read + Seek> PubReader<R> {
             match fill_type {
                 5 => {
                     // Shade center - radial gradient from center
-                    return Some(Fill::RadialGradient(RadialGradient::centered(start_color, end_color)));
+                    return Some(Fill::RadialGradient(RadialGradient::centered(
+                        start_color,
+                        end_color,
+                    )));
                 }
                 6 => {
                     // Shade shape - also treated as radial for simplicity
-                    return Some(Fill::RadialGradient(RadialGradient::centered(start_color, end_color)));
+                    return Some(Fill::RadialGradient(RadialGradient::centered(
+                        start_color,
+                        end_color,
+                    )));
                 }
                 4 | 7 | 8 => {
                     // Linear gradient types (shade, shade_scale, shade_title)
@@ -6974,13 +7401,16 @@ impl<R: Read + Seek> PubReader<R> {
 
             log::trace!(
                 "Table borders from edge properties: top={}, right={}, bottom={}, left={}",
-                top.is_some(), right.is_some(), bottom.is_some(), left.is_some()
+                top.is_some(),
+                right.is_some(),
+                bottom.is_some(),
+                left.is_some()
             );
 
             // Calculate inner borders before moving outer borders
             let inner_horizontal = top.clone().or_else(|| bottom.clone());
             let inner_vertical = left.clone().or_else(|| right.clone());
-            
+
             TableBorders {
                 top,
                 right,
@@ -6998,7 +7428,10 @@ impl<R: Read + Seek> PubReader<R> {
             let (r, g, b, _) = color.to_rgba8();
             log::trace!(
                 "Table borders from general line: color=RGB({},{},{}), width={:.1}pt",
-                r, g, b, width
+                r,
+                g,
+                b,
+                width
             );
 
             TableBorders::uniform(stroke)
@@ -7020,52 +7453,61 @@ impl<R: Read + Seek> PubReader<R> {
     /// - origin.y = top crop as fraction of original height  
     /// - width = (1.0 - left_crop_fraction - right_crop_fraction)
     /// - height = (1.0 - top_crop_fraction - bottom_crop_fraction)
-    fn convert_crop_to_normalized(&self, escher: &ParsedEscherShape, bounds_emu: (i32, i32, i32, i32)) -> Option<Rect> {
+    fn convert_crop_to_normalized(
+        &self,
+        escher: &ParsedEscherShape,
+        bounds_emu: (i32, i32, i32, i32),
+    ) -> Option<Rect> {
         let crop_left = escher.crop_left?;
         let crop_top = escher.crop_top.unwrap_or(0);
         let crop_right = escher.crop_right.unwrap_or(0);
         let crop_bottom = escher.crop_bottom.unwrap_or(0);
-        
+
         // If all crops are zero, no cropping needed
         if crop_left == 0 && crop_top == 0 && crop_right == 0 && crop_bottom == 0 {
             return None;
         }
-        
+
         // Calculate the original image dimensions in EMUs
         // The bounds_emu is the VISIBLE portion after cropping
         // The original image size = visible size + crop amounts
         let (l, t, r, b) = bounds_emu;
         let visible_width_emu = (r - l).abs();
         let visible_height_emu = (b - t).abs();
-        
+
         // Original dimensions = visible + crops
         let original_width_emu = visible_width_emu + crop_left.abs() + crop_right.abs();
         let original_height_emu = visible_height_emu + crop_top.abs() + crop_bottom.abs();
-        
+
         // Avoid division by zero
         if original_width_emu == 0 || original_height_emu == 0 {
             return None;
         }
-        
+
         // Convert crop amounts to normalized fractions (0-1)
         // Crop values can be negative (extending beyond original) but we clamp to valid range
         let left_frac = (crop_left.max(0) as f64 / original_width_emu as f64).clamp(0.0, 1.0);
         let top_frac = (crop_top.max(0) as f64 / original_height_emu as f64).clamp(0.0, 1.0);
         let right_frac = (crop_right.max(0) as f64 / original_width_emu as f64).clamp(0.0, 1.0);
         let bottom_frac = (crop_bottom.max(0) as f64 / original_height_emu as f64).clamp(0.0, 1.0);
-        
+
         // Calculate visible region as normalized coordinates
         let visible_width_frac = (1.0 - left_frac - right_frac).max(0.0);
         let visible_height_frac = (1.0 - top_frac - bottom_frac).max(0.0);
-        
+
         // Return the crop rectangle (the visible portion of the original image)
-        Some(Rect::new(left_frac, top_frac, visible_width_frac, visible_height_frac))
+        Some(Rect::new(
+            left_frac,
+            top_frac,
+            visible_width_frac,
+            visible_height_frac,
+        ))
     }
 
     fn get_shape_bounds(&self, shape: &ParsedShape) -> Rect {
         let page_width = emus_to_points_u(self.doc_width_emu);
         let page_height = emus_to_points_u(self.doc_height_emu);
-        
+
         // Try to find bounds in Escher shapes
         if let Some(escher) = self.find_escher_shape(shape.seq_num) {
             if let Some((left, top, right, bottom)) = escher.bounds_emu {
@@ -7073,18 +7515,18 @@ impl<R: Read + Seek> PubReader<R> {
                 // Convert from center-relative to top-left-relative coordinates
                 let center_x = page_width / 2.0;
                 let center_y = page_height / 2.0;
-                
+
                 let x = emus_to_points(left as i64) + center_x;
                 let y = emus_to_points(top as i64) + center_y;
                 let width = emus_to_points((right - left) as i64);
                 let height = emus_to_points((bottom - top) as i64);
-                
+
                 log::trace!(
                     "Shape bounds: center-relative ({:.1},{:.1}) -> absolute ({:.1},{:.1}), size {:.1}x{:.1}",
                     emus_to_points(left as i64), emus_to_points(top as i64),
                     x, y, width, height
                 );
-                
+
                 return Rect::new(x, y, width, height);
             }
         }
@@ -7092,13 +7534,13 @@ impl<R: Read + Seek> PubReader<R> {
         // Fall back to shape width/height
         let width = shape.width_emu.map(emus_to_points_u).unwrap_or(200.0);
         let height = shape.height_emu.map(emus_to_points_u).unwrap_or(100.0);
-        
+
         // If shape dimensions exceed page, this might be a two-page spread or
         // the dimensions are stored differently. Scale to fit within page margins.
         let margin = 18.0; // 0.25 inch margin
         let usable_width = (page_width - 2.0 * margin).max(50.0);
         let usable_height = (page_height - 2.0 * margin).max(50.0);
-        
+
         let (final_width, final_height) = if width > usable_width || height > usable_height {
             // Scale to fit while maintaining aspect ratio
             let scale = (usable_width / width).min(usable_height / height);
@@ -7106,7 +7548,7 @@ impl<R: Read + Seek> PubReader<R> {
         } else {
             (width, height)
         };
-        
+
         // Center on page
         let x = (page_width - final_width) / 2.0;
         let y = margin;
@@ -7128,7 +7570,11 @@ impl<R: Read + Seek> PubReader<R> {
         // In Publisher, the Contents seq_num often corresponds to the Escher spid
         if let Some(&idx) = self.escher_shapes_by_id.get(&seq_num) {
             if let Some(shape) = self.escher_shapes.get(idx) {
-                log::trace!("Found Escher shape by spid: seq_num={} -> spid={}", seq_num, shape.shape_id);
+                log::trace!(
+                    "Found Escher shape by spid: seq_num={} -> spid={}",
+                    seq_num,
+                    shape.shape_id
+                );
                 return Some(shape);
             }
         }
@@ -7140,7 +7586,8 @@ impl<R: Read + Seek> PubReader<R> {
                     if escher.text_id == Some(text_id) {
                         log::trace!(
                             "Found Escher shape by text_id: seq_num={}, text_id={}",
-                            seq_num, text_id
+                            seq_num,
+                            text_id
                         );
                         return Some(escher);
                     }
@@ -7176,7 +7623,7 @@ impl<R: Read + Seek> PubReader<R> {
                 }
             }
         }
-        
+
         // Strategy 4: Index-based matching as fallback
         // This assumes shapes are in roughly the same order in both streams
         // Find the position of this shape in the ordered list of Contents shapes
@@ -7184,21 +7631,24 @@ impl<R: Read + Seek> PubReader<R> {
         // Also only match against drawing_index=2 (content drawing), not 0/1 (master/template)
         let mut shape_positions: Vec<u32> = self.shapes.keys().copied().collect();
         shape_positions.sort();
-        
+
         if let Some(pos) = shape_positions.iter().position(|&s| s == seq_num) {
             // Try to find the corresponding Escher shape by position
             // Skip shapes that have no bounds (likely group containers)
             // Also skip shapes that have a text_id - those should be matched by text_id strategy
             // Only use drawing_index=2 (content shapes), not 0/1 (master pages)
-            let escher_without_text_id: Vec<&ParsedEscherShape> = self.escher_shapes
+            let escher_without_text_id: Vec<&ParsedEscherShape> = self
+                .escher_shapes
                 .iter()
                 .filter(|s| s.bounds_emu.is_some() && s.text_id.is_none() && s.drawing_index == 2)
                 .collect();
-            
+
             if pos < escher_without_text_id.len() {
                 log::trace!(
                     "Found Escher shape by position: seq_num={} at pos {} -> spid={}",
-                    seq_num, pos, escher_without_text_id[pos].shape_id
+                    seq_num,
+                    pos,
+                    escher_without_text_id[pos].shape_id
                 );
                 return Some(escher_without_text_id[pos]);
             }
@@ -7213,7 +7663,7 @@ impl<R: Read + Seek> PubReader<R> {
     fn get_text_insets(&self, shape: &ParsedShape) -> Option<TextInsets> {
         let escher = self.find_escher_shape(shape.seq_num)?;
         let (left, top, right, bottom) = escher.text_inset_emu?;
-        
+
         Some(TextInsets {
             left: emus_to_points_u(left),
             top: emus_to_points_u(top),
@@ -7245,7 +7695,7 @@ impl<R: Read + Seek> PubReader<R> {
         // Add text runs
         for run in &parsed.runs {
             let char_style = self.convert_character_style(&run.style);
-            
+
             // Check if this run is a hyperlink
             if let Some(ref url) = run.hyperlink {
                 // Create a link element
@@ -7424,23 +7874,22 @@ impl<R: Read + Seek> PubReader<R> {
 
     /// Import images from orphan Escher shapes (shapes with blips but no Contents counterpart).
     /// This is called after import_objects to add images that don't have Contents shapes.
-    fn import_orphan_escher_images(
-        &self,
-        document: &mut Document,
-    ) -> FormatResult<()> {
+    fn import_orphan_escher_images(&self, document: &mut Document) -> FormatResult<()> {
         let page_width = emus_to_points_u(self.doc_width_emu);
         let page_height = emus_to_points_u(self.doc_height_emu);
         let center_x = page_width / 2.0;
         let center_y = page_height / 2.0;
-        
+
         // Build set of Escher shape IDs that are associated with Contents shapes
-        let contents_shape_spids: std::collections::HashSet<u32> = self.shapes.values()
+        let contents_shape_spids: std::collections::HashSet<u32> = self
+            .shapes
+            .values()
             .filter_map(|shape| self.find_escher_shape(shape.seq_num).map(|e| e.shape_id))
             .collect();
-        
+
         // Track which images we've already added to avoid duplicates
         let mut images_added = std::collections::HashSet::new();
-        
+
         // Find orphan Escher shapes with blips (images not tied to Contents shapes)
         for escher in &self.escher_shapes {
             if let (Some(blip_idx), Some(bounds_emu)) = (escher.blip_index, escher.bounds_emu) {
@@ -7448,29 +7897,36 @@ impl<R: Read + Seek> PubReader<R> {
                 if contents_shape_spids.contains(&escher.shape_id) {
                     continue;
                 }
-                
+
                 // Skip if we've already added this image
                 if images_added.contains(&blip_idx) {
                     continue;
                 }
-                
+
                 // Find the image data
-                let image = self.images.iter().find(|i| i.index == blip_idx)
-                    .or_else(|| self.images.iter().find(|i| i.index == blip_idx.saturating_sub(1)))
+                let image = self
+                    .images
+                    .iter()
+                    .find(|i| i.index == blip_idx)
+                    .or_else(|| {
+                        self.images
+                            .iter()
+                            .find(|i| i.index == blip_idx.saturating_sub(1))
+                    })
                     .or_else(|| self.images.iter().find(|i| i.index == blip_idx + 1));
-                
+
                 if let Some(image) = image {
                     images_added.insert(blip_idx);
-                    
+
                     // Convert bounds from center-relative to page coordinates
                     let (l, t, r, b) = bounds_emu;
                     let x = emus_to_points(l as i64) + center_x;
                     let y = emus_to_points(t as i64) + center_y;
                     let width = emus_to_points((r - l) as i64);
                     let height = emus_to_points((b - t) as i64);
-                    
+
                     let bounds = Rect::new(x.max(0.0), y.max(0.0), width, height);
-                    
+
                     // Determine page based on y-coordinate
                     // In Publisher's center-relative system:
                     // - Negative y = earlier pages (page 0 for single-page, or first half)
@@ -7483,14 +7939,17 @@ impl<R: Read + Seek> PubReader<R> {
                         // Negative y or single page = page 0
                         0
                     };
-                    
+
                     log::trace!(
                         "Orphan Escher image: spid={}, blip_idx={} -> page {}, bounds={:?}",
-                        escher.shape_id, blip_idx, page_idx, bounds
+                        escher.shape_id,
+                        blip_idx,
+                        page_idx,
+                        bounds
                     );
-                    
+
                     let mut img_frame = ImageFrame::new(bounds);
-                    
+
                     // Embed as base64
                     use base64::Engine;
                     let b64 = base64::engine::general_purpose::STANDARD.encode(&image.data);
@@ -7498,25 +7957,27 @@ impl<R: Read + Seek> PubReader<R> {
                         data: b64,
                         mime_type: image.image_type.mime_type().to_string(),
                     };
-                    
+
                     // Apply cropping if present
                     if let Some(crop_rect) = self.convert_crop_to_normalized(escher, bounds_emu) {
                         img_frame.crop = Some(crop_rect);
                     }
-                    
+
                     // Apply drop shadow
                     if let Some(shadow) = Self::create_drop_shadow_from_escher(escher) {
                         img_frame.style.shadow = Some(shadow);
                     }
-                    
-                    if let Some(doc_page) = document.page_mut(page_idx.min(num_pages.saturating_sub(1))) {
+
+                    if let Some(doc_page) =
+                        document.page_mut(page_idx.min(num_pages.saturating_sub(1)))
+                    {
                         // Insert at beginning for proper z-order (images behind other content)
                         doc_page.insert_object(0, Object::ImageFrame(img_frame));
                     }
                 }
             }
         }
-        
+
         // Publisher 2016+ fallback: if we have images but no ImageFrame objects were created,
         // add images using default positioning.
         let image_count = document
@@ -7528,20 +7989,20 @@ impl<R: Read + Seek> PubReader<R> {
 
         if image_count == 0 && !self.images.is_empty() {
             let margin = 18.0;
-            
+
             for (img_idx, image) in self.images.iter().enumerate() {
                 let page_idx = img_idx.min(document.pages().len().saturating_sub(1));
                 if let Some(doc_page) = document.page_mut(page_idx) {
                     let pg_width = doc_page.size.width;
                     let pg_height = doc_page.size.height;
-                    
+
                     let usable_width = pg_width - 2.0 * margin;
                     let usable_height = pg_height * 0.4;
-                    
+
                     let default_aspect = 4.0 / 3.0;
                     let img_width = usable_width.min(usable_height * default_aspect);
                     let img_height = img_width / default_aspect;
-                    
+
                     let left = (pg_width - img_width) / 2.0;
                     let top = pg_height * 0.55 + (img_idx % 2) as f64 * (img_height + margin);
                     let top = top.min(pg_height - img_height - margin);
@@ -7563,41 +8024,40 @@ impl<R: Read + Seek> PubReader<R> {
 
         Ok(())
     }
-    
+
     /// Import WordArt shapes from orphan Escher shapes (shapes with WordArt properties but no Contents counterpart).
     /// This is called after import_objects to add WordArt that doesn't have Contents shapes.
-    fn import_orphan_escher_wordart(
-        &self,
-        document: &mut Document,
-    ) -> FormatResult<()> {
+    fn import_orphan_escher_wordart(&self, document: &mut Document) -> FormatResult<()> {
         let page_width = emus_to_points_u(self.doc_width_emu);
         let page_height = emus_to_points_u(self.doc_height_emu);
         let center_x = page_width / 2.0;
         let center_y = page_height / 2.0;
-        
+
         // Build set of Escher shape IDs that are associated with Contents shapes
-        let contents_shape_spids: std::collections::HashSet<u32> = self.shapes.values()
+        let contents_shape_spids: std::collections::HashSet<u32> = self
+            .shapes
+            .values()
             .filter_map(|shape| self.find_escher_shape(shape.seq_num).map(|e| e.shape_id))
             .collect();
-        
+
         // Find orphan Escher shapes that are WordArt
         for escher in &self.escher_shapes {
             // Skip if this Escher shape is associated with a Contents shape
             if contents_shape_spids.contains(&escher.shape_id) {
                 continue;
             }
-            
+
             // Check if this is a WordArt shape by type or presence of WordArt text
             let spt = escher.fsp_shape_type.unwrap_or(0);
-            let is_wordart_type = matches!(spt, 
+            let is_wordart_type = matches!(spt,
                 25..=31 |      // TextOctagon through TextOnRing
                 136..=175      // TextPlainText through TextCanDown
             );
-            
+
             if !is_wordart_type && escher.wordart_text.is_none() {
                 continue;
             }
-            
+
             // Need bounds to place the WordArt
             let Some(bounds_emu) = escher.bounds_emu else {
                 log::trace!(
@@ -7606,43 +8066,45 @@ impl<R: Read + Seek> PubReader<R> {
                 );
                 continue;
             };
-            
+
             // Get the text from Escher WordArt text property or use placeholder
-            let text = escher.wordart_text.clone()
+            let text = escher
+                .wordart_text
+                .clone()
                 .unwrap_or_else(|| "WordArt".to_string());
-            
+
             // Convert bounds from center-relative to page coordinates
             let (l, t, r, b) = bounds_emu;
             let x = emus_to_points(l as i64) + center_x;
             let y = emus_to_points(t as i64) + center_y;
             let width = emus_to_points((r - l) as i64);
             let height = emus_to_points((b - t) as i64);
-            
+
             let bounds = Rect::new(x.max(0.0), y.max(0.0), width, height);
-            
+
             // Create the WordArt object
             let mut wordart = crate::model::WordArt::new(bounds, text.clone());
-            
+
             // Apply font if specified
             if let Some(ref font) = escher.wordart_font {
                 wordart.style.font.family = font.clone();
             }
-            
-            // Apply size if specified  
+
+            // Apply size if specified
             if let Some(size) = escher.wordart_size {
                 wordart.style.font_size = size.max(6.0);
             }
-            
+
             // Apply letter spacing
             if let Some(spacing) = escher.wordart_spacing {
                 wordart.letter_spacing = spacing;
             }
-            
+
             // Apply fill from Escher
             if let Some(fill) = self.create_shape_fill_from_escher(escher) {
                 wordart.fill = fill;
             }
-            
+
             // Apply outline from Escher line properties
             if !escher.no_line {
                 if let Some(line_color) = escher.line_color {
@@ -7650,7 +8112,8 @@ impl<R: Read + Seek> PubReader<R> {
                         let red = (line_color & 0xff) as u8;
                         let green = ((line_color >> 8) & 0xff) as u8;
                         let blue = ((line_color >> 16) & 0xff) as u8;
-                        let line_width = escher.line_width_emu
+                        let line_width = escher
+                            .line_width_emu
                             .map(|w| emus_to_points_u(w))
                             .unwrap_or(0.75);
                         wordart.outline = Some(Stroke::solid(
@@ -7660,12 +8123,11 @@ impl<R: Read + Seek> PubReader<R> {
                     }
                 }
             }
-            
+
             // Map shape type to WordArt preset
-            wordart.transform = crate::model::TextTransform::Preset(
-                Self::map_spt_to_wordart_preset(spt)
-            );
-            
+            wordart.transform =
+                crate::model::TextTransform::Preset(Self::map_spt_to_wordart_preset(spt));
+
             // Apply flags (bold, italic, vertical)
             let flags = escher.wordart_flags;
             if (flags & crate::escher::GTEXT_FLAG_BOLD) != 0 {
@@ -7675,25 +8137,30 @@ impl<R: Read + Seek> PubReader<R> {
                 wordart.style.font.style = repub_model::styles::FontStyle::Italic;
             }
             wordart.vertical = (flags & crate::escher::GTEXT_FLAG_VERTICAL) != 0;
-            
+
             // Apply rotation
             wordart.common.rotation = escher.rotation;
-            
+
             // Apply flip transform
             if escher.flip_h || escher.flip_v {
                 wordart.common.transform = self.create_flip_transform(escher.flip_h, escher.flip_v);
             }
-            
+
             // Apply 3D extrusion if present
             let has_3d = (escher.flags_3d & crate::escher::F3D_HAS_3D) != 0;
-            if has_3d || escher.extrusion_depth_backward.is_some() || escher.extrusion_depth_forward.is_some() {
-                let depth_back = escher.extrusion_depth_backward
+            if has_3d
+                || escher.extrusion_depth_backward.is_some()
+                || escher.extrusion_depth_forward.is_some()
+            {
+                let depth_back = escher
+                    .extrusion_depth_backward
                     .map(|e| emus_to_points_u(e))
-                    .unwrap_or(36.0);  // Default ~0.5 inch
-                let depth_front = escher.extrusion_depth_forward
+                    .unwrap_or(36.0); // Default ~0.5 inch
+                let depth_front = escher
+                    .extrusion_depth_forward
                     .map(|e| emus_to_points_u(e))
                     .unwrap_or(0.0);
-                
+
                 let mut extrusion = crate::model::Extrusion3D {
                     depth: depth_back + depth_front,
                     color: None,
@@ -7701,7 +8168,7 @@ impl<R: Read + Seek> PubReader<R> {
                     bevel: None,
                     bevel_size: 6.0,
                 };
-                
+
                 // Apply extrusion color if specified
                 if (escher.flags_3d & crate::escher::F3D_USE_EXTRUSION_COLOR) != 0 {
                     if let Some(color_val) = escher.extrusion_color {
@@ -7713,9 +8180,9 @@ impl<R: Read + Seek> PubReader<R> {
                         }
                     }
                 }
-                
+
                 wordart.extrusion = Some(extrusion);
-                
+
                 // Apply 3D rotation
                 if let Some(x_rot) = escher.rotation_3d_x {
                     wordart.rotation_3d.x = (x_rot as f64) / 65536.0;
@@ -7723,27 +8190,36 @@ impl<R: Read + Seek> PubReader<R> {
                 if let Some(y_rot) = escher.rotation_3d_y {
                     wordart.rotation_3d.y = (y_rot as f64) / 65536.0;
                 }
-                
+
                 let depth = depth_back + depth_front;
                 log::trace!(
                     "WordArt spid={} has 3D: depth={:.1}pt, rotation=({:.1}, {:.1})",
-                    escher.shape_id, depth, wordart.rotation_3d.x, wordart.rotation_3d.y
+                    escher.shape_id,
+                    depth,
+                    wordart.rotation_3d.x,
+                    wordart.rotation_3d.y
                 );
             }
-            
+
             // Determine page based on drawing_index (matches how other shapes are assigned to pages)
-            let page_idx = escher.drawing_index.min(document.pages().len().saturating_sub(1));
-            
+            let page_idx = escher
+                .drawing_index
+                .min(document.pages().len().saturating_sub(1));
+
             log::trace!(
                 "Orphan WordArt: spid={}, spt={}, text={:?} -> page {}, bounds={:?}",
-                escher.shape_id, spt, text, page_idx, bounds
+                escher.shape_id,
+                spt,
+                text,
+                page_idx,
+                bounds
             );
-            
+
             if let Some(doc_page) = document.page_mut(page_idx) {
                 doc_page.add_object(Object::WordArt(wordart));
             }
         }
-        
+
         Ok(())
     }
 
@@ -8248,7 +8724,7 @@ mod tests {
         // Test that ParsedEscherShape correctly stores text insets
         let shape = ParsedEscherShape {
             shape_id: 100,
-            shape_type: Some(202), // TextBox
+            shape_type: Some(202),                                // TextBox
             bounds_emu: Some((914400, 914400, 2743200, 1828800)), // 1" x 1" at (1", 1")
             text_id: Some(1),
             text_inset_emu: Some((91440, 45720, 91440, 45720)), // 0.1" left/right, 0.05" top/bottom
@@ -8270,8 +8746,8 @@ mod tests {
         // Test ClientAnchor bounds conversion from EMUs to points
         // Position: (1", 2") with size (3", 4")
         // 1 inch = 914400 EMUs
-        let left = 914400i32;   // 1 inch = 72 points
-        let top = 1828800i32;   // 2 inches = 144 points
+        let left = 914400i32; // 1 inch = 72 points
+        let top = 1828800i32; // 2 inches = 144 points
         let right = 3657600i32; // 4 inches = 288 points (1 + 3)
         let bottom = 5486400i32; // 6 inches = 432 points (2 + 4)
 
@@ -8341,9 +8817,9 @@ mod tests {
     #[test]
     fn test_negative_anchor_coordinates() {
         // Some shapes may have negative coordinates (positioned off-page or relative to parent)
-        let left = -914400i32;  // -1 inch
-        let top = -457200i32;   // -0.5 inch
-        let right = 914400i32;  // 1 inch
+        let left = -914400i32; // -1 inch
+        let top = -457200i32; // -0.5 inch
+        let right = 914400i32; // 1 inch
         let bottom = 457200i32; // 0.5 inch
 
         let x = emus_to_points(left as i64);
@@ -8460,20 +8936,20 @@ mod tests {
     fn test_type12_plc_parsing() {
         // Test Type 12 PLC structure parsing
         // Structure: count (4), type=12 (4), positions (count+2)*4, middle section, urls
-        
+
         // Create a minimal Type 12 PLC with count=1
         // oneStartsAt = 0x4c
         let mut data = vec![0u8; 0x60]; // Enough space for one URL
-        
+
         // Header
         data[0..4].copy_from_slice(&1u32.to_le_bytes()); // count = 1
         data[4..8].copy_from_slice(&12u32.to_le_bytes()); // type = 12
-        
+
         // Pre-data: 1 + count + 1 = 3 positions
         data[8..12].copy_from_slice(&0u32.to_le_bytes()); // position 0
         data[12..16].copy_from_slice(&5u32.to_le_bytes()); // start char
         data[16..20].copy_from_slice(&15u32.to_le_bytes()); // end char
-        
+
         // URL at offset 0x4c (oneStartsAt)
         // Length = 4 characters
         let url = "http";
@@ -8481,23 +8957,23 @@ mod tests {
         // UTF-16LE encoded "http"
         for (i, c) in url.encode_utf16().enumerate() {
             let offset = 0x4e + i * 2;
-            data[offset..offset+2].copy_from_slice(&c.to_le_bytes());
+            data[offset..offset + 2].copy_from_slice(&c.to_le_bytes());
         }
-        
+
         // Create a temporary reader to test parsing
         // Note: We can't easily test parse_type12_plc directly since it's a method
         // Instead, verify the structure is correct by manual calculation
-        
+
         let count = u32::from_le_bytes([data[0], data[1], data[2], data[3]]) as usize;
         let plc_type = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
-        
+
         assert_eq!(count, 1);
         assert_eq!(plc_type, 12);
-        
+
         // Verify URL at expected position
         let url_len = u16::from_le_bytes([data[0x4c], data[0x4d]]) as usize;
         assert_eq!(url_len, 4);
-        
+
         // Decode URL
         let url_bytes = &data[0x4e..0x4e + url_len * 2];
         let decoded: String = url_bytes
@@ -8511,7 +8987,7 @@ mod tests {
             })
             .map(|c| char::from_u32(c as u32).unwrap_or('?'))
             .collect();
-        
+
         assert_eq!(decoded, "http");
     }
 
@@ -8524,7 +9000,7 @@ mod tests {
             url: "https://example.com".to_string(),
             plc_offset: 0x1000,
         };
-        
+
         assert_eq!(hyperlink.start_char, 10);
         assert_eq!(hyperlink.end_char, 25);
         assert_eq!(hyperlink.url, "https://example.com");
@@ -8539,7 +9015,7 @@ mod tests {
             style: ParsedCharacterStyle::default(),
             hyperlink: Some("https://example.com".to_string()),
         };
-        
+
         assert!(run.hyperlink.is_some());
         assert_eq!(run.hyperlink.as_ref().unwrap(), "https://example.com");
     }

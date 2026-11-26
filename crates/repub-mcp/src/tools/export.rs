@@ -8,10 +8,10 @@ use repub_fonts::SystemFontProvider;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use super::Tool;
 use crate::error::{McpError, McpResult};
 use crate::protocol::{ToolDefinition, ToolResult};
 use crate::session::Session;
-use super::Tool;
 
 /// Export document to file.
 pub struct ExportDocument;
@@ -58,8 +58,8 @@ impl Tool for ExportDocument {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: ExportDocumentArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: ExportDocumentArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document()?;
         let path = PathBuf::from(&args.path);
@@ -135,7 +135,10 @@ impl Tool for ExportDocument {
                 })))
             }
 
-            _ => Err(McpError::InvalidArgument(format!("Unknown format: {}", args.format))),
+            _ => Err(McpError::InvalidArgument(format!(
+                "Unknown format: {}",
+                args.format
+            ))),
         }
     }
 }
@@ -172,8 +175,8 @@ impl Tool for RenderPreview {
     }
 
     fn execute(&self, session: &mut Session, args: Value) -> McpResult<ToolResult> {
-        let args: RenderPreviewArgs = serde_json::from_value(args)
-            .map_err(|e| McpError::InvalidArgument(e.to_string()))?;
+        let args: RenderPreviewArgs =
+            serde_json::from_value(args).map_err(|e| McpError::InvalidArgument(e.to_string()))?;
 
         let doc = session.document()?;
         let page_idx = args.page.unwrap_or(0);
@@ -184,7 +187,7 @@ impl Tool for RenderPreview {
         }
 
         let page = &doc.pages()[page_idx];
-        
+
         // Calculate DPI to achieve target width
         // At 72 DPI, width = page.size.width pixels
         // To get target_width pixels, DPI = 72 * target_width / page.size.width
@@ -199,10 +202,8 @@ impl Tool for RenderPreview {
             .map_err(|e| McpError::Export(e.to_string()))?;
 
         // Return as base64
-        let base64_data = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            &png_data,
-        );
+        let base64_data =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &png_data);
 
         Ok(ToolResult::json(json!({
             "success": true,
@@ -229,7 +230,7 @@ fn add_page_suffix(path: &Path, page_num: usize) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use repub_model::{Document, PageSize, PageOrientation};
+    use repub_model::{Document, PageOrientation, PageSize};
 
     fn setup_session() -> Session {
         let mut session = Session::new();
@@ -242,11 +243,16 @@ mod tests {
     fn test_render_preview() {
         let tool = RenderPreview;
         let mut session = setup_session();
-        
-        let result = tool.execute(&mut session, json!({
-            "page": 0,
-            "width": 200
-        })).unwrap();
+
+        let result = tool
+            .execute(
+                &mut session,
+                json!({
+                    "page": 0,
+                    "width": 200
+                }),
+            )
+            .unwrap();
 
         assert!(!result.is_error);
     }

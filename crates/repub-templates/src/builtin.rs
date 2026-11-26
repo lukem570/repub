@@ -23,7 +23,13 @@ fn text_frame(bounds: Rect, text: &str) -> Shape {
 /// Modern business card template (3.5" x 2").
 pub fn business_card_modern() -> Template {
     // Business card: 252 x 144 points (3.5" x 2")
-    let mut doc = Document::new(PageSize::Custom { width: 252.0, height: 144.0 }, PageOrientation::Landscape);
+    let mut doc = Document::new(
+        PageSize::Custom {
+            width: 252.0,
+            height: 144.0,
+        },
+        PageOrientation::Landscape,
+    );
 
     let page = &mut doc.pages_mut()[0];
 
@@ -63,16 +69,31 @@ pub fn business_card_modern() -> Template {
     let logo_id = logo_frame.common.id;
     page.add_shape(logo_frame);
 
-    let mut template = Template::new("business-card-modern", "Modern Business Card", TemplateCategory::Business, doc);
+    let mut template = Template::new(
+        "business-card-modern",
+        "Modern Business Card",
+        TemplateCategory::Business,
+        doc,
+    );
 
-    template.metadata.description = "Clean, modern business card design with blue accent bar".to_string();
-    template.metadata.tags =
-        vec!["business".to_string(), "card".to_string(), "modern".to_string(), "professional".to_string()];
+    template.metadata.description =
+        "Clean, modern business card design with blue accent bar".to_string();
+    template.metadata.tags = vec![
+        "business".to_string(),
+        "card".to_string(),
+        "modern".to_string(),
+        "professional".to_string(),
+    ];
 
     template.add_placeholder(
-        Placeholder::text("name", "Full Name", name_id).with_default("John Smith").with_example("Jane Doe").required(),
+        Placeholder::text("name", "Full Name", name_id)
+            .with_default("John Smith")
+            .with_example("Jane Doe")
+            .required(),
     );
-    template.add_placeholder(Placeholder::text("title", "Job Title", title_id).with_default("Software Engineer"));
+    template.add_placeholder(
+        Placeholder::text("title", "Job Title", title_id).with_default("Software Engineer"),
+    );
     template.add_placeholder(Placeholder {
         id: "email".to_string(),
         name: "Email Address".to_string(),
@@ -81,7 +102,9 @@ pub fn business_card_modern() -> Template {
         placeholder_type: PlaceholderType::Email,
         default_value: Some("john@company.com".to_string()),
         required: false,
-        validation: PlaceholderType::Email.default_validation().map(|s| s.to_string()),
+        validation: PlaceholderType::Email
+            .default_validation()
+            .map(|s| s.to_string()),
         example: Some("jane@company.com".to_string()),
     });
     template.add_placeholder(Placeholder {
@@ -107,7 +130,8 @@ pub fn business_card_modern() -> Template {
         example: None,
     });
     template.add_placeholder(
-        Placeholder::image("logo", "Company Logo", logo_id).with_description("Your company logo (optional)"),
+        Placeholder::image("logo", "Company Logo", logo_id)
+            .with_description("Your company logo (optional)"),
     );
 
     template
@@ -115,7 +139,13 @@ pub fn business_card_modern() -> Template {
 
 /// Classic business card template.
 pub fn business_card_classic() -> Template {
-    let mut doc = Document::new(PageSize::Custom { width: 252.0, height: 144.0 }, PageOrientation::Landscape);
+    let mut doc = Document::new(
+        PageSize::Custom {
+            width: 252.0,
+            height: 144.0,
+        },
+        PageOrientation::Landscape,
+    );
 
     let page = &mut doc.pages_mut()[0];
 
@@ -140,15 +170,33 @@ pub fn business_card_classic() -> Template {
     let contact_id = contact_frame.common.id;
     page.add_shape(contact_frame);
 
-    let mut template = Template::new("business-card-classic", "Classic Business Card", TemplateCategory::Business, doc);
+    let mut template = Template::new(
+        "business-card-classic",
+        "Classic Business Card",
+        TemplateCategory::Business,
+        doc,
+    );
 
-    template.metadata.description = "Traditional, elegant business card with simple border".to_string();
-    template.metadata.tags = vec!["business".to_string(), "card".to_string(), "classic".to_string(), "elegant".to_string()];
+    template.metadata.description =
+        "Traditional, elegant business card with simple border".to_string();
+    template.metadata.tags = vec![
+        "business".to_string(),
+        "card".to_string(),
+        "classic".to_string(),
+        "elegant".to_string(),
+    ];
 
-    template.add_placeholder(Placeholder::text("name", "Full Name", name_id).with_default("John Smith").required());
-    template.add_placeholder(Placeholder::text("title", "Job Title", title_id).with_default("Managing Director"));
     template.add_placeholder(
-        Placeholder::text("contact", "Contact Info", contact_id).with_default("john@company.com | (555) 123-4567"),
+        Placeholder::text("name", "Full Name", name_id)
+            .with_default("John Smith")
+            .required(),
+    );
+    template.add_placeholder(
+        Placeholder::text("title", "Job Title", title_id).with_default("Managing Director"),
+    );
+    template.add_placeholder(
+        Placeholder::text("contact", "Contact Info", contact_id)
+            .with_default("john@company.com | (555) 123-4567"),
     );
 
     template
@@ -186,18 +234,31 @@ pub fn letterhead_corporate() -> Template {
     let address_id = footer_frame.common.id;
     page.add_shape(footer_frame);
 
-    let mut template = Template::new("letterhead-corporate", "Corporate Letterhead", TemplateCategory::Business, doc);
+    let mut template = Template::new(
+        "letterhead-corporate",
+        "Corporate Letterhead",
+        TemplateCategory::Business,
+        doc,
+    );
 
-    template.metadata.description = "Professional letterhead with header bar and footer".to_string();
-    template.metadata.tags = vec!["business".to_string(), "letterhead".to_string(), "corporate".to_string()];
+    template.metadata.description =
+        "Professional letterhead with header bar and footer".to_string();
+    template.metadata.tags = vec![
+        "business".to_string(),
+        "letterhead".to_string(),
+        "corporate".to_string(),
+    ];
 
     template.add_placeholder(
-        Placeholder::text("company_name", "Company Name", company_id).with_default("Acme Corporation").required(),
+        Placeholder::text("company_name", "Company Name", company_id)
+            .with_default("Acme Corporation")
+            .required(),
     );
     template.add_placeholder(Placeholder::image("logo", "Company Logo", logo_id));
     template.add_placeholder(
-        Placeholder::text("address", "Address", address_id)
-            .with_default("123 Business Ave, Suite 100, City, State 12345 | (555) 123-4567 | www.company.com"),
+        Placeholder::text("address", "Address", address_id).with_default(
+            "123 Business Ave, Suite 100, City, State 12345 | (555) 123-4567 | www.company.com",
+        ),
     );
 
     template
@@ -246,19 +307,33 @@ pub fn flyer_event() -> Template {
     let contact_id = contact_frame.common.id;
     page.add_shape(contact_frame);
 
-    let mut template = Template::new("flyer-event", "Event Flyer", TemplateCategory::Marketing, doc);
+    let mut template = Template::new(
+        "flyer-event",
+        "Event Flyer",
+        TemplateCategory::Marketing,
+        doc,
+    );
 
     template.metadata.description = "Eye-catching event flyer with bold header".to_string();
-    template.metadata.tags =
-        vec!["flyer".to_string(), "event".to_string(), "marketing".to_string(), "announcement".to_string()];
+    template.metadata.tags = vec![
+        "flyer".to_string(),
+        "event".to_string(),
+        "marketing".to_string(),
+        "announcement".to_string(),
+    ];
 
     template.add_placeholder(
-        Placeholder::text("event_title", "Event Title", title_id).with_default("Annual Conference 2024").required(),
+        Placeholder::text("event_title", "Event Title", title_id)
+            .with_default("Annual Conference 2024")
+            .required(),
     );
-    template.add_placeholder(Placeholder::text("date", "Date", date_id).with_default("Saturday, March 15, 2024"));
+    template.add_placeholder(
+        Placeholder::text("date", "Date", date_id).with_default("Saturday, March 15, 2024"),
+    );
     template.add_placeholder(Placeholder::text("time", "Time", date_id).with_default("7:00 PM")); // Same frame, combined
     template.add_placeholder(
-        Placeholder::image("image", "Event Image", image_id).with_description("Main event image or photo"),
+        Placeholder::image("image", "Event Image", image_id)
+            .with_description("Main event image or photo"),
     );
     template.add_placeholder(
         Placeholder::text("description", "Description", desc_id).with_default(
@@ -266,10 +341,12 @@ pub fn flyer_event() -> Template {
         ),
     );
     template.add_placeholder(
-        Placeholder::text("location", "Location", location_id).with_default("Convention Center, 123 Main St"),
+        Placeholder::text("location", "Location", location_id)
+            .with_default("Convention Center, 123 Main St"),
     );
     template.add_placeholder(
-        Placeholder::text("contact", "Contact Info", contact_id).with_default("RSVP: events@company.com | (555) 123-4567"),
+        Placeholder::text("contact", "Contact Info", contact_id)
+            .with_default("RSVP: events@company.com | (555) 123-4567"),
     );
 
     template
@@ -278,7 +355,13 @@ pub fn flyer_event() -> Template {
 /// Tri-fold brochure template.
 pub fn brochure_trifold() -> Template {
     // Tri-fold: 11" x 8.5" landscape, folded into thirds
-    let mut doc = Document::new(PageSize::Custom { width: 792.0, height: 612.0 }, PageOrientation::Landscape);
+    let mut doc = Document::new(
+        PageSize::Custom {
+            width: 792.0,
+            height: 612.0,
+        },
+        PageOrientation::Landscape,
+    );
 
     let page = &mut doc.pages_mut()[0];
     let panel_width = 264.0; // 792 / 3
@@ -295,11 +378,17 @@ pub fn brochure_trifold() -> Template {
     page.add_shape(line2);
 
     // Panel 1 - Cover (right panel when folded)
-    let cover_title = text_frame(Rect::new(panel_width * 2.0 + 20.0, 200.0, 224.0, 80.0), "{{title}}");
+    let cover_title = text_frame(
+        Rect::new(panel_width * 2.0 + 20.0, 200.0, 224.0, 80.0),
+        "{{title}}",
+    );
     let title_id = cover_title.common.id;
     page.add_shape(cover_title);
 
-    let cover_subtitle = text_frame(Rect::new(panel_width * 2.0 + 20.0, 290.0, 224.0, 40.0), "{{subtitle}}");
+    let cover_subtitle = text_frame(
+        Rect::new(panel_width * 2.0 + 20.0, 290.0, 224.0, 40.0),
+        "{{subtitle}}",
+    );
     let subtitle_id = cover_subtitle.common.id;
     page.add_shape(cover_subtitle);
 
@@ -309,24 +398,44 @@ pub fn brochure_trifold() -> Template {
     page.add_shape(section1);
 
     // Panel 3 - Inside center
-    let section2 = text_frame(Rect::new(panel_width + 20.0, 40.0, 224.0, 530.0), "{{section2}}");
+    let section2 = text_frame(
+        Rect::new(panel_width + 20.0, 40.0, 224.0, 530.0),
+        "{{section2}}",
+    );
     let section2_id = section2.common.id;
     page.add_shape(section2);
 
-    let mut template = Template::new("brochure-trifold", "Tri-Fold Brochure", TemplateCategory::Marketing, doc);
+    let mut template = Template::new(
+        "brochure-trifold",
+        "Tri-Fold Brochure",
+        TemplateCategory::Marketing,
+        doc,
+    );
 
     template.metadata.description = "Standard tri-fold brochure layout (11\" x 8.5\")".to_string();
-    template.metadata.tags = vec!["brochure".to_string(), "trifold".to_string(), "marketing".to_string()];
+    template.metadata.tags = vec![
+        "brochure".to_string(),
+        "trifold".to_string(),
+        "marketing".to_string(),
+    ];
 
-    template.add_placeholder(Placeholder::text("title", "Cover Title", title_id).with_default("Company Name").required());
-    template.add_placeholder(Placeholder::text("subtitle", "Cover Subtitle", subtitle_id).with_default("Your tagline here"));
+    template.add_placeholder(
+        Placeholder::text("title", "Cover Title", title_id)
+            .with_default("Company Name")
+            .required(),
+    );
+    template.add_placeholder(
+        Placeholder::text("subtitle", "Cover Subtitle", subtitle_id)
+            .with_default("Your tagline here"),
+    );
     template.add_placeholder(
         Placeholder::text("section1", "Section 1 Content", section1_id)
             .with_default("About Us\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit."),
     );
     template.add_placeholder(
-        Placeholder::text("section2", "Section 2 Content", section2_id)
-            .with_default("Our Services\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit."),
+        Placeholder::text("section2", "Section 2 Content", section2_id).with_default(
+            "Our Services\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        ),
     );
 
     template
@@ -337,7 +446,13 @@ pub fn brochure_trifold() -> Template {
 /// Party invitation template.
 pub fn invitation_party() -> Template {
     // 5" x 7" invitation
-    let mut doc = Document::new(PageSize::Custom { width: 360.0, height: 504.0 }, PageOrientation::Portrait);
+    let mut doc = Document::new(
+        PageSize::Custom {
+            width: 360.0,
+            height: 504.0,
+        },
+        PageOrientation::Portrait,
+    );
 
     let page = &mut doc.pages_mut()[0];
 
@@ -376,21 +491,38 @@ pub fn invitation_party() -> Template {
     let rsvp_id = rsvp_frame.common.id;
     page.add_shape(rsvp_frame);
 
-    let mut template = Template::new("invitation-party", "Party Invitation", TemplateCategory::Personal, doc);
+    let mut template = Template::new(
+        "invitation-party",
+        "Party Invitation",
+        TemplateCategory::Personal,
+        doc,
+    );
 
     template.metadata.description = "Elegant party invitation card (5\" x 7\")".to_string();
-    template.metadata.tags = vec!["invitation".to_string(), "party".to_string(), "celebration".to_string()];
+    template.metadata.tags = vec![
+        "invitation".to_string(),
+        "party".to_string(),
+        "celebration".to_string(),
+    ];
 
     template.add_placeholder(
-        Placeholder::text("event_name", "Event Name", event_id).with_default("Birthday Celebration").required(),
-    );
-    template.add_placeholder(Placeholder::text("date", "Date", date_id).with_default("Saturday, January 15, 2024"));
-    template.add_placeholder(Placeholder::text("time", "Time", time_id).with_default("7:00 PM - 11:00 PM"));
-    template.add_placeholder(
-        Placeholder::text("location", "Location", location_id).with_default("123 Celebration Lane\nAnytown, USA 12345"),
+        Placeholder::text("event_name", "Event Name", event_id)
+            .with_default("Birthday Celebration")
+            .required(),
     );
     template.add_placeholder(
-        Placeholder::text("rsvp", "RSVP Contact", rsvp_id).with_default("Jane at (555) 123-4567\nby January 10th"),
+        Placeholder::text("date", "Date", date_id).with_default("Saturday, January 15, 2024"),
+    );
+    template.add_placeholder(
+        Placeholder::text("time", "Time", time_id).with_default("7:00 PM - 11:00 PM"),
+    );
+    template.add_placeholder(
+        Placeholder::text("location", "Location", location_id)
+            .with_default("123 Celebration Lane\nAnytown, USA 12345"),
+    );
+    template.add_placeholder(
+        Placeholder::text("rsvp", "RSVP Contact", rsvp_id)
+            .with_default("Jane at (555) 123-4567\nby January 10th"),
     );
 
     template
@@ -399,7 +531,13 @@ pub fn invitation_party() -> Template {
 /// Greeting card template.
 pub fn greeting_card() -> Template {
     // 5" x 7" folded card (10" x 7" flat)
-    let mut doc = Document::new(PageSize::Custom { width: 360.0, height: 504.0 }, PageOrientation::Portrait);
+    let mut doc = Document::new(
+        PageSize::Custom {
+            width: 360.0,
+            height: 504.0,
+        },
+        PageOrientation::Portrait,
+    );
 
     let page = &mut doc.pages_mut()[0];
 
@@ -418,14 +556,24 @@ pub fn greeting_card() -> Template {
     let signature_id = signature_frame.common.id;
     page.add_shape(signature_frame);
 
-    let mut template = Template::new("greeting-card", "Greeting Card", TemplateCategory::Personal, doc);
+    let mut template = Template::new(
+        "greeting-card",
+        "Greeting Card",
+        TemplateCategory::Personal,
+        doc,
+    );
 
     template.metadata.description = "Simple greeting card with image and message".to_string();
-    template.metadata.tags =
-        vec!["card".to_string(), "greeting".to_string(), "thank you".to_string(), "birthday".to_string()];
+    template.metadata.tags = vec![
+        "card".to_string(),
+        "greeting".to_string(),
+        "thank you".to_string(),
+        "birthday".to_string(),
+    ];
 
     template.add_placeholder(
-        Placeholder::image("image", "Card Image", image_id).with_description("Photo or illustration for the card"),
+        Placeholder::image("image", "Card Image", image_id)
+            .with_description("Photo or illustration for the card"),
     );
     template.add_placeholder(
         Placeholder::text("message", "Message", message_id).with_default(
@@ -433,7 +581,8 @@ pub fn greeting_card() -> Template {
         ),
     );
     template.add_placeholder(
-        Placeholder::text("signature", "Signature", signature_id).with_default("With love,\nYour Name"),
+        Placeholder::text("signature", "Signature", signature_id)
+            .with_default("With love,\nYour Name"),
     );
 
     template
@@ -459,7 +608,10 @@ pub fn certificate_achievement() -> Template {
     page.add_shape(inner_border);
 
     // Title
-    let title_frame = text_frame(Rect::new(100.0, 60.0, 592.0, 50.0), "Certificate of Achievement");
+    let title_frame = text_frame(
+        Rect::new(100.0, 60.0, 592.0, 50.0),
+        "Certificate of Achievement",
+    );
     page.add_shape(title_frame);
 
     // "This certifies that"
@@ -492,22 +644,37 @@ pub fn certificate_achievement() -> Template {
     let sig_id = sig_label.common.id;
     page.add_shape(sig_label);
 
-    let mut template = Template::new("certificate-achievement", "Achievement Certificate", TemplateCategory::Office, doc);
+    let mut template = Template::new(
+        "certificate-achievement",
+        "Achievement Certificate",
+        TemplateCategory::Office,
+        doc,
+    );
 
-    template.metadata.description = "Formal certificate of achievement with decorative border".to_string();
-    template.metadata.tags =
-        vec!["certificate".to_string(), "achievement".to_string(), "award".to_string(), "recognition".to_string()];
+    template.metadata.description =
+        "Formal certificate of achievement with decorative border".to_string();
+    template.metadata.tags = vec![
+        "certificate".to_string(),
+        "achievement".to_string(),
+        "award".to_string(),
+        "recognition".to_string(),
+    ];
 
     template.add_placeholder(
-        Placeholder::text("recipient_name", "Recipient Name", name_id).with_default("John Smith").required(),
+        Placeholder::text("recipient_name", "Recipient Name", name_id)
+            .with_default("John Smith")
+            .required(),
     );
     template.add_placeholder(
         Placeholder::text("achievement", "Achievement", desc_id)
             .with_default("has successfully completed the requirements for\nExcellence in Professional Development"),
     );
-    template.add_placeholder(Placeholder::text("date", "Date", date_id).with_default("January 15, 2024"));
     template.add_placeholder(
-        Placeholder::text("signatory_title", "Signatory Title", sig_id).with_default("Program Director"),
+        Placeholder::text("date", "Date", date_id).with_default("January 15, 2024"),
+    );
+    template.add_placeholder(
+        Placeholder::text("signatory_title", "Signatory Title", sig_id)
+            .with_default("Program Director"),
     );
 
     template
@@ -516,7 +683,13 @@ pub fn certificate_achievement() -> Template {
 /// Address label template (Avery 5160 compatible).
 pub fn label_address() -> Template {
     // Single label: 2.625" x 1" (189 x 72 points)
-    let mut doc = Document::new(PageSize::Custom { width: 189.0, height: 72.0 }, PageOrientation::Landscape);
+    let mut doc = Document::new(
+        PageSize::Custom {
+            width: 189.0,
+            height: 72.0,
+        },
+        PageOrientation::Landscape,
+    );
 
     let page = &mut doc.pages_mut()[0];
 
@@ -540,16 +713,34 @@ pub fn label_address() -> Template {
     let csz_id = csz_frame.common.id;
     page.add_shape(csz_frame);
 
-    let mut template = Template::new("label-address", "Address Label", TemplateCategory::Office, doc);
+    let mut template = Template::new(
+        "label-address",
+        "Address Label",
+        TemplateCategory::Office,
+        doc,
+    );
 
     template.metadata.description = "Standard address label (Avery 5160 compatible)".to_string();
-    template.metadata.tags = vec!["label".to_string(), "address".to_string(), "mailing".to_string()];
+    template.metadata.tags = vec![
+        "label".to_string(),
+        "address".to_string(),
+        "mailing".to_string(),
+    ];
 
-    template.add_placeholder(Placeholder::text("name", "Name", name_id).with_default("John Smith").required());
-    template.add_placeholder(Placeholder::text("address1", "Address Line 1", addr1_id).with_default("123 Main Street"));
-    template.add_placeholder(Placeholder::text("address2", "Address Line 2", addr2_id).with_default("Apt 4B"));
     template.add_placeholder(
-        Placeholder::text("city_state_zip", "City, State ZIP", csz_id).with_default("Anytown, ST 12345"),
+        Placeholder::text("name", "Name", name_id)
+            .with_default("John Smith")
+            .required(),
+    );
+    template.add_placeholder(
+        Placeholder::text("address1", "Address Line 1", addr1_id).with_default("123 Main Street"),
+    );
+    template.add_placeholder(
+        Placeholder::text("address2", "Address Line 2", addr2_id).with_default("Apt 4B"),
+    );
+    template.add_placeholder(
+        Placeholder::text("city_state_zip", "City, State ZIP", csz_id)
+            .with_default("Anytown, ST 12345"),
     );
 
     template

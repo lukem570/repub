@@ -1,8 +1,8 @@
 //! Text Columns dialog for setting text frame column count and gap.
 
 use egui::{DragValue, Vec2};
-use repub_model::ObjectId;
 use repub_model::shape::{Shape, ShapeKind};
+use repub_model::ObjectId;
 
 use crate::state::AppState;
 use crate::theme::{colors, fonts, section_header};
@@ -43,7 +43,11 @@ impl TextColumnsDialog {
 
     /// Open the dialog for a text frame.
     pub fn open_for_text_frame(&mut self, state: &AppState, obj_id: ObjectId) {
-        if let Some(Shape { kind: ShapeKind::TextFrame(tf), .. }) = Self::get_object(state, obj_id) {
+        if let Some(Shape {
+            kind: ShapeKind::TextFrame(tf),
+            ..
+        }) = Self::get_object(state, obj_id)
+        {
             self.object_id = Some(obj_id);
             self.column_count = tf.columns.count;
             self.column_gap = tf.columns.gap;
@@ -130,7 +134,10 @@ impl TextColumnsDialog {
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("OK").fill(colors::accent())).clicked() {
+                        if ui
+                            .add(egui::Button::new("OK").fill(colors::accent()))
+                            .clicked()
+                        {
                             // Apply changes
                             if let Some(obj_id) = self.object_id {
                                 self.apply_changes(state, obj_id);
@@ -148,7 +155,11 @@ impl TextColumnsDialog {
     fn apply_changes(&self, state: &mut AppState, obj_id: ObjectId) {
         state.record_undo("Text Columns");
         if let Some(page) = state.current_page_mut() {
-            if let Some(Shape { kind: ShapeKind::TextFrame(tf), .. }) = page.get_shape_mut(obj_id) {
+            if let Some(Shape {
+                kind: ShapeKind::TextFrame(tf),
+                ..
+            }) = page.get_shape_mut(obj_id)
+            {
                 tf.columns.count = self.column_count;
                 tf.columns.gap = self.column_gap;
             }

@@ -34,7 +34,8 @@ impl Widget for ColorButton {
         if ui.is_rect_visible(rect) {
             let visuals = ui.style().interact(&response);
             ui.painter().rect_filled(rect, 4.0, self.color);
-            ui.painter().rect_stroke(rect, 4.0, Stroke::new(1.0, visuals.fg_stroke.color));
+            ui.painter()
+                .rect_stroke(rect, 4.0, Stroke::new(1.0, visuals.fg_stroke.color));
         }
 
         response
@@ -90,7 +91,9 @@ impl StatusBar {
     const MAX_ZOOM: f32 = 8.0;
 
     fn text(s: impl Into<String>) -> egui::RichText {
-        egui::RichText::new(s).font(crate::theme::fonts::body_sm()).color(colors::text_secondary())
+        egui::RichText::new(s)
+            .font(crate::theme::fonts::body_sm())
+            .color(colors::text_secondary())
     }
 
     /// Icon then text, e.g. the pointer position.
@@ -102,14 +105,24 @@ impl StatusBar {
 
     /// Flat icon button used on the right side.
     fn icon_button(ui: &mut Ui, icon: Icon, selected: bool, enabled: bool, tip: &str) -> Response {
-        let sense = if enabled { Sense::click() } else { Sense::hover() };
+        let sense = if enabled {
+            Sense::click()
+        } else {
+            Sense::hover()
+        };
         let (rect, response) = ui.allocate_exact_size(Vec2::new(22.0, 18.0), sense);
         if selected {
             ui.painter().rect_filled(rect, 2.0, colors::pressed());
         } else if enabled && response.hovered() {
             ui.painter().rect_filled(rect, 2.0, colors::hover());
         }
-        icon.paint_state(ui, egui::Rect::from_center_size(rect.center(), Vec2::splat(14.0)), enabled, colors::text_primary(), colors::text_disabled());
+        icon.paint_state(
+            ui,
+            egui::Rect::from_center_size(rect.center(), Vec2::splat(14.0)),
+            enabled,
+            colors::text_primary(),
+            colors::text_disabled(),
+        );
         response.on_hover_text(tip)
     }
 
@@ -119,7 +132,8 @@ impl StatusBar {
         let has_doc = info.total_pages > 0;
         // Narrow windows drop the least important items first (as Publisher does)
         let width = ui.max_rect().width();
-        let (show_size, show_position, show_slider) = (width >= 760.0, width >= 600.0, width >= 480.0);
+        let (show_size, show_position, show_slider) =
+            (width >= 760.0, width >= 600.0, width >= 480.0);
 
         ui.horizontal_centered(|ui| {
             ui.spacing_mut().item_spacing.x = 4.0;
@@ -152,7 +166,11 @@ impl StatusBar {
                 }
                 ui.add_space(14.0);
                 if let Some((w, h)) = info.selection_size.filter(|_| show_size) {
-                    Self::icon_label(ui, Icon::Resize, &format!("{} x {}", info.units.format(w), info.units.format(h)));
+                    Self::icon_label(
+                        ui,
+                        Icon::Resize,
+                        &format!("{} x {}", info.units.format(w), info.units.format(h)),
+                    );
                 }
             }
 
@@ -160,35 +178,54 @@ impl StatusBar {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
                 ui.add_space(4.0);
-                if Self::icon_button(ui, Icon::PageFit, false, has_doc, "Fit page to the window").clicked() {
+                if Self::icon_button(ui, Icon::PageFit, false, has_doc, "Fit page to the window")
+                    .clicked()
+                {
                     action = Some(StatusBarAction::SetZoom(-1.0));
                 }
                 ui.add_space(4.0);
 
                 // Zoom percentage, click for presets
                 let zoom_response = ui
-                    .add_enabled(has_doc, egui::Button::new(Self::text(format!("{:.0}%", info.zoom * 100.0))).frame(false).min_size(Vec2::new(40.0, 18.0)))
+                    .add_enabled(
+                        has_doc,
+                        egui::Button::new(Self::text(format!("{:.0}%", info.zoom * 100.0)))
+                            .frame(false)
+                            .min_size(Vec2::new(40.0, 18.0)),
+                    )
                     .on_hover_text("Zoom level");
                 let zoom_popup_id = ui.make_persistent_id("zoom_menu_popup");
                 if zoom_response.clicked() {
                     ui.memory_mut(|mem| mem.toggle_popup(zoom_popup_id));
                 }
-                egui::popup_above_or_below_widget(ui, zoom_popup_id, &zoom_response, egui::AboveOrBelow::Above, egui::PopupCloseBehavior::CloseOnClick, |ui| {
-                    ui.set_min_width(120.0);
-                    for &(zoom_level, label) in Self::ZOOM_PRESETS {
-                        if ui.selectable_label((info.zoom - zoom_level).abs() < 0.01, label).clicked() {
-                            action = Some(StatusBarAction::SetZoom(zoom_level));
+                egui::popup_above_or_below_widget(
+                    ui,
+                    zoom_popup_id,
+                    &zoom_response,
+                    egui::AboveOrBelow::Above,
+                    egui::PopupCloseBehavior::CloseOnClick,
+                    |ui| {
+                        ui.set_min_width(120.0);
+                        for &(zoom_level, label) in Self::ZOOM_PRESETS {
+                            if ui
+                                .selectable_label((info.zoom - zoom_level).abs() < 0.01, label)
+                                .clicked()
+                            {
+                                action = Some(StatusBarAction::SetZoom(zoom_level));
+                            }
                         }
-                    }
-                    ui.separator();
-                    if ui.selectable_label(false, "Whole Page").clicked() {
-                        action = Some(StatusBarAction::SetZoom(-1.0));
-                    }
-                });
+                        ui.separator();
+                        if ui.selectable_label(false, "Whole Page").clicked() {
+                            action = Some(StatusBarAction::SetZoom(-1.0));
+                        }
+                    },
+                );
 
                 // − slider +
                 if Self::icon_button(ui, Icon::Add, false, has_doc, "Zoom in").clicked() {
-                    action = Some(StatusBarAction::SetZoom((info.zoom * 1.25).min(Self::MAX_ZOOM)));
+                    action = Some(StatusBarAction::SetZoom(
+                        (info.zoom * 1.25).min(Self::MAX_ZOOM),
+                    ));
                 }
                 if show_slider {
                     let mut zoom = info.zoom;
@@ -201,14 +238,32 @@ impl StatusBar {
                     }
                 }
                 if Self::icon_button(ui, Icon::Subtract, false, has_doc, "Zoom out").clicked() {
-                    action = Some(StatusBarAction::SetZoom((info.zoom / 1.25).max(Self::MIN_ZOOM)));
+                    action = Some(StatusBarAction::SetZoom(
+                        (info.zoom / 1.25).max(Self::MIN_ZOOM),
+                    ));
                 }
 
                 ui.add_space(10.0);
-                if Self::icon_button(ui, Icon::BookOpen, info.two_page_spread, has_doc, "Two-Page Spread").clicked() {
+                if Self::icon_button(
+                    ui,
+                    Icon::BookOpen,
+                    info.two_page_spread,
+                    has_doc,
+                    "Two-Page Spread",
+                )
+                .clicked()
+                {
                     action = Some(StatusBarAction::SetTwoPageSpread(true));
                 }
-                if Self::icon_button(ui, Icon::DocumentOnePage, !info.two_page_spread, has_doc, "Single Page").clicked() {
+                if Self::icon_button(
+                    ui,
+                    Icon::DocumentOnePage,
+                    !info.two_page_spread,
+                    has_doc,
+                    "Single Page",
+                )
+                .clicked()
+                {
                     action = Some(StatusBarAction::SetTwoPageSpread(false));
                 }
             });
@@ -252,7 +307,7 @@ pub struct Ruler {
 impl Ruler {
     /// Size of the ruler in pixels.
     pub const SIZE: f32 = 20.0;
-    
+
     /// Points per inch.
     const POINTS_PER_INCH: f64 = 72.0;
 
@@ -327,9 +382,15 @@ impl Ruler {
         // White span over the page's extent
         if self.page_size > 0.0 {
             let span = if horizontal {
-                egui::Rect::from_x_y_ranges(self.page_origin..=self.page_origin + self.page_size, rect.y_range())
+                egui::Rect::from_x_y_ranges(
+                    self.page_origin..=self.page_origin + self.page_size,
+                    rect.y_range(),
+                )
             } else {
-                egui::Rect::from_x_y_ranges(rect.x_range(), self.page_origin..=self.page_origin + self.page_size)
+                egui::Rect::from_x_y_ranges(
+                    rect.x_range(),
+                    self.page_origin..=self.page_origin + self.page_size,
+                )
             };
             painter.rect_filled(span.intersect(rect), 0.0, colors::ruler_page_bg());
         }
@@ -388,7 +449,11 @@ impl Ruler {
             let label = eighths == 0 && inch % label_step == 0;
 
             if horizontal {
-                painter.vline(screen_pos, egui::Rangef::new(rect.bottom() - tick_len, rect.bottom()), tick_stroke);
+                painter.vline(
+                    screen_pos,
+                    egui::Rangef::new(rect.bottom() - tick_len, rect.bottom()),
+                    tick_stroke,
+                );
                 if label {
                     // Centered on the inch tick, above it; negative positions show absolute values
                     painter.text(
@@ -400,10 +465,18 @@ impl Ruler {
                     );
                 }
             } else {
-                painter.hline(egui::Rangef::new(rect.right() - tick_len, rect.right()), screen_pos, tick_stroke);
+                painter.hline(
+                    egui::Rangef::new(rect.right() - tick_len, rect.right()),
+                    screen_pos,
+                    tick_stroke,
+                );
                 if label {
                     // Rotated 90° counter-clockwise (reads bottom to top), centered on the tick
-                    let galley = painter.layout_no_wrap(inch.abs().to_string(), font.clone(), colors::ruler_text());
+                    let galley = painter.layout_no_wrap(
+                        inch.abs().to_string(),
+                        font.clone(),
+                        colors::ruler_text(),
+                    );
                     let size = galley.size();
                     let center_x = rect.left() + 5.5;
                     let pos = egui::Pos2::new(center_x - size.y / 2.0, screen_pos + size.x / 2.0);
@@ -420,9 +493,15 @@ impl Ruler {
             let screen_pos = (self.page_origin + doc_mouse * self.zoom).round() + 0.5;
             let stroke = Stroke::new(1.0, colors::ruler_mouse_indicator());
             let points = if horizontal {
-                [egui::Pos2::new(screen_pos, rect.top()), egui::Pos2::new(screen_pos, rect.bottom())]
+                [
+                    egui::Pos2::new(screen_pos, rect.top()),
+                    egui::Pos2::new(screen_pos, rect.bottom()),
+                ]
             } else {
-                [egui::Pos2::new(rect.left(), screen_pos), egui::Pos2::new(rect.right(), screen_pos)]
+                [
+                    egui::Pos2::new(rect.left(), screen_pos),
+                    egui::Pos2::new(rect.right(), screen_pos),
+                ]
             };
             painter.extend(egui::Shape::dashed_line(&points, stroke, 1.0, 1.0));
         }

@@ -2,8 +2,8 @@
 //! Publisher's categories, each drawn as a small preview by the preset engine.
 
 use egui::{Rect, Sense, Ui, Vec2};
-use repub_geometry::Rect as DocRect;
 use repub_escher::{preset, PresetExt};
+use repub_geometry::Rect as DocRect;
 use repub_model::geometry::{AutoShape, PresetGeometry, ShapeGeometry};
 use repub_model::shape::{Shape, ShapeKind};
 use repub_model::styles::{Fill, Stroke};
@@ -18,23 +18,36 @@ pub const CATEGORIES: &[(&str, &[u16])] = &[
     (
         "Basic Shapes",
         &[
-            1, 2, 3, 5, 6, 7, 8, 4, 10, 9, 56, 11, 23, 57, 95, 65, 96, 74, 73, 183, 184, 21, 22, 16, 84, 19, 85, 86, 87, 88,
-            185, 186,
+            1, 2, 3, 5, 6, 7, 8, 4, 10, 9, 56, 11, 23, 57, 95, 65, 96, 74, 73, 183, 184, 21, 22,
+            16, 84, 19, 85, 86, 87, 88, 185, 186,
         ],
     ),
     (
         "Block Arrows",
-        &[13, 66, 68, 67, 69, 70, 76, 182, 89, 90, 91, 101, 102, 103, 104, 105, 99, 93, 94, 15, 55, 78, 77, 79, 80, 81, 82, 83],
+        &[
+            13, 66, 68, 67, 69, 70, 76, 182, 89, 90, 91, 101, 102, 103, 104, 105, 99, 93, 94, 15,
+            55, 78, 77, 79, 80, 81, 82, 83,
+        ],
     ),
     (
         "Flowchart",
         &[
-            109, 176, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 177, 121, 122, 123, 124, 125, 126, 127, 128, 129,
-            130, 131, 132, 133, 134, 135,
+            109, 176, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 177, 121, 122, 123,
+            124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
         ],
     ),
-    ("Stars and Banners", &[71, 72, 187, 12, 58, 59, 92, 60, 53, 54, 107, 108, 97, 98, 64, 188]),
-    ("Callouts", &[61, 62, 63, 106, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]),
+    (
+        "Stars and Banners",
+        &[
+            71, 72, 187, 12, 58, 59, 92, 60, 53, 54, 107, 108, 97, 98, 64, 188,
+        ],
+    ),
+    (
+        "Callouts",
+        &[
+            61, 62, 63, 106, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+        ],
+    ),
 ];
 
 /// The name shown for shape type `spt` (Publisher's wording where it differs
@@ -90,7 +103,10 @@ fn sample(spt: u16, bounds: DocRect) -> Option<Shape> {
     if !matches!(shape.fill, Fill::None) {
         shape.fill = Fill::Solid(repub_color::Color::from_rgb8(0xCD, 0xE6, 0xDE));
     }
-    shape.line = Some(Stroke::new(repub_color::Color::from_rgb8(0x44, 0x44, 0x44), 1.0));
+    shape.line = Some(Stroke::new(
+        repub_color::Color::from_rgb8(0x44, 0x44, 0x44),
+        1.0,
+    ));
     Some(shape)
 }
 
@@ -102,7 +118,12 @@ pub fn show(ui: &mut Ui, state: &mut AppState) -> bool {
     let per_row = 10;
     ui.set_max_width(cell.x * per_row as f32 + 16.0);
     for (title, shapes) in CATEGORIES {
-        ui.label(egui::RichText::new(*title).strong().size(11.0).color(colors::text_secondary()));
+        ui.label(
+            egui::RichText::new(*title)
+                .strong()
+                .size(11.0)
+                .color(colors::text_secondary()),
+        );
         for row in shapes.chunks(per_row) {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
@@ -110,7 +131,11 @@ pub fn show(ui: &mut Ui, state: &mut AppState) -> bool {
                     let (rect, response) = ui.allocate_exact_size(cell, Sense::click());
                     let selected = state.current_tool == Tool::Preset(spt);
                     if selected || response.hovered() {
-                        let bg = if selected { colors::selected() } else { colors::hover() };
+                        let bg = if selected {
+                            colors::selected()
+                        } else {
+                            colors::hover()
+                        };
                         ui.painter().rect_filled(rect, 3.0, bg);
                     }
                     paint_preview(ui, spt, rect.shrink(4.0));
@@ -129,8 +154,18 @@ pub fn show(ui: &mut Ui, state: &mut AppState) -> bool {
 /// Draw shape `spt` filling `rect` (screen).
 pub fn paint_preview(ui: &Ui, spt: u16, rect: Rect) {
     let bounds = DocRect::new(0.0, 0.0, rect.width() as f64, rect.height() as f64);
-    let Some(mut shape) = sample(spt, bounds) else { return };
-    shape.line = Some(Stroke::new(repub_color::Color::from_rgb8(0x44, 0x44, 0x44), 1.0));
-    let map = DocToScreen { origin: rect.min, scale: 1.0 };
-    ui.painter().with_clip_rect(rect.expand(1.0)).extend(shape_object_shapes(&shape, map, 1.0, 0.0));
+    let Some(mut shape) = sample(spt, bounds) else {
+        return;
+    };
+    shape.line = Some(Stroke::new(
+        repub_color::Color::from_rgb8(0x44, 0x44, 0x44),
+        1.0,
+    ));
+    let map = DocToScreen {
+        origin: rect.min,
+        scale: 1.0,
+    };
+    ui.painter()
+        .with_clip_rect(rect.expand(1.0))
+        .extend(shape_object_shapes(&shape, map, 1.0, 0.0));
 }

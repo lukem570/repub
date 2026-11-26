@@ -278,23 +278,44 @@ impl<R: Read + Seek> ContentsParser<R> {
                                     page_chunk_indices.push(idx);
                                 }
                                 chunk_type::SHAPE => {
-                                    log::trace!("Found SHAPE chunk at idx {} (seq={})", idx, chunk_ref.seq_num);
+                                    log::trace!(
+                                        "Found SHAPE chunk at idx {} (seq={})",
+                                        idx,
+                                        chunk_ref.seq_num
+                                    );
                                     shape_chunk_indices.push(idx);
                                 }
                                 chunk_type::TABLE => {
-                                    log::trace!("Found TABLE chunk at idx {} (seq={})", idx, chunk_ref.seq_num);
+                                    log::trace!(
+                                        "Found TABLE chunk at idx {} (seq={})",
+                                        idx,
+                                        chunk_ref.seq_num
+                                    );
                                     shape_chunk_indices.push(idx);
                                 }
                                 chunk_type::GROUP | chunk_type::LOGO => {
-                                    log::trace!("Found GROUP/LOGO chunk at idx {} (seq={})", idx, chunk_ref.seq_num);
+                                    log::trace!(
+                                        "Found GROUP/LOGO chunk at idx {} (seq={})",
+                                        idx,
+                                        chunk_ref.seq_num
+                                    );
                                     shape_chunk_indices.push(idx);
                                 }
                                 chunk_type::ALTSHAPE => {
-                                    log::trace!("Found ALTSHAPE chunk at idx {} (seq={})", idx, chunk_ref.seq_num);
+                                    log::trace!(
+                                        "Found ALTSHAPE chunk at idx {} (seq={})",
+                                        idx,
+                                        chunk_ref.seq_num
+                                    );
                                     shape_chunk_indices.push(idx);
                                 }
                                 _ => {
-                                    log::trace!("Found UNKNOWN chunk type 0x{:02X} at idx {} (seq={})", chunk_ref.chunk_type, idx, chunk_ref.seq_num);
+                                    log::trace!(
+                                        "Found UNKNOWN chunk type 0x{:02X} at idx {} (seq={})",
+                                        chunk_ref.chunk_type,
+                                        idx,
+                                        chunk_ref.seq_num
+                                    );
                                 }
                             }
 
@@ -376,8 +397,7 @@ impl<R: Read + Seek> ContentsParser<R> {
         seq_num: u32,
     ) -> FormatResult<Option<ContentChunkRef>> {
         let end = block.data_offset + block.data_length;
-        self.reader
-            .seek(SeekFrom::Start(block.data_offset + 4))?; // Skip container length
+        self.reader.seek(SeekFrom::Start(block.data_offset + 4))?; // Skip container length
 
         let mut chunk_type: Option<u32> = None;
         let mut offset: Option<u64> = None;
@@ -453,8 +473,7 @@ impl<R: Read + Seek> ContentsParser<R> {
             if block.id == block_id::DOCUMENT_SIZE {
                 // Parse size container
                 let size_end = block.data_offset + block.data_length;
-                self.reader
-                    .seek(SeekFrom::Start(block.data_offset + 4))?;
+                self.reader.seek(SeekFrom::Start(block.data_offset + 4))?;
 
                 while self.reader.stream_position()? < size_end {
                     let sub_block = self.parse_block()?;
@@ -467,11 +486,19 @@ impl<R: Read + Seek> ContentsParser<R> {
                     match sub_block.id {
                         block_id::DOCUMENT_WIDTH => {
                             width_emu = sub_block.data;
-                            log::debug!("Width EMU: {} ({} points)", width_emu, emus_to_points(width_emu as i64));
+                            log::debug!(
+                                "Width EMU: {} ({} points)",
+                                width_emu,
+                                emus_to_points(width_emu as i64)
+                            );
                         }
                         block_id::DOCUMENT_HEIGHT => {
                             height_emu = sub_block.data;
-                            log::debug!("Height EMU: {} ({} points)", height_emu, emus_to_points(height_emu as i64));
+                            log::debug!(
+                                "Height EMU: {} ({} points)",
+                                height_emu,
+                                emus_to_points(height_emu as i64)
+                            );
                         }
                         _ => {}
                     }
@@ -479,8 +506,7 @@ impl<R: Read + Seek> ContentsParser<R> {
             } else if block.id == block_id::DOCUMENT_PAGE_LIST {
                 // Parse page list
                 let list_end = block.data_offset + block.data_length;
-                self.reader
-                    .seek(SeekFrom::Start(block.data_offset + 4))?;
+                self.reader.seek(SeekFrom::Start(block.data_offset + 4))?;
 
                 while self.reader.stream_position()? < list_end {
                     let sub_block = self.parse_block()?;
@@ -847,7 +873,11 @@ mod tests {
         }
 
         println!("Contents stream size: {} bytes", contents_data.len());
-        assert_eq!(contents_data.len(), 10306, "Expected Contents stream to be 10306 bytes");
+        assert_eq!(
+            contents_data.len(),
+            10306,
+            "Expected Contents stream to be 10306 bytes"
+        );
 
         // Parse it
         let cursor = std::io::Cursor::new(contents_data);

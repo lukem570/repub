@@ -32,7 +32,12 @@ pub fn image_quad(
     scale: f64,
 ) -> TexturedQuad {
     let (u0, v0, u1, v1) = match crop {
-        Some(c) => (c.x() as f32, c.y() as f32, c.right() as f32, c.bottom() as f32),
+        Some(c) => (
+            c.x() as f32,
+            c.y() as f32,
+            c.right() as f32,
+            c.bottom() as f32,
+        ),
         None => (0.0, 0.0, 1.0, 1.0),
     };
     let tint = [1.0, 1.0, 1.0, opacity.clamp(0.0, 1.0) as f32];

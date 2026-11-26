@@ -5,9 +5,7 @@ use std::sync::Arc;
 use repub_color::{Color, ColorScheme, SchemeColor, SchemeRef};
 use repub_fonts::SystemFontProvider;
 use repub_geometry::{Point, Rect};
-use repub_model::shape::{
-    LineData, LineEnding, Shape, ShapeKind, TextEffectData, WordArtPreset,
-};
+use repub_model::shape::{LineData, LineEnding, Shape, ShapeKind, TextEffectData, WordArtPreset};
 use repub_model::styles::{Fill, Stroke};
 use repub_model::{Document, PageOrientation, PageSize};
 use repub_scene::{compose, compose_with_scheme, FillRule, Paint, Primitive};
@@ -41,7 +39,9 @@ fn rectangle_emits_fill_and_stroke() {
         .primitives
         .iter()
         .find_map(|p| match p {
-            Primitive::FillPath { paint, fill_rule, .. } => Some((paint, *fill_rule)),
+            Primitive::FillPath {
+                paint, fill_rule, ..
+            } => Some((paint, *fill_rule)),
             _ => None,
         })
         .unwrap();
@@ -59,8 +59,14 @@ fn unfilled_rectangle_emits_only_stroke() {
 
     let fonts = provider();
     let scene = compose(&doc, 0, fonts.as_ref());
-    assert_eq!(count(&scene, |p| matches!(p, Primitive::FillPath { .. })), 0);
-    assert_eq!(count(&scene, |p| matches!(p, Primitive::StrokePath { .. })), 1);
+    assert_eq!(
+        count(&scene, |p| matches!(p, Primitive::FillPath { .. })),
+        0
+    );
+    assert_eq!(
+        count(&scene, |p| matches!(p, Primitive::StrokePath { .. })),
+        1
+    );
 }
 
 #[test]
@@ -72,7 +78,10 @@ fn text_frame_emits_glyph_runs() {
     let fonts = provider();
     let scene = compose(&doc, 0, fonts.as_ref());
     let glyph_runs = count(&scene, |p| matches!(p, Primitive::Glyphs { .. }));
-    assert!(glyph_runs >= 1, "expected at least one glyph run, got {glyph_runs}");
+    assert!(
+        glyph_runs >= 1,
+        "expected at least one glyph run, got {glyph_runs}"
+    );
 }
 
 #[test]
@@ -80,7 +89,10 @@ fn line_emits_stroke() {
     let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
     let line = Shape::new(
         Rect::new(0.0, 0.0, 100.0, 0.0),
-        ShapeKind::Line(LineData::new(Point::new(10.0, 10.0), Point::new(110.0, 10.0))),
+        ShapeKind::Line(LineData::new(
+            Point::new(10.0, 10.0),
+            Point::new(110.0, 10.0),
+        )),
     );
     doc.page_mut(0).unwrap().add_shape(line);
 
@@ -125,7 +137,10 @@ fn wordart_resolves_to_glyph_fill_paths() {
     let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
     let mut data = TextEffectData::with_preset("WAVE", WordArtPreset::Wave);
     data.style.font.family = "DejaVu Sans".to_string();
-    let mut shape = Shape::new(Rect::new(50.0, 50.0, 300.0, 120.0), ShapeKind::TextEffect(data));
+    let mut shape = Shape::new(
+        Rect::new(50.0, 50.0, 300.0, 120.0),
+        ShapeKind::TextEffect(data),
+    );
     shape.fill = Fill::Solid(Color::BLUE);
     doc.page_mut(0).unwrap().add_shape(shape);
 
@@ -149,13 +164,19 @@ fn wordart_3d_emits_extra_fill_layers() {
     let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
     let mut flat = TextEffectData::with_preset("A", WordArtPreset::Plain);
     flat.style.font.family = "DejaVu Sans".to_string();
-    let mut flat_shape = Shape::new(Rect::new(0.0, 0.0, 200.0, 120.0), ShapeKind::TextEffect(flat));
+    let mut flat_shape = Shape::new(
+        Rect::new(0.0, 0.0, 200.0, 120.0),
+        ShapeKind::TextEffect(flat),
+    );
     flat_shape.fill = Fill::Solid(Color::BLUE);
 
     let mut deep = TextEffectData::with_preset("A", WordArtPreset::Plain);
     deep.style.font.family = "DejaVu Sans".to_string();
     deep = deep.with_extrusion(24.0);
-    let mut deep_shape = Shape::new(Rect::new(0.0, 0.0, 200.0, 120.0), ShapeKind::TextEffect(deep));
+    let mut deep_shape = Shape::new(
+        Rect::new(0.0, 0.0, 200.0, 120.0),
+        ShapeKind::TextEffect(deep),
+    );
     deep_shape.fill = Fill::Solid(Color::BLUE);
 
     doc.page_mut(0).unwrap().add_shape(flat_shape);
@@ -221,13 +242,14 @@ fn group_recurses_into_children() {
 #[test]
 fn table_emits_cell_fills_and_borders() {
     let mut doc = Document::new(PageSize::Letter, PageOrientation::Portrait);
-    let mut table_data = repub_model::shape::TableData::new(Rect::new(0.0, 0.0, 200.0, 100.0), 2, 2);
-    table_data
-        .cell_mut(0, 0)
-        .unwrap()
-        .set_text("A");
+    let mut table_data =
+        repub_model::shape::TableData::new(Rect::new(0.0, 0.0, 200.0, 100.0), 2, 2);
+    table_data.cell_mut(0, 0).unwrap().set_text("A");
     table_data.cells[0].fill = Fill::Solid(Color::YELLOW);
-    let table = Shape::new(Rect::new(10.0, 10.0, 200.0, 100.0), ShapeKind::Table(table_data));
+    let table = Shape::new(
+        Rect::new(10.0, 10.0, 200.0, 100.0),
+        ShapeKind::Table(table_data),
+    );
     doc.page_mut(0).unwrap().add_shape(table);
 
     let fonts = provider();

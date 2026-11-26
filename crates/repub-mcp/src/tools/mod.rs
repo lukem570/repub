@@ -1,9 +1,9 @@
 //! MCP tool implementations.
 
 pub mod document;
-pub mod page;
-pub mod objects;
 pub mod export;
+pub mod objects;
+pub mod page;
 pub mod template;
 
 use serde_json::Value;
