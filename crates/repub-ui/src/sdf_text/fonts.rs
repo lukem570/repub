@@ -33,22 +33,26 @@ const MAX_FILE: u64 = 40 * 1024 * 1024;
 
 static REGISTRY: OnceLock<Registry> = OnceLock::new();
 
-/// Start scanning the font folders on a background thread (idempotent).
+/// Start scanning the font folders on a background thread (idempotent). The browser has no
+/// font folders, so nothing is scanned there.
 pub fn scan_in_background() {
-    static STARTED: OnceLock<()> = OnceLock::new();
-    STARTED.get_or_init(|| {
-        let _ = std::thread::Builder::new()
-            .name("font-scan".into())
-            .spawn(|| {
-                let start = std::time::Instant::now();
-                let r = registry();
-                log::info!(
-                    "Found {} font families in {:.0} ms",
-                    r.families.len(),
-                    start.elapsed().as_secs_f64() * 1000.0
-                );
-            });
-    });
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        static STARTED: OnceLock<()> = OnceLock::new();
+        STARTED.get_or_init(|| {
+            let _ = std::thread::Builder::new()
+                .name("font-scan".into())
+                .spawn(|| {
+                    let start = std::time::Instant::now();
+                    let r = registry();
+                    log::info!(
+                        "Found {} font families in {:.0} ms",
+                        r.families.len(),
+                        start.elapsed().as_secs_f64() * 1000.0
+                    );
+                });
+        });
+    }
 }
 
 /// The registry, scanning on this thread if the background scan hasn't run.
@@ -58,6 +62,10 @@ pub fn registry() -> &'static Registry {
 
 /// The registry if the scan has finished.
 pub fn try_registry() -> Option<&'static Registry> {
+    // The browser has no installed fonts to scan for: the registry is just the bundled family
+    #[cfg(target_arch = "wasm32")]
+    return Some(registry());
+    #[cfg(not(target_arch = "wasm32"))]
     REGISTRY.get()
 }
 
@@ -185,6 +193,9 @@ fn faces_in(path: &Path) -> Vec<(String, FontFile)> {
 
 /// Where Repub keeps caches (font list, baked glyphs).
 pub fn cache_dir() -> Option<PathBuf> {
+    #[cfg(target_arch = "wasm32")]
+    return None;
+    #[cfg(not(target_arch = "wasm32"))]
     directories::ProjectDirs::from("com", "repub", "Repub").map(|d| d.cache_dir().to_path_buf())
 }
 
@@ -211,6 +222,16 @@ pub fn file_stamp(path: &Path) -> Option<(u64, u64)> {
 }
 
 fn scan() -> Registry {
+    #[cfg(target_arch = "wasm32")]
+    return Registry {
+        families: BTreeMap::new(),
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    scan_system_fonts()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn scan_system_fonts() -> Registry {
     let mut files = Vec::new();
     for dir in font_dirs() {
         walk(&dir, 0, &mut files);

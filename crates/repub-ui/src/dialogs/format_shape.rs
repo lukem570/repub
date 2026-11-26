@@ -358,6 +358,8 @@ pub(crate) fn fill_editor(ui: &mut Ui, fill: &mut Fill) {
                     .file_name()
                     .map_or("(none)".to_string(), |n| n.to_string_lossy().into_owned());
                 ui.label(name);
+                // Picking a file needs a synchronous dialog, which the browser lacks
+                #[cfg(not(target_arch = "wasm32"))]
                 if ui.button("Choose…").clicked() {
                     if let Some(path) = rfd::FileDialog::new()
                         .add_filter(

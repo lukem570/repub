@@ -15,7 +15,6 @@ use crate::dialogs::{
     SpellingDialog, TablePropertiesDialog, TemplatesDialog, TextBoxMarginsDialog,
     TextColumnsDialog, TextFitDialog, TextWrapDialog, WordArtDialog,
 };
-use crate::menus;
 use crate::panels::{PagesPanel, Toolbar};
 use crate::settings::Settings;
 use crate::start_screen::{DocumentInfo, StartPage, StartScreen, StartScreenAction};
@@ -293,6 +292,16 @@ impl TableEdit {
     }
 }
 
+/// The native menu bar and its event channel (desktop only).
+#[cfg(not(target_arch = "wasm32"))]
+type NativeMenu = (muda::Menu, std::sync::mpsc::Receiver<muda::MenuEvent>);
+/// There is no native menu bar in the browser.
+#[cfg(target_arch = "wasm32")]
+type NativeMenu = ();
+
+#[cfg(target_arch = "wasm32")]
+mod web_io;
+
 /// Main Repub application.
 pub struct RepubApp {
     /// Application state
@@ -404,12 +413,7 @@ impl RepubApp {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    fn build(
-        ctx: &egui::Context,
-        settings: Settings,
-        native_menu: Option<(muda::Menu, std::sync::mpsc::Receiver<muda::MenuEvent>)>,
-    ) -> Self {
+    fn build(ctx: &egui::Context, settings: Settings, native_menu: Option<NativeMenu>) -> Self {
         crate::theme::init(ctx);
         crate::theme::apply_theme(ctx, settings.theme);
 
@@ -419,11 +423,18 @@ impl RepubApp {
         state.zoom = settings.default_zoom;
         state.units = crate::state::DisplayUnit::from_key(&settings.measurement_unit);
 
+        #[cfg(target_arch = "wasm32")]
+        crate::platform::web::set_context(ctx);
+
+        #[cfg(not(target_arch = "wasm32"))]
         let has_native_menu = native_menu.is_some();
+        #[cfg(not(target_arch = "wasm32"))]
         let (native_menu, native_menu_rx) = match native_menu {
             Some((menu, rx)) => (Some(menu), Some(rx)),
             None => (None, None),
         };
+        #[cfg(target_arch = "wasm32")]
+        let _ = native_menu;
 
         Self {
             state,
@@ -462,60 +473,13 @@ impl RepubApp {
             clipboard: Clipboard::default(),
             pages_panel: PagesPanel::new(),
             last_fit_viewport: None,
+            #[cfg(not(target_arch = "wasm32"))]
             native_menu,
+            #[cfg(not(target_arch = "wasm32"))]
             native_menu_rx,
             // AppKit menus need the main thread; only create them alongside the menu bar
-            #[cfg(target_os = "macos")]
+            #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
             native_context_menus: has_native_menu.then(crate::native_menu::NativeContextMenus::new),
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn build(ctx: &egui::Context, settings: Settings, _native_menu: Option<()>) -> Self {
-        crate::theme::init(ctx);
-        crate::theme::apply_theme(ctx, settings.theme);
-        let mut state = AppState::new();
-        state.show_rulers = settings.show_rulers;
-        state.show_guides = settings.show_guides;
-        state.zoom = settings.default_zoom;
-        state.units = crate::state::DisplayUnit::from_key(&settings.measurement_unit);
-        Self {
-            state,
-            settings,
-            canvas: Canvas::new(),
-            toolbar: Toolbar::new(),
-            new_doc_dialog: NewDocumentDialog::new(),
-            start_screen: StartScreen::new(),
-            export_dialog: ExportDialog::new(),
-            about_dialog: AboutDialog::new(),
-            page_properties_dialog: PagePropertiesDialog::new(),
-            insert_table_dialog: InsertTableDialog::new(),
-            text_fit_dialog: TextFitDialog::new(),
-            text_columns_dialog: TextColumnsDialog::new(),
-            text_wrap_dialog: TextWrapDialog::new(),
-            format_shape_dialog: FormatShapeDialog::new(),
-            document_properties_dialog: DocumentPropertiesDialog::new(),
-            font_dialog: FontDialog::new(),
-            paragraph_dialog: ParagraphDialog::new(),
-            table_properties_dialog: TablePropertiesDialog::new(),
-            wordart_dialog: WordArtDialog::new(),
-            templates_dialog: TemplatesDialog::new(),
-            text_box_margins_dialog: TextBoxMarginsDialog::new(),
-            find_replace_dialog: FindReplaceDialog::new(),
-            hyperlink_dialog: HyperlinkDialog::new(),
-            spelling_dialog: SpellingDialog::new(),
-            move_page_dialog: MovePageDialog::new(),
-            rename_page_dialog: RenamePageDialog::new(),
-            pending_save_path: None,
-            save_prompt: SaveChangesPrompt::default(),
-            pending_discard: None,
-            allow_close: false,
-            error_alert: ErrorAlert::default(),
-            context_page: 0,
-            view_checks: None,
-            clipboard: Clipboard::default(),
-            pages_panel: PagesPanel::new(),
-            last_fit_viewport: None,
         }
     }
 
@@ -1876,6 +1840,7 @@ impl RepubApp {
         self.state.end_edit(label);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// Pick a picture file and place it on the current page: at its natural size
     /// (96 dpi), shrunk to fit inside the margins, centred, and selected.
     fn insert_picture(&mut self) {
@@ -1900,9 +1865,21 @@ impl RepubApp {
         }
     }
 
-    /// Place the picture at `path` on the current page (see [`Self::insert_picture`]).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn place_picture(&mut self, path: &Path) -> Result<(), String> {
         let (px_w, px_h) = image::image_dimensions(path).map_err(|e| e.to_string())?;
+        let data = repub_model::shape::PictureData::from_file(path.to_string_lossy().into_owned());
+        self.place_picture_data(data, px_w, px_h)
+    }
+
+    /// Place a picture of `px_w` x `px_h` pixels on the current page at its natural size (96 dpi),
+    /// shrunk to fit inside the margins and centred, selected, as one undo step.
+    fn place_picture_data(
+        &mut self,
+        data: repub_model::shape::PictureData,
+        px_w: u32,
+        px_h: u32,
+    ) -> Result<(), String> {
         let Some(page) = self.state.current_page() else {
             return Err("No page".into());
         };
@@ -1918,9 +1895,7 @@ impl RepubApp {
             h,
         );
         let mut frame = Shape::picture(bounds);
-        frame.kind = ShapeKind::Picture(repub_model::shape::PictureData::from_file(
-            path.to_string_lossy().into_owned(),
-        ));
+        frame.kind = ShapeKind::Picture(data);
         let id = frame.common.id;
         self.state.record_undo("Insert Picture");
         if let Some(page) = self.state.current_page_mut() {
@@ -1959,6 +1934,7 @@ impl RepubApp {
         self.state.mark_dirty();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// Print by way of PDF: write the publication to a temporary PDF and open it
     /// in the system's viewer (Preview on macOS), whose Print command handles
     /// printers, copies and page ranges.
@@ -2226,6 +2202,7 @@ impl RepubApp {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// Replace the selected image frame's picture with a file chosen by the user.
     fn change_picture(&mut self) {
         use repub_model::shape::ImageSource;
@@ -2259,6 +2236,7 @@ impl RepubApp {
         self.state.mark_dirty();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn open_document(&mut self) {
         if let Some(path) = rfd::FileDialog::new()
             .add_filter("All Publications", &["repub", "repubz", "pub"])
@@ -2269,6 +2247,19 @@ impl RepubApp {
         {
             self.open_path(path);
         }
+    }
+
+    /// Make `doc`, opened from `path`, the current document.
+    fn install_opened_document(&mut self, doc: Document, path: Option<PathBuf>) {
+        self.state.text_edit = None;
+        self.state.document = Some(doc);
+        self.state.fit_page_pending = true;
+        self.state.document_path = path;
+        self.state.dirty = false;
+        self.state.current_page = 0;
+        self.state.selection.clear();
+        self.state.history.clear();
+        self.state.apply_document_settings();
     }
 
     /// Open a document from a path (file dialog or command-line argument).
@@ -2289,15 +2280,7 @@ impl RepubApp {
 
         match result {
             Ok(doc) => {
-                self.state.text_edit = None;
-                self.state.document = Some(doc);
-                self.state.fit_page_pending = true;
-                self.state.document_path = Some(path.clone());
-                self.state.dirty = false;
-                self.state.current_page = 0;
-                self.state.selection.clear();
-                self.state.history.clear();
-                self.state.apply_document_settings();
+                self.install_opened_document(doc, Some(path.clone()));
                 self.settings.add_recent_file(path);
                 self.settings.save();
             }
@@ -2330,6 +2313,7 @@ impl RepubApp {
         false
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn save_document(&mut self, save_as: bool) {
         // Save writes Repub's own format, so a document opened from another
         // format (e.g. a Publisher .pub) is never overwritten in place: Save asks
@@ -2719,8 +2703,13 @@ impl eframe::App for RepubApp {
         self.frame(ctx);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        // Save settings
+        self.settings.save();
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn on_exit(&mut self) {
         self.settings.save();
     }
 }
@@ -2733,6 +2722,8 @@ impl RepubApp {
         crate::theme::sync(ctx, self.settings.theme);
         // Document text slots are shared by the page thumbnails and the canvas
         crate::sdf_text::begin_frame();
+        #[cfg(target_arch = "wasm32")]
+        self.process_web_events();
         // A master page being edited and the document stay in step (undo, edits)
         self.state.sync_master_edit();
         if let Some(link) = self.state.follow_link.take() {
@@ -2799,19 +2790,6 @@ impl RepubApp {
                 self.process_action(action, ctx);
             }
         }
-
-        // On macOS, we use native menu bar, so skip the egui menu
-        // On other platforms, show the egui menu bar
-        #[cfg(not(target_os = "macos"))]
-        egui::TopBottomPanel::top("menu_bar")
-            .frame(crate::theme::toolbar_frame())
-            .exact_height(crate::theme::metrics::MENU_BAR_HEIGHT)
-            .show(ctx, |ui| {
-                let actions = menus::show_menu_bar(ui, &self.state);
-                for action in actions {
-                    self.process_action(action, ctx);
-                }
-            });
 
         // macOS: our own title row under the transparent native title bar
         #[cfg(target_os = "macos")]
@@ -3425,6 +3403,7 @@ impl RepubApp {
         action
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn export_with_options(&mut self, options: crate::dialogs::export::ExportOptions) {
         use crate::dialogs::export::ExportFormat;
 
@@ -3488,37 +3467,45 @@ fn is_native_document(path: &Path) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case("repub") || e.eq_ignore_ascii_case("repubz"))
 }
 
-/// Export `options.pages` of `doc` to `path`. PDF writes one file; SVG and the
-/// image formats write one file per page, numbered `name-1.ext`, `name-2.ext`
-/// when there is more than one.
 fn export_pages(
     doc: &Document,
     options: &crate::dialogs::export::ExportOptions,
     path: &Path,
 ) -> Result<(), String> {
+    for (page, bytes) in export_files(doc, options)? {
+        let target = match page {
+            Some(page) if options.pages.len() != 1 => {
+                let stem = path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                let ext = path
+                    .extension()
+                    .map(|e| e.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                path.with_file_name(format!("{stem}-{}.{ext}", page + 1))
+            }
+            _ => path.to_path_buf(),
+        };
+        std::fs::write(&target, bytes).map_err(|e| format!("{}: {e}", target.display()))?;
+    }
+    Ok(())
+}
+
+/// The contents of each file an export produces: one for PDF and HTML (page `None`), and one per
+/// chosen page (`Some(page)`, 0-based) for SVG and the image formats.
+fn export_files(
+    doc: &Document,
+    options: &crate::dialogs::export::ExportOptions,
+) -> Result<Vec<(Option<usize>, Vec<u8>)>, String> {
     use crate::dialogs::export::ExportFormat;
     use repub_format::{
-        export_image, export_pdf, export_svg, ExportFormat as ImageFormat_, PdfOptions,
-        RasterExportOptions, SvgOptions,
+        export_html_string, export_image_bytes, export_pdf_bytes, export_svg_bytes,
+        ExportFormat as ImageFormat_, HtmlOptions, PdfOptions, RasterExportOptions, SvgOptions,
     };
 
     // The Scene-driven exporters need a font provider to resolve and measure fonts.
     let fonts = repub_fonts::SystemFontProvider::new().map_err(|e| e.to_string())?;
-
-    let file_for = |index: usize| -> PathBuf {
-        if options.pages.len() == 1 {
-            return path.to_path_buf();
-        }
-        let stem = path
-            .file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let ext = path
-            .extension()
-            .map(|e| e.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        path.with_file_name(format!("{stem}-{}.{ext}", index + 1))
-    };
 
     // A copy holding only the chosen pages, in order
     let subset = || {
@@ -3534,20 +3521,23 @@ fn export_pages(
     };
     match options.format {
         ExportFormat::Pdf => {
-            export_pdf(&subset(), path, &PdfOptions::default(), &fonts).map_err(|e| e.to_string())
+            let bytes = export_pdf_bytes(&subset(), &PdfOptions::default(), &fonts)
+                .map_err(|e| e.to_string())?;
+            Ok(vec![(None, bytes)])
         }
-        ExportFormat::Html => {
-            repub_format::export_html(&subset(), path, &repub_format::HtmlOptions::default())
-                .map_err(|e| e.to_string())
-        }
-        ExportFormat::Svg => {
-            let svg_opts = SvgOptions::default();
-            for &page in &options.pages {
-                export_svg(doc, page, &file_for(page), &svg_opts, &fonts)
-                    .map_err(|e| e.to_string())?;
-            }
-            Ok(())
-        }
+        ExportFormat::Html => Ok(vec![(
+            None,
+            export_html_string(&subset(), &HtmlOptions::default()).into_bytes(),
+        )]),
+        ExportFormat::Svg => options
+            .pages
+            .iter()
+            .map(|&page| {
+                export_svg_bytes(doc, page, &SvgOptions::default(), &fonts)
+                    .map(|bytes| (Some(page), bytes))
+                    .map_err(|e| e.to_string())
+            })
+            .collect(),
         raster => {
             let format = match raster {
                 ExportFormat::Jpeg => ImageFormat_::Jpeg,
@@ -3560,21 +3550,21 @@ fn export_pages(
                 quality: options.quality,
                 ..Default::default()
             };
-            for &page in &options.pages {
-                export_image(doc, page, &file_for(page), &image_opts, &fonts)
-                    .map_err(|e| e.to_string())?;
-            }
-            Ok(())
+            options
+                .pages
+                .iter()
+                .map(|&page| {
+                    export_image_bytes(doc, page, &image_opts, &fonts)
+                        .map(|bytes| (Some(page), bytes))
+                        .map_err(|e| e.to_string())
+                })
+                .collect()
         }
     }
 }
 
-/// The current time as Unix seconds.
 fn unix_now() -> Option<i64> {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .map(|d| d.as_secs() as i64)
+    crate::platform::unix_now()
 }
 
 /// Whether the shape's own fill is drawn (auto shapes, text boxes, pictures, WordArt).
@@ -3682,6 +3672,7 @@ mod export_tests {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Open `path` in the system's default application for it.
 fn open_in_system_viewer(path: &Path) -> std::io::Result<()> {
     #[cfg(target_os = "macos")]

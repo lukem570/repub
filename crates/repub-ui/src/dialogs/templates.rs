@@ -204,6 +204,8 @@ impl TemplatesDialog {
                                         .hint_text("Picture file")
                                         .desired_width(280.0),
                                 );
+                                // Picking a file needs a synchronous dialog, which the browser lacks
+                                #[cfg(not(target_arch = "wasm32"))]
                                 if ui.button("Choose…").clicked() {
                                     if let Some(path) = rfd::FileDialog::new()
                                         .add_filter(

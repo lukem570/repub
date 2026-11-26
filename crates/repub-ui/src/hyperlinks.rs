@@ -96,17 +96,7 @@ pub fn destination(link: &Hyperlink) -> Destination {
 
 /// Open `address` in the system's browser or mail app.
 pub fn open_address(address: &str) -> std::io::Result<()> {
-    #[cfg(target_os = "macos")]
-    let mut command = std::process::Command::new("open");
-    #[cfg(target_os = "windows")]
-    let mut command = {
-        let mut c = std::process::Command::new("rundll32");
-        c.arg("url.dll,FileProtocolHandler");
-        c
-    };
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = std::process::Command::new("xdg-open");
-    command.arg(address).spawn().map(|_| ())
+    crate::platform::open_address(address)
 }
 
 #[cfg(test)]

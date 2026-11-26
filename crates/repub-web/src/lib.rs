@@ -1,20 +1,12 @@
 //! # Repub Web
 //!
-//! WebAssembly build for browser-based document editing.
+//! The Repub desktop app compiled to WebAssembly: the browser runs the same
+//! `repub-ui` application, drawn on a canvas with the same renderer, so the two
+//! look and behave alike. Differences come only from the browser: files are
+//! picked and downloaded instead of opened and saved in place, and there are no
+//! system fonts or native menus.
 //!
-//! This crate provides a full-featured web application that runs entirely
-//! in the browser using WebAssembly. It shares most of its code with the
-//! desktop application.
-//!
-//! ## Features
-//!
-//! - Same document editing capabilities as desktop
-//! - File drag & drop support
-//! - Local storage for settings and auto-save
-//! - Export/download files
-//! - Responsive design for tablets
-//!
-//! ## Usage
+//! ## Building
 //!
 //! Build with [Trunk](https://trunkrs.dev) from this crate's directory:
 //! ```bash
@@ -23,75 +15,54 @@
 //! ```
 //!
 //! The `Deploy to GitHub Pages` workflow publishes `dist/` on every push to `main`.
-
-#[cfg(target_arch = "wasm32")]
-mod app;
-#[cfg(target_arch = "wasm32")]
-mod platform;
-#[cfg(target_arch = "wasm32")]
-mod storage;
+//! This crate is empty on every target but `wasm32-unknown-unknown`.
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-
 #[cfg(target_arch = "wasm32")]
-pub use app::WebApp;
+use wasm_bindgen::JsCast;
 
-/// Initialize the WASM module and start the application.
+/// Set up logging and panic reporting when the module loads.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(start)]
 pub fn main() {
-    // Set up panic hook for better error messages
     console_error_panic_hook::set_once();
-
-    // Initialize logging
     wasm_logger::init(wasm_logger::Config::default());
-
-    log::info!("Repub Web starting...");
 }
 
-/// Start the application in the given canvas element.
+/// Start the application in the canvas element with id `canvas_id`.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<(), JsValue> {
-    log::info!("Starting Repub in canvas: {}", canvas_id);
-
-    let web_options = eframe::WebOptions::default();
-
     let canvas = web_sys::window()
         .and_then(|w| w.document())
         .and_then(|d| d.get_element_by_id(canvas_id))
         .and_then(|e| e.dyn_into::<web_sys::HtmlCanvasElement>().ok())
         .ok_or_else(|| JsValue::from_str(&format!("no canvas element with id \"{canvas_id}\"")))?;
 
+    // wgpu 22 asks WebGPU for a limit current browsers no longer recognize, so it can't create
+    // a device there; WebGL 2 works everywhere WebGPU does and beyond
+    let mut options = eframe::WebOptions::default();
+    options.wgpu_options.supported_backends = wgpu::Backends::GL;
+
     wasm_bindgen_futures::spawn_local(async move {
-        let runner = eframe::WebRunner::new();
-        let result = runner
+        let result = eframe::WebRunner::new()
             .start(
                 canvas,
-                web_options,
-                Box::new(|cc| Ok(Box::new(WebApp::new(cc)))),
+                options,
+                Box::new(|cc| Ok(Box::new(repub_ui::RepubApp::new(cc)))),
             )
             .await;
-
         if let Err(e) = result {
-            log::error!("Failed to start eframe: {:?}", e);
+            log::error!("Failed to start Repub: {e:?}");
         }
     });
-
     Ok(())
 }
 
-/// Get the application version.
+/// The application version.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
-}
-
-// Stub for non-WASM builds (for cargo check)
-#[cfg(not(target_arch = "wasm32"))]
-pub fn main() {
-    println!("Repub Web is designed to run in a browser via WebAssembly.");
-    println!("Build with: wasm-pack build --target web");
 }

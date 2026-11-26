@@ -104,6 +104,42 @@ pub fn save(doc: &Document, path: &Path, fonts: &dyn FontProvider) -> FormatResu
     }
 }
 
+/// Load a document from the contents of a file called `name`, dispatching by its extension.
+///
+/// This is [`load`] without a file system, for callers (a browser) that already hold the bytes.
+pub fn load_bytes(name: &str, bytes: &[u8]) -> FormatResult<Document> {
+    let path = Path::new(name);
+    let ext = extension(path).ok_or_else(|| FormatError::MissingExtension(path.to_path_buf()))?;
+    match ext.as_str() {
+        "repub" | "json" => Ok(repub_format_native::load_bytes(bytes, false)?),
+        "repubz" => Ok(repub_format_native::load_bytes(bytes, true)?),
+        "pub" => Ok(repub_format_pub::import_bytes(bytes)?),
+        _ => Err(FormatError::UnsupportedExtension(path.to_path_buf())),
+    }
+}
+
+/// Encode a document in the format named by the extension of `name` (page 1 for the single-page
+/// formats: SVG and images), like [`save`] without a file system.
+pub fn save_bytes(doc: &Document, name: &str, fonts: &dyn FontProvider) -> FormatResult<Vec<u8>> {
+    let path = Path::new(name);
+    let ext = extension(path).ok_or_else(|| FormatError::MissingExtension(path.to_path_buf()))?;
+    Ok(match ext.as_str() {
+        "repub" => repub_format_native::save_bytes(doc, &SaveOptions::default())?,
+        "repubz" => repub_format_native::save_bytes(doc, &SaveOptions::compressed())?,
+        "json" => repub_format_native::save_bytes(doc, &SaveOptions::compact())?,
+        "pdf" => repub_export_vector::export_pdf_bytes(doc, &PdfOptions::default(), fonts)?,
+        "svg" => repub_export_vector::export_svg_bytes(doc, 0, &SvgOptions::default(), fonts)?,
+        "png" | "jpg" | "jpeg" | "tiff" | "tif" | "bmp" | "webp" => {
+            repub_export_raster::export_image_bytes(doc, 0, &raster_options_for(&ext), fonts)?
+        }
+        "html" | "htm" => {
+            repub_export_raster::export_html_string(doc, &HtmlOptions::default()).into_bytes()
+        }
+        "pub" => repub_format_pub::export_bytes(doc)?,
+        _ => return Err(FormatError::UnsupportedExtension(path.to_path_buf())),
+    })
+}
+
 /// Default raster options for a given image extension (chooses the format).
 fn raster_options_for(ext: &str) -> RasterExportOptions {
     let format = match ext {
@@ -140,6 +176,36 @@ mod tests {
             "Facade",
         ));
         doc
+    }
+
+    #[test]
+    fn bytes_round_trip_without_a_file_system() {
+        let fonts = SystemFontProvider::new().unwrap();
+        let doc = sample_doc();
+        for name in ["doc.repub", "doc.repubz", "doc.json"] {
+            let bytes = save_bytes(&doc, name, &fonts).unwrap();
+            let back = load_bytes(name, &bytes).unwrap();
+            assert_eq!(back.pages().len(), doc.pages().len(), "{name}");
+            assert_eq!(
+                back.pages()[0].all_shapes().count(),
+                doc.pages()[0].all_shapes().count(),
+                "{name}"
+            );
+        }
+        assert!(save_bytes(&doc, "doc.pdf", &fonts)
+            .unwrap()
+            .starts_with(b"%PDF"));
+        assert!(save_bytes(&doc, "doc.png", &fonts)
+            .unwrap()
+            .starts_with(&[0x89, b'P', b'N', b'G']));
+        assert!(matches!(
+            load_bytes("doc.xyz", b""),
+            Err(FormatError::UnsupportedExtension(_))
+        ));
+        assert!(matches!(
+            save_bytes(&doc, "noext", &fonts),
+            Err(FormatError::MissingExtension(_))
+        ));
     }
 
     #[test]

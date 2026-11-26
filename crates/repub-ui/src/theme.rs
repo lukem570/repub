@@ -238,7 +238,6 @@ pub mod metrics {
     pub const ICON_SIZE: f32 = 16.0;
     pub const ICON_SIZE_LARGE: f32 = 32.0;
     pub const TOOLBAR_HEIGHT: f32 = 32.0;
-    pub const MENU_BAR_HEIGHT: f32 = 24.0;
     /// Tab row (~30) + command body (~94).
     pub const RIBBON_HEIGHT: f32 = 124.0;
     pub const STATUS_BAR_HEIGHT: f32 = 24.0;

@@ -127,16 +127,6 @@
             }
         });
 
-        // Handle window resize
-        function resizeCanvas() {
-            const canvas = document.getElementById('canvas');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
         // Prevent context menu on canvas
         document.getElementById('canvas').addEventListener('contextmenu', e => {
             e.preventDefault();

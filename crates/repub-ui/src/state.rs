@@ -223,7 +223,7 @@ pub struct AppState {
     /// Document snapshot taken by `begin_edit`, recorded by `end_edit` if changed.
     pending_undo: Option<repub_model::Document>,
     /// Label and time of the last coalesced undo entry.
-    last_coalesced_undo: Option<(String, std::time::Instant)>,
+    last_coalesced_undo: Option<(String, crate::platform::Instant)>,
     /// In-place text editing session, if a text frame is being edited.
     pub text_edit: Option<crate::text_edit::TextEditState>,
     /// Last text copied or cut while editing (mirrors the system clipboard).
@@ -491,7 +491,7 @@ impl AppState {
     /// a second collapse into one entry (for continuous edits such as dragging a
     /// value in the format panel).
     pub fn record_undo_coalesced(&mut self, label: &str) {
-        let now = std::time::Instant::now();
+        let now = crate::platform::Instant::now();
         let recent = self
             .last_coalesced_undo
             .as_ref()

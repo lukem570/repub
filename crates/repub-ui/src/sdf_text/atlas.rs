@@ -297,18 +297,22 @@ pub fn build_in_background() {
     static STARTED: OnceLock<()> = OnceLock::new();
     STARTED.get_or_init(|| {
         super::fonts::scan_in_background();
-        let spawned = std::thread::Builder::new()
-            .name("sdf-atlas".into())
-            .spawn(|| {
-                let start = std::time::Instant::now();
-                drop(get_or_build());
-                log::info!(
-                    "SDF text atlas built in {:.0} ms",
-                    start.elapsed().as_secs_f64() * 1000.0
-                );
-            });
-        if let Err(e) = spawned {
-            log::error!("Could not start SDF atlas thread: {e}");
+        // The browser can't spawn threads: the atlas is built on first use there
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let spawned = std::thread::Builder::new()
+                .name("sdf-atlas".into())
+                .spawn(|| {
+                    let start = crate::platform::Instant::now();
+                    drop(get_or_build());
+                    log::info!(
+                        "SDF text atlas built in {:.0} ms",
+                        start.elapsed().as_secs_f64() * 1000.0
+                    );
+                });
+            if let Err(e) = spawned {
+                log::error!("Could not start SDF atlas thread: {e}");
+            }
         }
     });
 }
@@ -702,29 +706,40 @@ impl GlyphCache {
     }
 }
 
-/// Render `chars` of a font on all cores.
+/// Render `chars` of a font (on all cores, where there are threads).
 fn render_many(data: &[u8], index: u32, chars: &[char]) -> Vec<(char, Option<Rendered>)> {
-    let threads = std::thread::available_parallelism()
-        .map_or(4, |n| n.get())
-        .clamp(1, 16);
-    let chunk = chars.len().div_ceil(threads).max(1);
-    std::thread::scope(|scope| {
-        let workers: Vec<_> = chars
-            .chunks(chunk)
-            .map(|part| {
-                scope.spawn(move || {
-                    let face = ttf_parser::Face::parse(data, index).ok();
-                    part.iter()
-                        .map(|&c| (c, face.as_ref().and_then(|f| render_glyph(f, c))))
-                        .collect::<Vec<_>>()
-                })
-            })
+    #[cfg(target_arch = "wasm32")]
+    {
+        let face = ttf_parser::Face::parse(data, index).ok();
+        return chars
+            .iter()
+            .map(|&c| (c, face.as_ref().and_then(|f| render_glyph(f, c))))
             .collect();
-        workers
-            .into_iter()
-            .flat_map(|w| w.join().unwrap_or_default())
-            .collect()
-    })
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let threads = std::thread::available_parallelism()
+            .map_or(4, |n| n.get())
+            .clamp(1, 16);
+        let chunk = chars.len().div_ceil(threads).max(1);
+        std::thread::scope(|scope| {
+            let workers: Vec<_> = chars
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        let face = ttf_parser::Face::parse(data, index).ok();
+                        part.iter()
+                            .map(|&c| (c, face.as_ref().and_then(|f| render_glyph(f, c))))
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            workers
+                .into_iter()
+                .flat_map(|w| w.join().unwrap_or_default())
+                .collect()
+        })
+    }
 }
 
 #[cfg(test)]
@@ -884,14 +899,14 @@ mod timing {
     #[test]
     #[ignore]
     fn font_timings() {
-        let t = std::time::Instant::now();
+        let t = crate::platform::Instant::now();
         let r = super::super::fonts::registry();
         eprintln!(
             "scan: {:?}, {} families",
             t.elapsed(),
             r.family_names().len()
         );
-        let t = std::time::Instant::now();
+        let t = crate::platform::Instant::now();
         let mut atlas = super::build();
         eprintln!("bundled build: {:?}", t.elapsed());
         atlas.bake_many(
@@ -904,7 +919,7 @@ mod timing {
         for family in ["Arial", "Georgia", "Times New Roman"] {
             let mut style = repub_model::styles::CharacterStyle::default();
             style.font.family = family.into();
-            let t = std::time::Instant::now();
+            let t = crate::platform::Instant::now();
             atlas.load(&style);
             let id = atlas.resolve(&style).0;
             atlas.bake_many(

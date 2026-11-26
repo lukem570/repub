@@ -35,11 +35,11 @@ pub mod gradient;
 pub mod hit_test;
 pub mod hyperlinks;
 pub mod icons;
-pub mod menus;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native_menu;
 pub mod panels;
 pub mod pattern_fill;
+pub mod platform;
 pub mod sdf_text;
 pub mod settings;
 pub mod shape_gallery;

@@ -6,6 +6,8 @@
 
 Repub is an open-source cross-platform alternative for Microsoft Publisher.
 
+try it [here](https://lukem570.github.io/repub/).
+
 ![image](assets/image/screenshot.png)
 
 - Desktop GUI for Windows, macOS, and Linux

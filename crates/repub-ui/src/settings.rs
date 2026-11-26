@@ -119,19 +119,26 @@ impl Default for Settings {
     }
 }
 
+/// Where the browser keeps the settings.
+#[cfg(target_arch = "wasm32")]
+const WEB_KEY: &str = "repub.settings";
+
+#[cfg(target_arch = "wasm32")]
+fn web_storage() -> Option<web_sys::Storage> {
+    web_sys::window()?.local_storage().ok()?
+}
+
 impl Settings {
-    /// Load settings from the config file.
     pub fn load() -> Self {
-        let path = Self::config_path();
-        if let Some(path) = path {
-            if path.exists() {
-                if let Ok(contents) = std::fs::read_to_string(&path) {
-                    if let Ok(mut settings) = serde_json::from_str::<Settings>(&contents) {
-                        settings.migrate();
-                        return settings;
-                    }
-                }
-            }
+        #[cfg(target_arch = "wasm32")]
+        let stored = web_storage().and_then(|s| s.get_item(WEB_KEY).ok().flatten());
+        #[cfg(not(target_arch = "wasm32"))]
+        let stored = Self::config_path()
+            .filter(|path| path.exists())
+            .and_then(|path| std::fs::read_to_string(path).ok());
+        if let Some(Ok(mut settings)) = stored.map(|json| serde_json::from_str::<Settings>(&json)) {
+            settings.migrate();
+            return settings;
         }
         Self::default()
     }
@@ -158,21 +165,27 @@ impl Settings {
         }
     }
 
-    /// Save settings to the config file (no-op for in-memory settings).
     pub fn save(&self) {
         if !self.persist {
             return;
         }
+        let Ok(json) = serde_json::to_string_pretty(self) else {
+            return;
+        };
+        #[cfg(target_arch = "wasm32")]
+        if let Some(storage) = web_storage() {
+            let _ = storage.set_item(WEB_KEY, &json);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(path) = Self::config_path() {
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }
-            if let Ok(json) = serde_json::to_string_pretty(self) {
-                let _ = std::fs::write(path, json);
-            }
+            let _ = std::fs::write(path, json);
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// Get the config file path.
     fn config_path() -> Option<PathBuf> {
         directories::ProjectDirs::from("com", "repub", "Repub")
