@@ -1177,6 +1177,8 @@ mod tests {
     fn every_menu_item_maps_to_a_command() {
         let source = include_str!("native_menu.rs");
         let source = &source[..source.find("#[cfg(test)]\nmod tests").unwrap()];
+        // rustfmt may wrap a call across lines; compare without whitespace
+        let source: String = source.chars().filter(|c| !c.is_whitespace()).collect();
         let mut ids: Vec<&str> = Vec::new();
         for (i, _) in source.match_indices("with_id(\"") {
             let rest = &source[i + 9..];

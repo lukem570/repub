@@ -141,7 +141,9 @@ impl Canvas {
         // Sync snap config from state
         self.sync_snap_config(state);
 
-        let triggered_action: Option<AppAction> = None;
+        // Only the egui context menu (every platform but macOS) sets this
+        #[cfg_attr(target_os = "macos", allow(unused_mut))]
+        let mut triggered_action: Option<AppAction> = None;
         let (response, painter) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
 
         let rect = response.rect;
