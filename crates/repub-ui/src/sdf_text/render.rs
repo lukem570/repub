@@ -140,9 +140,9 @@ pub fn install(render_state: &egui_wgpu::RenderState) {
         }),
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
-        // Match egui's MSAA sample count (4x when multisampling is enabled)
+        // Match egui's MSAA sample count: the desktop app asks for 4x, the browser can't
         multisample: wgpu::MultisampleState {
-            count: 4,
+            count: if cfg!(target_arch = "wasm32") { 1 } else { 4 },
             mask: !0,
             alpha_to_coverage_enabled: false,
         },
