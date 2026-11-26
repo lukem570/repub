@@ -42,7 +42,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/repub/repub"
 keywords = ["publishing", "desktop-publishing", "document", "pdf"]
@@ -97,7 +97,7 @@ egui = "0.26"
 cfb = "0.9"
 pdf-writer = "0.9"
 quick-xml = "0.31"
-zip = "0.6"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 # Text
 unicode-linebreak = "0.1"

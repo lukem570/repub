@@ -698,7 +698,7 @@ impl WebApp {
                         self.pan_offset.y += delta.y as f64;
                     }
                 }
-                tool if matches!(tool, Tool::Rectangle | Tool::Ellipse | Tool::Line | Tool::Polygon | Tool::Star | Tool::Text) => {
+                tool @ (Tool::Rectangle | Tool::Ellipse | Tool::Line | Tool::Polygon | Tool::Star | Tool::Text) => {
                     if response.drag_started() {
                         self.draw_state.start(doc_pos);
                     } else if response.dragged() {

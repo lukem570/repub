@@ -2,3 +2,6 @@
 /target
 **/target
 /_local
+
+# Trunk output
+/crates/repub-web/dist

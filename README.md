@@ -17,7 +17,7 @@ Repub is an open-source cross-platform alternative for Microsoft Publisher.
 
 ## Build
 
-Requires Rust 1.75 or later.
+Requires Rust 1.90 or later.
 
 ```bash
 git clone git@github.com:lukem570/repub.git

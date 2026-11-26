@@ -26,7 +26,7 @@ cargo test --workspace
 
 ## Development setup
 
-Requires Rust 1.75 or later (`rust-toolchain.toml` selects stable with rustfmt and clippy).
+Requires Rust 1.90 or later (`rust-toolchain.toml` selects stable with rustfmt and clippy).
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/repub.git

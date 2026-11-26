@@ -16,12 +16,13 @@
 //!
 //! ## Usage
 //!
-//! Build with wasm-pack:
+//! Build with [Trunk](https://trunkrs.dev) from this crate's directory:
 //! ```bash
-//! wasm-pack build --target web --release
+//! trunk serve            # development server
+//! trunk build --release  # writes the site to dist/
 //! ```
 //!
-//! Then serve the `pkg` directory along with the HTML shell.
+//! The `Deploy to GitHub Pages` workflow publishes `dist/` on every push to `main`.
 
 
 
@@ -58,23 +59,28 @@ pub fn start(canvas_id: &str) -> Result<(), JsValue> {
     log::info!("Starting Repub in canvas: {}", canvas_id);
     
     let web_options = eframe::WebOptions::default();
-    
-    let canvas_id = canvas_id.to_string();
+
+    let canvas = web_sys::window()
+        .and_then(|w| w.document())
+        .and_then(|d| d.get_element_by_id(canvas_id))
+        .and_then(|e| e.dyn_into::<web_sys::HtmlCanvasElement>().ok())
+        .ok_or_else(|| JsValue::from_str(&format!("no canvas element with id \"{canvas_id}\"")))?;
+
     wasm_bindgen_futures::spawn_local(async move {
         let runner = eframe::WebRunner::new();
         let result = runner
             .start(
-                &canvas_id,
+                canvas,
                 web_options,
                 Box::new(|cc| Ok(Box::new(WebApp::new(cc)))),
             )
             .await;
-        
+
         if let Err(e) = result {
             log::error!("Failed to start eframe: {:?}", e);
         }
     });
-    
+
     Ok(())
 }
 

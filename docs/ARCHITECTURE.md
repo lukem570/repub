@@ -65,7 +65,7 @@ Document page → compose (repub-scene) → Scene → Renderer (repub-render)
 - `repub`: desktop application binary that runs `repub-ui`.
 - `repub-cli`: command-line interface (binary `repub-cli`) with `new`, `info`, `export`, `convert`, `add`, `list`, `validate`, `template`, and `completions`.
 - `repub-mcp`: Model Context Protocol server library. It provides tools to create, open, save, and close documents, add and delete pages and objects, list pages and objects, render previews, export, and work with templates.
-- `repub-web`: WebAssembly build. Build it with `wasm-pack build --target web --release`.
+- `repub-web`: WebAssembly build, a lighter editor than the desktop app. Build it with Trunk from `crates/repub-web` (`trunk build --release`); it is deployed to GitHub Pages on every push to `main`.
 - `repub-compare`: tools for comparing rendering output and imported files.
 
 `repub-edit` is a framework-free editing engine (commands, undo and redo, selection, text editing, snapping). `repub-ui` does not currently use it.
